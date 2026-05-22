@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  trips    Trip[]
+  members  TripMember[]
+  events   Event[]
+  expenses Expense[]
+  notes    Note[]
+}
+
+model Trip {
+  id            String   @id @default(uuid())
+  ownerId       String
+  title         String
+  destination   String
+  startDate     DateTime
+  endDate       DateTime
+  coverImageUrl String?
+  totalBudget   Float?
+  createdAt     DateTime @default(now())
+
+  owner    User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members  TripMember[]
+  days     Day[]
+  expenses Expense[]
+  note     Note?
+}
+
+model TripMember {
+  id       String   @id @default(uuid())
+  tripId   String
+  userId   String
+  role     String   @default("editor")
+  joinedAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+}
+
+model Day {
+  id     String   @id @default(uuid())
+  tripId String
+  date   DateTime
+  label  String?
+
+  trip   Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@unique([tripId, date])
+}
+
+model Event {
+  id         String   @id @default(uuid())
+  dayId      String
+  tripId     String
+  type       String
+  title      String
+  location   String?
+  startTime  String?
+  endTime    String?
+  notes      String?
+  cost       Float?
+  orderIndex Int      @default(0)
+  lat        Float?
+  lng        Float?
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  day      Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  creator  User      @relation(fields: [createdBy], references: [id])
+  expenses Expense[]
+}
+
+model Expense {
+  id        String   @id @default(uuid())
+  tripId    String
+  eventId   String?
+  label     String
+  amount    Float
+  category  String
+  addedBy   String
+  createdAt DateTime @default(now())
+
+  trip  Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  user  User   @relation(fields: [addedBy], references: [id])
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  tripId    String   @unique
+  content   Json     @default("{}")
+  updatedAt DateTime @updatedAt
+  updatedBy String
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [updatedBy], references: [id])
+}
