@@ -2,6 +2,8 @@
 
 A full-stack travel itinerary app built with Next.js 16, Supabase, Clerk, and Prisma.
 
+Odyssey is where the planning feels as good as the trip itself. A collaborative workspace for travelers to build itineraries, coordinate with their crew, map their route, and track their budget! All in one calm, beautiful place. For travelers, dreamers and those who love wanderlust.
+
 ## Setup
 
 ### 1. Clone and install
