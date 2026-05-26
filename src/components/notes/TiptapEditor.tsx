@@ -18,7 +18,8 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
     content: initialContent ?? { type: "doc", content: [{ type: "paragraph" }] },
     editorProps: {
       attributes: {
-        class: "prose prose-odyssey max-w-none min-h-[60vh] p-4 rounded-xl border border-odyssey-cream bg-white focus:outline-none focus:ring-2 focus:ring-odyssey-teal/30",
+        class: "prose max-w-none min-h-[50vh] focus:outline-none",
+        style: "font-family: var(--font-body); color: var(--ink); line-height: 1.65; font-size: 15px;",
         "aria-label": "Trip notes editor",
       },
     },
@@ -38,11 +39,11 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
   return (
     <div>
       {editor && (
-        <div className="flex gap-1 mb-2 flex-wrap">
+        <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
           {[
             { action: () => editor.chain().focus().toggleBold().run(), label: "Bold", active: editor.isActive("bold"), text: "B" },
             { action: () => editor.chain().focus().toggleItalic().run(), label: "Italic", active: editor.isActive("italic"), text: "I" },
-            { action: () => editor.chain().focus().toggleBulletList().run(), label: "Bullet list", active: editor.isActive("bulletList"), text: "•" },
+            { action: () => editor.chain().focus().toggleBulletList().run(), label: "Bullet list", active: editor.isActive("bulletList"), text: "·" },
             { action: () => editor.chain().focus().toggleOrderedList().run(), label: "Numbered list", active: editor.isActive("orderedList"), text: "1." },
             { action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), label: "Heading", active: editor.isActive("heading", { level: 2 }), text: "H2" },
           ].map((btn) => (
@@ -51,11 +52,13 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
               type="button"
               onClick={btn.action}
               aria-label={btn.label}
-              className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
-                btn.active
-                  ? "bg-odyssey-periwinkle text-white border-odyssey-periwinkle"
-                  : "bg-white text-odyssey-ink border-odyssey-cream hover:bg-odyssey-mist"
-              }`}
+              style={{
+                padding: "4px 12px", fontSize: 13, borderRadius: 8, cursor: "pointer",
+                border: "1px solid var(--rule-2)", fontFamily: "var(--font-mono)",
+                background: btn.active ? "var(--peri)" : "var(--paper)",
+                color: btn.active ? "white" : "var(--ink-2)",
+                transition: "all .15s ease",
+              }}
             >
               {btn.text}
             </button>
@@ -66,7 +69,7 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
       <EditorContent editor={editor} />
 
       {lastUpdated && (
-        <p className="text-xs text-odyssey-slate/60 mt-2">
+        <p style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 16 }}>
           Last edited {new Date(lastUpdated).toLocaleString()}{lastUpdatedBy ? ` by ${lastUpdatedBy}` : ""}
         </p>
       )}

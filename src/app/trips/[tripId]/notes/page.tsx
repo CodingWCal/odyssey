@@ -18,18 +18,27 @@ export default async function NotesPage({ params }: Props) {
   });
 
   return (
-    <div className="px-6 py-8 md:pb-8 pb-24 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="font-heading text-3xl text-odyssey-ink">Notes</h1>
-        <p className="text-odyssey-slate text-sm mt-1">Shared pad for the whole crew. Autosaves on blur.</p>
+    <div className="canvas" style={{ maxWidth: 680 }}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: 40, margin: "0 0 6px", color: "var(--ink)" }}>
+          Trip <em style={{ fontStyle: "italic", color: "var(--peri)" }}>notes</em>
+        </h1>
+        <p style={{ color: "var(--ink-2)", fontSize: 13.5, margin: 0 }}>
+          Shared pad for the whole crew. Autosaves on blur.
+        </p>
       </div>
 
-      <TiptapEditor
-        tripId={tripId}
-        initialContent={note?.content as object | null}
-        lastUpdated={note?.updatedAt ?? null}
-        lastUpdatedBy={note?.user?.name ?? null}
-      />
+      <div style={{
+        background: "var(--paper-2)", border: "1px solid var(--rule)",
+        borderRadius: "var(--radius-lg)", padding: "22px 24px",
+      }}>
+        <TiptapEditor
+          tripId={tripId}
+          initialContent={note?.content as object | null}
+          lastUpdated={note?.updatedAt ?? null}
+          lastUpdatedBy={note?.user?.name ?? null}
+        />
+      </div>
     </div>
   );
 }

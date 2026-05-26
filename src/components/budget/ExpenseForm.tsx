@@ -80,7 +80,8 @@ export function ExpenseForm({ tripId, onSuccess }: ExpenseFormProps) {
       <Button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-xl bg-odyssey-teal hover:bg-odyssey-teal/90 text-white"
+        className="w-full rounded-xl"
+        style={{ background: "var(--ink)", color: "var(--paper)" }}
       >
         {isPending ? "Adding..." : "Add Expense"}
       </Button>

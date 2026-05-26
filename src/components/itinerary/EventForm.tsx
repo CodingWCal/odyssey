@@ -153,10 +153,10 @@ export function EventForm({ tripId, dayId, existing, onSuccess }: EventFormProps
           </Button>
         </div>
         {geocodeStatus === "found" && (
-          <p className="text-xs text-odyssey-teal">✓ Location pinned on map</p>
+          <p style={{ fontSize: 12, color: "var(--teal)" }}>✓ Location pinned on map</p>
         )}
         {geocodeStatus === "not_found" && (
-          <p className="text-xs text-odyssey-coral">Couldn't find that address — try being more specific</p>
+          <p style={{ fontSize: 12, color: "var(--coral)" }}>Couldn&apos;t find that address — try being more specific</p>
         )}
       </div>
 
@@ -184,7 +184,8 @@ export function EventForm({ tripId, dayId, existing, onSuccess }: EventFormProps
       <Button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-xl bg-odyssey-teal hover:bg-odyssey-teal/90 text-white"
+        className="w-full rounded-xl"
+        style={{ background: "var(--ink)", color: "var(--paper)" }}
       >
         {isPending ? "Saving..." : existing ? "Update Event" : "Add Event"}
       </Button>

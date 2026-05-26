@@ -13,9 +13,9 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   if (!trip) notFound();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-odyssey-mist">
+    <div className="app-shell">
       <WorkspaceSidebar trip={trip} />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="main">{children}</main>
     </div>
   );
 }

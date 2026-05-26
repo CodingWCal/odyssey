@@ -46,12 +46,13 @@ export function InviteForm({ tripId }: InviteFormProps) {
           className="rounded-xl"
         />
       </div>
-      {success && <p className="text-sm text-odyssey-teal">Invite sent! They'll appear once they sign in.</p>}
-      {error && <p className="text-sm text-odyssey-coral">{error}</p>}
+      {success && <p style={{ fontSize: 13, color: "var(--teal)" }}>Invite sent! They&apos;ll appear once they sign in.</p>}
+      {error && <p style={{ fontSize: 13, color: "var(--coral)" }}>{error}</p>}
       <Button
         type="submit"
         disabled={isPending || !email}
-        className="w-full bg-odyssey-teal hover:bg-odyssey-teal/90 text-white rounded-xl"
+        className="w-full rounded-xl"
+        style={{ background: "var(--ink)", color: "var(--paper)" }}
       >
         {isPending ? "Sending..." : "Send Invite"}
       </Button>

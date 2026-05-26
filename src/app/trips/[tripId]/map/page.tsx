@@ -17,14 +17,20 @@ export default async function MapPage({ params }: Props) {
     .filter((e: (typeof trip.days)[number]["events"][number]) => e.lat != null && e.lng != null) as TripEvent[];
 
   return (
-    <div className="h-screen md:h-[calc(100vh)] p-4 md:pb-4 pb-20">
-      <div className="h-full rounded-2xl overflow-hidden shadow-sm">
+    <div style={{ height: "100vh", padding: "16px", paddingBottom: "16px" }}>
+      <div style={{ height: "100%", borderRadius: "var(--radius-xl)", overflow: "hidden", boxShadow: "var(--shadow-2)" }}>
         {events.length === 0 ? (
-          <div className="h-full bg-odyssey-cream/30 rounded-2xl flex flex-col items-center justify-center text-center p-8">
-            <p className="text-4xl mb-3" aria-hidden="true">🗺️</p>
-            <h3 className="font-heading text-xl text-odyssey-ink mb-2">No pins yet</h3>
-            <p className="text-odyssey-slate text-sm">
-              Add latitude and longitude to events in the itinerary to see them here.
+          <div style={{
+            height: "100%", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            background: "var(--paper-3)", textAlign: "center", padding: 32,
+          }}>
+            <p style={{ fontSize: 48, marginBottom: 16 }} aria-hidden="true">🗺️</p>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 28, margin: "0 0 8px", color: "var(--ink)" }}>
+              No pins <em style={{ fontStyle: "italic", color: "var(--peri)" }}>yet</em>
+            </h3>
+            <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 340, margin: 0 }}>
+              Add an address to events in the itinerary and click "📍 Pin" — they&apos;ll appear here.
             </p>
           </div>
         ) : (

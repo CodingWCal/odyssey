@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
-import { DM_Sans, DM_Serif_Display, JetBrains_Mono } from "next/font/google";
+import { Instrument_Serif, Manrope, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-});
-
-const dmSerif = DM_Serif_Display({
-  variable: "--font-dm-serif",
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-display",
   subsets: ["latin"],
   weight: "400",
+  style: ["normal", "italic"],
+});
+
+const manrope = Manrope({
+  variable: "--font-body",
+  subsets: ["latin"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
@@ -33,9 +34,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${dmSans.variable} ${dmSerif.variable} ${jetbrainsMono.variable} h-full antialiased`}
+        className={`${instrumentSerif.variable} ${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
-        <body className="min-h-full bg-odyssey-mist">{children}</body>
+        <body className="min-h-full">{children}</body>
       </html>
     </ClerkProvider>
   );
