@@ -39,6 +39,7 @@ export interface TripDay {
   tripId: string;
   date: Date;
   label: string | null;
+  notes: string | null;
   events: TripEvent[];
 }
 

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { inviteCollaborator } from "@/app/trips/[tripId]/members/actions";
+import { Icons } from "@/components/shared/Icons";
 
 interface InviteFormProps {
   tripId: string;
@@ -12,6 +10,7 @@ interface InviteFormProps {
 
 export function InviteForm({ tripId }: InviteFormProps) {
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState("editor");
   const [isPending, startTransition] = useTransition();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -20,12 +19,12 @@ export function InviteForm({ tripId }: InviteFormProps) {
     e.preventDefault();
     setError("");
     setSuccess(false);
-
     startTransition(async () => {
       try {
         await inviteCollaborator({ email, tripId });
         setSuccess(true);
         setEmail("");
+        setTimeout(() => setSuccess(false), 2400);
       } catch {
         setError("Something went wrong. Please try again.");
       }
@@ -33,29 +32,35 @@ export function InviteForm({ tripId }: InviteFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="invite-email">Email Address</Label>
-        <Input
-          id="invite-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="friend@example.com"
-          required
-          className="rounded-xl"
-        />
-      </div>
-      {success && <p style={{ fontSize: 13, color: "var(--teal)" }}>Invite sent! They&apos;ll appear once they sign in.</p>}
-      {error && <p style={{ fontSize: 13, color: "var(--coral)" }}>{error}</p>}
-      <Button
-        type="submit"
-        disabled={isPending || !email}
-        className="w-full rounded-xl"
-        style={{ background: "var(--ink)", color: "var(--paper)" }}
-      >
-        {isPending ? "Sending..." : "Send Invite"}
-      </Button>
-    </form>
+    <>
+      <form className="invite-row" onSubmit={handleSubmit}>
+        <div className="field">
+          <label htmlFor="inv-email">Email</label>
+          <input
+            id="inv-email"
+            type="email"
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="friend@email.com"
+            required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="inv-role">Role</label>
+          <select id="inv-role" className="input" value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="editor">Editor</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ height: 42 }} disabled={isPending || !email}>
+          <Icons.plus size={14} /> {isPending ? "Sending…" : "Send invite"}
+        </button>
+      </form>
+      {success && (
+        <div className="invite-success">✓ Invite sent — they&apos;ll join once they sign in.</div>
+      )}
+      {error && <p style={{ fontSize: 13, color: "var(--coral)", marginTop: 12 }}>{error}</p>}
+    </>
   );
 }

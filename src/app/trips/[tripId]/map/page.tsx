@@ -1,7 +1,8 @@
 import { getTripById } from "@/app/trips/actions";
 import { MapClient } from "@/components/map/MapClient";
 import { notFound } from "next/navigation";
-import type { TripEvent } from "@/types";
+import type { MapDay, MapEvent } from "@/components/map/mapTypes";
+import type { EventType } from "@/types";
 
 interface Props {
   params: Promise<{ tripId: string }>;
@@ -12,31 +13,51 @@ export default async function MapPage({ params }: Props) {
   const trip = await getTripById(tripId);
   if (!trip) notFound();
 
-  const events: TripEvent[] = trip.days
-    .flatMap((d: (typeof trip.days)[number]) => d.events)
-    .filter((e: (typeof trip.days)[number]["events"][number]) => e.lat != null && e.lng != null) as TripEvent[];
+  const dateRange = `${new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+
+  // Build day-grouped events with a running global index across all geocoded
+  // events, in itinerary order (day date → event orderIndex).
+  let globalIdx = 0;
+  const days: MapDay[] = [];
+  const allEvents: MapEvent[] = [];
+
+  trip.days.forEach((d: (typeof trip.days)[number], di: number) => {
+    const dayLabel = `Day ${String(di + 1).padStart(2, "0")}`;
+    const dayDate = new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dayEvents: MapEvent[] = [];
+    d.events.forEach((e: (typeof d.events)[number]) => {
+      if (e.lat == null || e.lng == null) return;
+      globalIdx += 1;
+      const me: MapEvent = {
+        id: e.id,
+        type: e.type as EventType,
+        title: e.title,
+        location: e.location,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        cost: e.cost,
+        notes: e.notes,
+        lat: e.lat,
+        lng: e.lng,
+        dayId: d.id,
+        dayLabel,
+        dayDate,
+        globalIdx,
+      };
+      dayEvents.push(me);
+      allEvents.push(me);
+    });
+    if (dayEvents.length > 0) {
+      days.push({ id: d.id, label: dayLabel, dateShort: dayDate, events: dayEvents });
+    }
+  });
 
   return (
-    <div style={{ height: "100vh", padding: "16px", paddingBottom: "16px" }}>
-      <div style={{ height: "100%", borderRadius: "var(--radius-xl)", overflow: "hidden", boxShadow: "var(--shadow-2)" }}>
-        {events.length === 0 ? (
-          <div style={{
-            height: "100%", display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center",
-            background: "var(--paper-3)", textAlign: "center", padding: 32,
-          }}>
-            <p style={{ fontSize: 48, marginBottom: 16 }} aria-hidden="true">🗺️</p>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 28, margin: "0 0 8px", color: "var(--ink)" }}>
-              No pins <em style={{ fontStyle: "italic", color: "var(--peri)" }}>yet</em>
-            </h3>
-            <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 340, margin: 0 }}>
-              Add an address to events in the itinerary and click "📍 Pin" — they&apos;ll appear here.
-            </p>
-          </div>
-        ) : (
-          <MapClient events={events} />
-        )}
-      </div>
-    </div>
+    <MapClient
+      days={days}
+      events={allEvents}
+      eyebrow={`${trip.destination} · ${dateRange}`}
+      dayCount={trip.days.length}
+    />
   );
 }

@@ -1,28 +1,13 @@
 "use server";
 
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma/db";
 import { createTripSchema, updateTripSchema } from "@/lib/validations";
+import { getOrCreateDbUser } from "@/lib/auth";
 
-async function getOrCreateUser() {
-  const user = await currentUser();
-  if (!user) throw new Error("Unauthorized");
-
-  let dbUser = await db.user.findUnique({ where: { clerkId: user.id } });
-  if (!dbUser) {
-    dbUser = await db.user.create({
-      data: {
-        clerkId: user.id,
-        email: user.emailAddresses[0]?.emailAddress ?? "",
-        name: `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Traveler",
-        avatarUrl: user.imageUrl ?? null,
-      },
-    });
-  }
-  return dbUser;
-}
+const getOrCreateUser = getOrCreateDbUser;
 
 export async function getTripsByUser() {
   const { userId } = await auth();
@@ -59,6 +44,7 @@ export async function getTripById(tripId: string) {
         include: { events: { orderBy: { orderIndex: "asc" } } },
         orderBy: { date: "asc" },
       },
+      note: true,
     },
   });
 
