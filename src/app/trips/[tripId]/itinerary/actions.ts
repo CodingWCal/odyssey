@@ -1,31 +1,96 @@
 "use server";
 
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
 import { createEventSchema, updateEventSchema } from "@/lib/validations";
+import { getOrCreateDbUser } from "@/lib/auth";
 
-async function getDbUser() {
-  const user = await currentUser();
-  if (!user) throw new Error("Unauthorized");
-
-  let dbUser = await db.user.findUnique({ where: { clerkId: user.id } });
-  if (!dbUser) {
-    dbUser = await db.user.create({
-      data: {
-        clerkId: user.id,
-        email: user.emailAddresses[0]?.emailAddress ?? "",
-        name: `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Traveler",
-        avatarUrl: user.imageUrl ?? null,
-      },
-    });
-  }
-  return dbUser;
-}
+const getDbUser = getOrCreateDbUser;
 
 async function assertTripAccess(tripId: string, userId: string) {
   const member = await db.tripMember.findFirst({ where: { tripId, userId } });
   if (!member) throw new Error("Unauthorized");
+}
+
+/**
+ * Server-side geocoding via Nominatim. Authoritative source of truth for pin
+ * coordinates so a map pin always matches the written address — independent of
+ * whether the user clicked the client-side "📍 Pin" button.
+ */
+async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+      {
+        headers: {
+          "Accept-Language": "en",
+          // Nominatim usage policy requires a descriptive User-Agent.
+          "User-Agent": "Odyssey-TripPlanner/1.0 (collaborative itinerary app)",
+        },
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data[0]) return null;
+    const lat = parseFloat(data[0].lat);
+    const lng = parseFloat(data[0].lon);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+    return { lat, lng };
+  } catch {
+    return null;
+  }
+}
+
+function revalidateTrip(tripId: string) {
+  revalidatePath(`/trips/${tripId}/itinerary`);
+  revalidatePath(`/trips/${tripId}/map`);
+  revalidatePath(`/trips/${tripId}/budget`);
+  revalidatePath(`/trips/${tripId}`);
+}
+
+// Event type → budget expense category.
+const EVENT_TYPE_TO_CATEGORY: Record<string, string> = {
+  flight: "flights",
+  hotel: "lodging",
+  restaurant: "food",
+  activity: "activities",
+  transport: "transport",
+  misc: "misc",
+};
+
+/**
+ * Keep a budget expense in sync with an event's cost (#5). Itinerary owns the
+ * price: a positive cost creates/updates a linked expense; clearing it removes
+ * the link. The expense stays editable on the Budget page.
+ */
+async function syncLinkedExpense(event: {
+  id: string;
+  tripId: string;
+  type: string;
+  title: string;
+  cost: number | null;
+  createdBy: string;
+}) {
+  const existing = await db.expense.findFirst({ where: { eventId: event.id } });
+  if (event.cost != null && event.cost > 0) {
+    if (existing) {
+      await db.expense.update({ where: { id: existing.id }, data: { amount: event.cost } });
+    } else {
+      await db.expense.create({
+        data: {
+          tripId: event.tripId,
+          eventId: event.id,
+          label: event.title,
+          amount: event.cost,
+          category: EVENT_TYPE_TO_CATEGORY[event.type] ?? "misc",
+          addedBy: event.createdBy,
+        },
+      });
+    }
+  } else if (existing) {
+    await db.expense.delete({ where: { id: existing.id } });
+  }
 }
 
 export async function createEvent(data: {
@@ -51,6 +116,19 @@ export async function createEvent(data: {
     orderBy: { orderIndex: "desc" },
   });
 
+  // Server-side geocoding is authoritative: if there's an address but no
+  // coordinates (e.g. the user never clicked "📍 Pin"), resolve it here so the
+  // map pin always matches the written location.
+  let lat = validated.lat ?? null;
+  let lng = validated.lng ?? null;
+  if (validated.location && (lat == null || lng == null)) {
+    const coords = await geocode(validated.location);
+    if (coords) {
+      lat = coords.lat;
+      lng = coords.lng;
+    }
+  }
+
   const event = await db.event.create({
     data: {
       dayId: validated.dayId,
@@ -62,14 +140,15 @@ export async function createEvent(data: {
       endTime: validated.endTime || null,
       notes: validated.notes || null,
       cost: validated.cost ?? null,
-      lat: validated.lat ?? null,
-      lng: validated.lng ?? null,
+      lat,
+      lng,
       orderIndex: (lastEvent?.orderIndex ?? -1) + 1,
       createdBy: dbUser.id,
     },
   });
 
-  revalidatePath(`/trips/${validated.tripId}/itinerary`);
+  await syncLinkedExpense(event);
+  revalidateTrip(validated.tripId);
   return event;
 }
 
@@ -92,18 +171,41 @@ export async function updateEvent(eventId: string, data: Partial<{
 
   const validated = updateEventSchema.parse(data);
 
+  const newLocation = validated.location || null;
+  const locationChanged = "location" in validated && newLocation !== event.location;
+
+  // Keep coordinates in sync with the address (authoritative, server-side):
+  //  - address removed  -> clear coordinates
+  //  - address changed  -> re-geocode (ignore any stale client coords)
+  //  - address unchanged -> leave existing coordinates as-is
+  let lat = validated.lat ?? event.lat;
+  let lng = validated.lng ?? event.lng;
+  if (locationChanged) {
+    if (!newLocation) {
+      lat = null;
+      lng = null;
+    } else {
+      const coords = await geocode(newLocation);
+      lat = coords ? coords.lat : null;
+      lng = coords ? coords.lng : null;
+    }
+  }
+
   const updated = await db.event.update({
     where: { id: eventId },
     data: {
       ...validated,
-      location: validated.location || null,
+      location: newLocation,
       startTime: validated.startTime || null,
       endTime: validated.endTime || null,
       notes: validated.notes || null,
+      lat,
+      lng,
     },
   });
 
-  revalidatePath(`/trips/${event.tripId}/itinerary`);
+  await syncLinkedExpense(updated);
+  revalidateTrip(event.tripId);
   return updated;
 }
 
@@ -114,8 +216,10 @@ export async function deleteEvent(eventId: string) {
   if (!event) throw new Error("Event not found");
   await assertTripAccess(event.tripId, dbUser.id);
 
+  // Remove any budget expense linked to this event so the budget stays consistent.
+  await db.expense.deleteMany({ where: { eventId } });
   await db.event.delete({ where: { id: eventId } });
-  revalidatePath(`/trips/${event.tripId}/itinerary`);
+  revalidateTrip(event.tripId);
 }
 
 export async function reorderEvents(updates: { id: string; orderIndex: number }[], tripId: string) {
@@ -125,6 +229,18 @@ export async function reorderEvents(updates: { id: string; orderIndex: number }[
   await Promise.all(
     updates.map((u) => db.event.update({ where: { id: u.id }, data: { orderIndex: u.orderIndex } }))
   );
+
+  revalidateTrip(tripId);
+}
+
+export async function updateDayNotes(dayId: string, tripId: string, notes: string) {
+  const dbUser = await getDbUser();
+  await assertTripAccess(tripId, dbUser.id);
+
+  await db.day.update({
+    where: { id: dayId },
+    data: { notes: notes.trim() || null },
+  });
 
   revalidatePath(`/trips/${tripId}/itinerary`);
 }

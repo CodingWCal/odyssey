@@ -1,16 +1,16 @@
 import { getTripsByUser } from "@/app/trips/actions";
-import { TripCard } from "@/components/trips/TripCard";
-import { NewTripButton } from "@/components/trips/NewTripButton";
-import { UserButton } from "@clerk/nextjs";
+import { db } from "@/lib/prisma/db";
 import { currentUser } from "@clerk/nextjs/server";
+import { DashboardClient } from "@/components/trips/DashboardClient";
+import type { DashTrip } from "@/components/trips/TripCard";
+import { coverGradient } from "@/components/trips/cover";
 
-function timeOfDayGreeting() {
-  const h = new Date().getHours();
-  if (h < 5) return "Up late";
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  if (h < 21) return "Good evening";
-  return "Up late";
+function fmtDate(d: Date) {
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function daysBetween(a: Date, b: Date) {
+  return Math.max(1, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000) + 1);
 }
 
 export default async function DashboardPage() {
@@ -18,103 +18,51 @@ export default async function DashboardPage() {
   const user = await currentUser();
   const firstName = user?.firstName ?? "traveler";
 
-  const totalDays = trips.reduce((s: number, tr: (typeof trips)[number]) => {
-    const start = new Date(tr.startDate);
-    const end = new Date(tr.endDate);
-    return s + Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
-  }, 0);
-
-  return (
-    <div className="dash-shell">
-      {/* Top bar */}
-      <header className="dash-top">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          <span className="brand-name">Odyssey</span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <NewTripButton />
-          <UserButton />
-        </div>
-      </header>
-
-      {/* Main canvas */}
-      <main className="dash-canvas">
-        {/* Greeting */}
-        <section className="dash-greet">
-          <div className="eyebrow">{timeOfDayGreeting()}, {firstName}</div>
-          <h1>
-            Where to <em>next</em>?
-          </h1>
-          <div className="dash-stats">
-            <span><strong>{trips.length}</strong> adventure{trips.length !== 1 ? "s" : ""}</span>
-            <span className="sep">·</span>
-            <span><strong>{totalDays}</strong> days planned</span>
-          </div>
-        </section>
-
-        {/* Trips */}
-        {trips.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center", padding: "80px 24px",
-              background: "var(--paper-2)", borderRadius: "var(--radius-xl)",
-              border: "1px solid var(--rule)",
-            }}
-          >
-            <p style={{ fontSize: 48, marginBottom: 16 }} aria-hidden="true">✈️</p>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 32, margin: "0 0 8px" }}>
-              Ready for your first <em>adventure</em>?
-            </h3>
-            <p style={{ color: "var(--ink-2)", fontSize: 15, margin: "0 0 28px" }}>
-              Create your first trip and start building your itinerary.
-            </p>
-            <NewTripButton />
-          </div>
-        ) : (
-          <>
-            <div className="section-title">
-              <h2>
-                Your trips <span className="count">{trips.length}</span>
-              </h2>
-            </div>
-            <div className="trip-grid">
-              {trips.map((trip: (typeof trips)[number]) => (
-                <TripCard
-                  key={trip.id}
-                  id={trip.id}
-                  title={trip.title}
-                  destination={trip.destination}
-                  startDate={trip.startDate}
-                  endDate={trip.endDate}
-                  coverImageUrl={trip.coverImageUrl}
-                  members={trip.members.map((m: (typeof trip.members)[number]) => ({
-                    name: m.user.name,
-                    avatarUrl: m.user.avatarUrl,
-                  }))}
-                />
-              ))}
-              <NewTripCardOd />
-            </div>
-          </>
-        )}
-      </main>
-    </div>
+  const ids = trips.map((t: (typeof trips)[number]) => t.id);
+  const spendRows = ids.length
+    ? await db.expense.groupBy({ by: ["tripId"], where: { tripId: { in: ids } }, _sum: { amount: true } })
+    : [];
+  const spentByTrip = new Map<string, number>(
+    spendRows.map((r: (typeof spendRows)[number]) => [r.tripId, r._sum.amount ?? 0])
   );
-}
 
-function NewTripCardOd() {
-  return (
-    <a href="/trips/new" className="new-trip-card" style={{ textDecoration: "none" }}>
-      <div className="plus-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </div>
-      <h3>Plan a new trip</h3>
-      <p>Sketch out dates, destinations, and bring your people in.</p>
-    </a>
-  );
+  const now = new Date();
+
+  const dashTrips: DashTrip[] = trips.map((t: (typeof trips)[number]) => {
+    const start = new Date(t.startDate);
+    const end = new Date(t.endDate);
+    const endOfDay = new Date(end);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    let status: DashTrip["status"];
+    let countdown: string;
+    if (start <= now && now <= endOfDay) {
+      status = "live";
+      countdown = "In progress";
+    } else if (start > now) {
+      status = "upcoming";
+      const d = Math.ceil((start.getTime() - now.getTime()) / 86400000);
+      countdown = d <= 1 ? "Starts tomorrow" : `In ${d} days`;
+    } else {
+      status = "past";
+      countdown = "Wrapped";
+    }
+
+    return {
+      id: t.id,
+      title: t.title,
+      destination: t.destination,
+      startStr: fmtDate(start),
+      endStr: fmtDate(end),
+      days: daysBetween(start, end),
+      spent: spentByTrip.get(t.id) ?? 0,
+      cost: t.totalBudget ?? 0,
+      status,
+      countdown,
+      cover: coverGradient(t.id),
+      members: t.members.map((m: (typeof t.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" })),
+    };
+  });
+
+  return <DashboardClient firstName={firstName} trips={dashTrips} />;
 }

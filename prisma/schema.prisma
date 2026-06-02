@@ -58,6 +58,7 @@ model Day {
   tripId String
   date   DateTime
   label  String?
+  notes  String?
 
   trip   Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
   events Event[]

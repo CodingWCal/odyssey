@@ -1,0 +1,56 @@
+"use client";
+
+import { useState, useRef, useTransition } from "react";
+import { upsertNote } from "@/app/trips/[tripId]/notes/actions";
+import { Icons } from "@/components/shared/Icons";
+
+interface TripNotesProps {
+  tripId: string;
+  initialText: string;
+}
+
+/**
+ * Pinned trip-level notes card (`.notes-card`). Autosaves on blur to the Note
+ * model as plain text (`{ text }`).
+ */
+export function TripNotes({ tripId, initialText }: TripNotesProps) {
+  const [value, setValue] = useState(initialText);
+  const [focused, setFocused] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const lastSaved = useRef(initialText);
+
+  function save() {
+    if (value === lastSaved.current) return;
+    lastSaved.current = value;
+    startTransition(async () => {
+      await upsertNote(tripId, { text: value });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    });
+  }
+
+  return (
+    <div className={`notes-card ${focused ? "focused" : ""}`}>
+      <div className="notes-head">
+        <div className="left">
+          <span className="notes-pin"><Icons.note size={14} /></span>
+          <span className="notes-label">Trip notes — pinned</span>
+        </div>
+        <span className={`save-pill ${isPending || saved ? "show" : ""} ${saved && !isPending ? "saved" : ""}`}>
+          <span className="dot" />
+          {isPending ? "Saving…" : "Saved just now"}
+        </span>
+      </div>
+      <textarea
+        className="notes-editor"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); save(); }}
+        placeholder="What's the vibe? Confirmations, must-knows, packing reminders…"
+        rows={2}
+      />
+    </div>
+  );
+}

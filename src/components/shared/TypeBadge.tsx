@@ -1,13 +1,11 @@
-import type { EventType } from "@/types";
+import { Icons, type EventTypeKey } from "./Icons";
 
-interface TypeBadgeProps {
-  type: EventType;
-  className?: string;
-}
-
-export function TypeBadge({ type }: TypeBadgeProps) {
+// Event type pill — `.badge.t-{type}` per the design's badge styles.
+export function TypeBadge({ type }: { type: EventTypeKey }) {
+  const Icon = Icons[type] ?? Icons.misc;
   return (
-    <span className={`od-badge t-${type}`}>
+    <span className={`badge t-${type}`}>
+      <Icon size={11} />
       {type}
     </span>
   );
