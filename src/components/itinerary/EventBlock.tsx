@@ -66,7 +66,12 @@ export function EventBlock({ event, tripId, isDragging, dragHandle }: EventBlock
               {(event.location || event.cost != null) && (
                 <div className="event-sub">
                   {event.location && (
-                    <span className="meta"><Icons.pin size={12} /> {event.location}</span>
+                    <span className="meta">
+                      <Icons.pin size={12} />{" "}
+                      {(event.type === "flight" || event.type === "transport") && event.destLocation
+                        ? `${event.location} → ${event.destLocation}`
+                        : event.location}
+                    </span>
                   )}
                   {event.cost != null && (
                     <span className="cost">${Number(event.cost).toLocaleString("en-US")}</span>

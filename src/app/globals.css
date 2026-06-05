@@ -210,6 +210,24 @@
   padding-bottom: 22px;
   border-bottom: 1px solid var(--rule);
 }
+.trip-meta .title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.trip-meta .title-row .icon-btn {
+  flex: none;
+  margin-top: 2px;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.trip-meta:hover .title-row .icon-btn,
+.trip-meta .title-row .icon-btn:focus-visible {
+  opacity: .65;
+}
+.trip-meta .title-row .icon-btn:hover {
+  opacity: 1;
+}
 .trip-meta .title {
   font-family: var(--font-display);
   font-size: 26px;
@@ -1267,6 +1285,54 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding-right: 14px;
 }
 
+/* Split between travelers */
+.split-card {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 28px;
+}
+.split-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 14px;
+}
+.split-head .left .label {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px;
+}
+.split-head .left .sub { font-size: 12.5px; color: var(--ink-2); max-width: 46ch; }
+.split-rows { display: flex; flex-direction: column; gap: 8px; }
+.split-row {
+  display: grid;
+  grid-template-columns: 1.4fr 130px 1fr 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+.split-row .who { font-weight: 500; color: var(--ink); font-size: 13.5px; }
+.split-row .weight { display: flex; align-items: center; gap: 8px; }
+.split-row .weight .input {
+  width: 64px; height: 38px; text-align: right; padding-right: 10px; font-size: 14px;
+}
+.split-row .weight .pct {
+  font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); width: 40px;
+}
+.split-row .share, .split-row .paid, .split-row .balance {
+  display: flex; flex-direction: column; align-items: flex-end;
+  font-family: var(--font-mono); font-size: 14px; color: var(--ink);
+}
+.split-row .lbl {
+  font-family: var(--font-sans); font-size: 10px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3); margin-top: 1px;
+}
+.split-row .balance.pos { color: var(--teal); }
+.split-row .balance.neg { color: var(--coral); }
+.split-row .balance.even { color: var(--ink-3); }
+.split-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
+
 /* Page action bar */
 .page-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -1428,6 +1494,16 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   transform: rotate(-45deg) scale(1.25);
   box-shadow: 0 8px 22px rgba(0,0,0,.36), 0 2px 6px rgba(0,0,0,.24), 0 0 0 4px rgba(255,255,255,.85);
   z-index: 1000;
+}
+
+/* Flight arrival endpoint: smaller hollow pin tinted to the flight color. */
+.od-marker.dest {
+  width: 28px; height: 28px;
+  background: var(--paper-2);
+  font-size: 13px; font-weight: 700;
+}
+.od-marker.dest.active {
+  transform: rotate(-45deg) scale(1.2);
 }
 
 /* Floating event detail card */
@@ -1604,6 +1680,31 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .role-badge.owner { color: var(--teal); background: var(--teal-soft); }
 .role-badge.editor { color: var(--peri); background: var(--peri-soft); }
 .role-badge.viewer { color: var(--ink-3); background: rgba(31,34,56,.05); }
+/* Shown instead of the role badge while an invitee hasn't signed up yet. */
+.role-badge.pending { color: var(--coral); background: var(--coral-soft); }
+
+.member-actions-row {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+.member-actions-row .resend,
+.member-actions-row .remove {
+  font-family: var(--font-sans);
+  font-size: 12px; font-weight: 500; line-height: 1;
+  padding: 7px 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.member-actions-row .resend:hover { border-color: var(--peri); color: var(--peri); background: var(--peri-soft); }
+.member-actions-row .remove:hover { border-color: var(--coral); color: var(--coral); background: var(--coral-soft); }
+.member-actions-row button:disabled { opacity: .5; cursor: default; }
+.member-actions-row .action-note {
+  margin-right: auto;
+  font-size: 11.5px; color: var(--ink-3); font-family: var(--font-mono);
+}
 
 .member-stats {
   display: grid;

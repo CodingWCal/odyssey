@@ -23,6 +23,9 @@ export const createEventSchema = z.object({
   cost: z.coerce.number().min(0).optional(),
   lat: z.coerce.number().optional(),
   lng: z.coerce.number().optional(),
+  destLocation: z.string().max(300).optional().or(z.literal("")),
+  destLat: z.coerce.number().optional(),
+  destLng: z.coerce.number().optional(),
 });
 
 export const updateEventSchema = createEventSchema.partial().omit({ dayId: true, tripId: true });
@@ -38,6 +41,44 @@ export const createExpenseSchema = z.object({
 export const inviteCollaboratorSchema = z.object({
   email: z.string().email("Invalid email address"),
   tripId: z.string().min(1),
+  role: z.enum(["editor", "viewer"]).optional(),
+});
+
+export const updateSplitSchema = z.object({
+  tripId: z.string().min(1),
+  weights: z
+    .array(
+      z.object({
+        memberId: z.string().min(1),
+        weight: z.coerce.number().min(0),
+      })
+    )
+    .min(1),
+});
+
+export const createPollSchema = z.object({
+  tripId: z.string().min(1),
+  rangeStart: z.string().min(1),
+  rangeEnd: z.string().min(1),
+  enabledBlocks: z.array(z.enum(["all_day", "morning", "afternoon", "evening"])).min(1),
+  desiredLengthDays: z.coerce.number().int().min(1).optional(),
+});
+
+export const setSlotsSchema = z.object({
+  tripId: z.string().min(1),
+  slots: z.array(
+    z.object({
+      date: z.string().min(1),
+      block: z.enum(["all_day", "morning", "afternoon", "evening"]),
+      status: z.enum(["available", "maybe", "unavailable"]),
+    })
+  ),
+});
+
+export const applyWindowSchema = z.object({
+  tripId: z.string().min(1),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
 });
 
 export type CreateTripInput = z.infer<typeof createTripSchema>;
@@ -46,3 +87,7 @@ export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type InviteCollaboratorInput = z.infer<typeof inviteCollaboratorSchema>;
+export type UpdateSplitInput = z.infer<typeof updateSplitSchema>;
+export type CreatePollInput = z.infer<typeof createPollSchema>;
+export type SetSlotsInput = z.infer<typeof setSlotsSchema>;
+export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;

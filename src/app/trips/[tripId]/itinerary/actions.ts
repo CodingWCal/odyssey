@@ -105,6 +105,9 @@ export async function createEvent(data: {
   cost?: number;
   lat?: number;
   lng?: number;
+  destLocation?: string;
+  destLat?: number;
+  destLng?: number;
 }) {
   const dbUser = await getDbUser();
   await assertTripAccess(data.tripId, dbUser.id);
@@ -129,6 +132,17 @@ export async function createEvent(data: {
     }
   }
 
+  // Flights carry a second endpoint (arrival). Geocode it the same way.
+  let destLat = validated.destLat ?? null;
+  let destLng = validated.destLng ?? null;
+  if (validated.destLocation && (destLat == null || destLng == null)) {
+    const coords = await geocode(validated.destLocation);
+    if (coords) {
+      destLat = coords.lat;
+      destLng = coords.lng;
+    }
+  }
+
   const event = await db.event.create({
     data: {
       dayId: validated.dayId,
@@ -142,6 +156,9 @@ export async function createEvent(data: {
       cost: validated.cost ?? null,
       lat,
       lng,
+      destLocation: validated.destLocation || null,
+      destLat,
+      destLng,
       orderIndex: (lastEvent?.orderIndex ?? -1) + 1,
       createdBy: dbUser.id,
     },
@@ -162,6 +179,9 @@ export async function updateEvent(eventId: string, data: Partial<{
   cost: number;
   lat: number;
   lng: number;
+  destLocation: string;
+  destLat: number;
+  destLng: number;
 }>) {
   const dbUser = await getDbUser();
 
@@ -191,6 +211,22 @@ export async function updateEvent(eventId: string, data: Partial<{
     }
   }
 
+  // Mirror the same sync logic for a flight's arrival endpoint.
+  const newDestLocation = validated.destLocation || null;
+  const destChanged = "destLocation" in validated && newDestLocation !== event.destLocation;
+  let destLat = validated.destLat ?? event.destLat;
+  let destLng = validated.destLng ?? event.destLng;
+  if (destChanged) {
+    if (!newDestLocation) {
+      destLat = null;
+      destLng = null;
+    } else {
+      const coords = await geocode(newDestLocation);
+      destLat = coords ? coords.lat : null;
+      destLng = coords ? coords.lng : null;
+    }
+  }
+
   const updated = await db.event.update({
     where: { id: eventId },
     data: {
@@ -201,6 +237,9 @@ export async function updateEvent(eventId: string, data: Partial<{
       notes: validated.notes || null,
       lat,
       lng,
+      destLocation: newDestLocation,
+      destLat,
+      destLng,
     },
   });
 
@@ -226,8 +265,9 @@ export async function reorderEvents(updates: { id: string; orderIndex: number }[
   const dbUser = await getDbUser();
   await assertTripAccess(tripId, dbUser.id);
 
+  // Scope each update to this trip so foreign event ids are ignored.
   await Promise.all(
-    updates.map((u) => db.event.update({ where: { id: u.id }, data: { orderIndex: u.orderIndex } }))
+    updates.map((u) => db.event.updateMany({ where: { id: u.id, tripId }, data: { orderIndex: u.orderIndex } }))
   );
 
   revalidateTrip(tripId);
@@ -237,8 +277,9 @@ export async function updateDayNotes(dayId: string, tripId: string, notes: strin
   const dbUser = await getDbUser();
   await assertTripAccess(tripId, dbUser.id);
 
-  await db.day.update({
-    where: { id: dayId },
+  // Scope to this trip so a day id from another trip can't be edited.
+  await db.day.updateMany({
+    where: { id: dayId, tripId },
     data: { notes: notes.trim() || null },
   });
 

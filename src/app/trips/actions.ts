@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma/db";
@@ -10,11 +9,15 @@ import { getOrCreateDbUser } from "@/lib/auth";
 const getOrCreateUser = getOrCreateDbUser;
 
 export async function getTripsByUser() {
-  const { userId } = await auth();
-  if (!userId) return [];
-
-  const dbUser = await db.user.findUnique({ where: { clerkId: userId } });
-  if (!dbUser) return [];
+  // Resolve via getOrCreateUser (not a raw clerkId lookup) so an invited user's
+  // pending placeholder gets relinked to their real account on first visit —
+  // otherwise their trip memberships would never connect to their account.
+  let dbUser;
+  try {
+    dbUser = await getOrCreateUser();
+  } catch {
+    return [];
+  }
 
   return db.trip.findMany({
     where: { members: { some: { userId: dbUser.id } } },
@@ -28,11 +31,14 @@ export async function getTripsByUser() {
 }
 
 export async function getTripById(tripId: string) {
-  const { userId } = await auth();
-  if (!userId) return null;
-
-  const dbUser = await db.user.findUnique({ where: { clerkId: userId } });
-  if (!dbUser) return null;
+  // Relink an invited user's pending placeholder on first visit (see note in
+  // getTripsByUser) so trip access works without requiring a write action first.
+  let dbUser;
+  try {
+    dbUser = await getOrCreateUser();
+  } catch {
+    return null;
+  }
 
   const trip = await db.trip.findFirst({
     where: { id: tripId, members: { some: { userId: dbUser.id } } },
@@ -101,8 +107,9 @@ export async function createTrip(formData: FormData) {
 export async function updateTrip(tripId: string, formData: FormData) {
   const dbUser = await getOrCreateUser();
 
+  // Any trip member can edit shared trip details (e.g. the name).
   const member = await db.tripMember.findFirst({
-    where: { tripId, userId: dbUser.id, role: "owner" },
+    where: { tripId, userId: dbUser.id },
   });
   if (!member) throw new Error("Unauthorized");
 
@@ -125,7 +132,9 @@ export async function updateTrip(tripId: string, formData: FormData) {
     },
   });
 
-  revalidatePath(`/trips/${tripId}`);
+  // Revalidate the whole trip layout so the sidebar/hero pick up the new name.
+  revalidatePath(`/trips/${tripId}`, "layout");
+  revalidatePath("/dashboard");
 }
 
 export async function deleteTrip(tripId: string) {

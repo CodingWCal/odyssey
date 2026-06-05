@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { Icons } from "@/components/shared/Icons";
+import { TripEditModal } from "./TripEditModal";
 
 const NAV_ITEMS = [
+  { href: "schedule", label: "Schedule", Icon: Icons.schedule },
   { href: "itinerary", label: "Itinerary", Icon: Icons.itinerary },
   { href: "map", label: "Map", Icon: Icons.map },
   { href: "budget", label: "Budget", Icon: Icons.budget },
@@ -27,6 +30,7 @@ interface WorkspaceSidebarProps {
 
 export function WorkspaceSidebar({ trip }: WorkspaceSidebarProps) {
   const pathname = usePathname();
+  const [editOpen, setEditOpen] = useState(false);
 
   return (
     <aside className="sidebar">
@@ -40,11 +44,29 @@ export function WorkspaceSidebar({ trip }: WorkspaceSidebarProps) {
       </Link>
 
       <div className="trip-meta">
-        <h1 className="title">{trip.title}</h1>
+        <div className="title-row">
+          <h1 className="title">{trip.title}</h1>
+          <button
+            className="icon-btn"
+            onClick={() => setEditOpen(true)}
+            aria-label="Edit trip name"
+            title="Edit trip name"
+          >
+            <Icons.edit size={13} />
+          </button>
+        </div>
         <span className="dest">
           <Icons.pin size={11} /> {trip.destination} · {formatRange(trip.startDate, trip.endDate)}
         </span>
       </div>
+
+      <TripEditModal
+        open={editOpen}
+        tripId={trip.id}
+        initialTitle={trip.title}
+        initialDestination={trip.destination}
+        onClose={() => setEditOpen(false)}
+      />
 
       <nav className="nav" aria-label="Trip navigation">
         {NAV_ITEMS.map(({ href, label, Icon }) => {

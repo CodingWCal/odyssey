@@ -30,6 +30,9 @@ export interface TripEvent {
   orderIndex: number;
   lat: number | null;
   lng: number | null;
+  destLocation: string | null;
+  destLat: number | null;
+  destLng: number | null;
   createdBy: string;
   createdAt: Date;
 }
@@ -65,6 +68,7 @@ export interface TripMember {
   tripId: string;
   userId: string;
   role: MemberRole;
+  splitWeight: number;
   joinedAt: Date;
   user: {
     id: string;
@@ -83,6 +87,34 @@ export interface Expense {
   category: ExpenseCategory;
   addedBy: string;
   createdAt: Date;
+}
+
+export type AvailabilityBlock = "all_day" | "morning" | "afternoon" | "evening";
+
+export type AvailabilityStatus = "available" | "maybe" | "unavailable";
+
+export interface AvailabilitySlot {
+  id: string;
+  tripId: string;
+  userId: string;
+  date: Date;
+  block: AvailabilityBlock;
+  status: AvailabilityStatus;
+  source: string;
+  updatedAt: Date;
+}
+
+export interface AvailabilityPoll {
+  id: string;
+  tripId: string;
+  rangeStart: Date;
+  rangeEnd: Date;
+  enabledBlocks: AvailabilityBlock[];
+  desiredLengthDays: number | null;
+  status: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const EVENT_TYPE_COLORS: Record<EventType, string> = {

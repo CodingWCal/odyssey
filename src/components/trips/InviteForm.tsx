@@ -10,21 +10,30 @@ interface InviteFormProps {
 
 export function InviteForm({ tripId }: InviteFormProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("editor");
+  const [role, setRole] = useState<"editor" | "viewer">("editor");
   const [isPending, startTransition] = useTransition();
-  const [success, setSuccess] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setSuccess(false);
+    setMessage("");
     startTransition(async () => {
       try {
-        await inviteCollaborator({ email, tripId });
-        setSuccess(true);
+        const res = await inviteCollaborator({ email, tripId, role });
+        const who = email;
+        if (res.alreadyMember) {
+          setMessage(`${who} is already on this trip.`);
+        } else if (res.emailSent) {
+          setMessage(`✓ Invitation email sent to ${who}.`);
+        } else if (res.existingUser) {
+          setMessage(`✓ Added ${who} — they'll see the trip next time they sign in.`);
+        } else {
+          setMessage(`✓ Added ${who}, but the email couldn't be sent. Share the link manually.`);
+        }
         setEmail("");
-        setTimeout(() => setSuccess(false), 2400);
+        setTimeout(() => setMessage(""), 4000);
       } catch {
         setError("Something went wrong. Please try again.");
       }
@@ -48,7 +57,7 @@ export function InviteForm({ tripId }: InviteFormProps) {
         </div>
         <div className="field">
           <label htmlFor="inv-role">Role</label>
-          <select id="inv-role" className="input" value={role} onChange={(e) => setRole(e.target.value)}>
+          <select id="inv-role" className="input" value={role} onChange={(e) => setRole(e.target.value as "editor" | "viewer")}>
             <option value="editor">Editor</option>
             <option value="viewer">Viewer</option>
           </select>
@@ -57,8 +66,8 @@ export function InviteForm({ tripId }: InviteFormProps) {
           <Icons.plus size={14} /> {isPending ? "Sending…" : "Send invite"}
         </button>
       </form>
-      {success && (
-        <div className="invite-success">✓ Invite sent — they&apos;ll join once they sign in.</div>
+      {message && (
+        <div className="invite-success">{message}</div>
       )}
       {error && <p style={{ fontSize: 13, color: "var(--coral)", marginTop: 12 }}>{error}</p>}
     </>

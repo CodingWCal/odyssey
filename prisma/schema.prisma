@@ -20,6 +20,8 @@ model User {
   events   Event[]
   expenses Expense[]
   notes    Note[]
+
+  availabilitySlots AvailabilitySlot[]
 }
 
 model Trip {
@@ -38,14 +40,18 @@ model Trip {
   days     Day[]
   expenses Expense[]
   note     Note?
+
+  availabilityPoll  AvailabilityPoll?
+  availabilitySlots AvailabilitySlot[]
 }
 
 model TripMember {
-  id       String   @id @default(uuid())
-  tripId   String
-  userId   String
-  role     String   @default("editor")
-  joinedAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  tripId      String
+  userId      String
+  role        String   @default("editor")
+  splitWeight Float    @default(1)
+  joinedAt    DateTime @default(now())
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -76,12 +82,15 @@ model Event {
   startTime  String?
   endTime    String?
   notes      String?
-  cost       Float?
-  orderIndex Int      @default(0)
-  lat        Float?
-  lng        Float?
-  createdBy  String
-  createdAt  DateTime @default(now())
+  cost         Float?
+  orderIndex   Int      @default(0)
+  lat          Float?
+  lng          Float?
+  destLocation String?
+  destLat      Float?
+  destLng      Float?
+  createdBy    String
+  createdAt    DateTime @default(now())
 
   day      Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
   creator  User      @relation(fields: [createdBy], references: [id])
@@ -112,4 +121,36 @@ model Note {
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
   user User @relation(fields: [updatedBy], references: [id])
+}
+
+model AvailabilityPoll {
+  id                String   @id @default(uuid())
+  tripId            String   @unique
+  rangeStart        DateTime
+  rangeEnd          DateTime
+  enabledBlocks     String[]
+  desiredLengthDays Int?
+  status            String   @default("open")
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+}
+
+model AvailabilitySlot {
+  id        String   @id @default(uuid())
+  tripId    String
+  userId    String
+  date      DateTime
+  block     String
+  status    String
+  source    String   @default("manual")
+  updatedAt DateTime @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId, date, block])
+  @@index([tripId])
 }

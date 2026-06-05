@@ -1,7 +1,9 @@
 import { getTripById } from "@/app/trips/actions";
 import { db } from "@/lib/prisma/db";
+import { getOrCreateDbUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { InviteForm } from "@/components/trips/InviteForm";
+import { MemberActions } from "@/components/trips/MemberActions";
 import { AvatarStack, avatarColor, initialsOf } from "@/components/shared/AvatarStack";
 
 interface Props {
@@ -15,6 +17,21 @@ export default async function MembersPage({ params }: Props) {
 
   const dateRange = `${new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
   const members = trip.members.map((m: (typeof trip.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" }));
+
+  // Current viewer (for owner-only controls) + which members are still pending
+  // sign-up (placeholder clerkId) so we can show a Resend control.
+  const dbUser = await getOrCreateDbUser();
+  const currentUserId = dbUser.id;
+  const isOwner = trip.members.some(
+    (m: (typeof trip.members)[number]) => m.userId === currentUserId && m.role === "owner"
+  );
+  const clerkRows = await db.tripMember.findMany({
+    where: { tripId },
+    select: { id: true, user: { select: { clerkId: true } } },
+  });
+  const pendingByMember = new Map(
+    clerkRows.map((r: (typeof clerkRows)[number]) => [r.id, r.user.clerkId.startsWith("pending_")])
+  );
 
   // Real per-member activity counts.
   const stats = await Promise.all(
@@ -58,9 +75,15 @@ export default async function MembersPage({ params }: Props) {
             ? `Created the trip · ${new Date(m.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
             : `Joined ${new Date(m.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
           const s = stats[i];
+          const isPending = pendingByMember.get(m.id) ?? false;
+          const canRemove = isOwner && m.role !== "owner";
           return (
             <div className="member-card" key={m.id}>
-              <span className={`role-badge ${role}`}>{role}</span>
+              {isPending ? (
+                <span className="role-badge pending">pending</span>
+              ) : (
+                <span className={`role-badge ${role}`}>{role}</span>
+              )}
               <div className="member-top">
                 <span className={`member-avatar ${avatarColor(m.id)}`}>{initialsOf(m.user?.name ?? "?")}</span>
                 <div style={{ minWidth: 0, paddingTop: 4 }}>
@@ -78,6 +101,13 @@ export default async function MembersPage({ params }: Props) {
                 <span>·</span>
                 <span style={{ textTransform: "capitalize" }}>{role}</span>
               </div>
+              <MemberActions
+                memberId={m.id}
+                tripId={tripId}
+                memberName={m.user?.name ?? "this traveler"}
+                isPending={isPending}
+                canRemove={canRemove}
+              />
             </div>
           );
         })}

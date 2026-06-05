@@ -1,13 +1,86 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma/db";
 import { inviteCollaboratorSchema } from "@/lib/validations";
 import { getOrCreateDbUser } from "@/lib/auth";
 
 const getDbUser = getOrCreateDbUser;
 
-export async function inviteCollaborator(data: { email: string; tripId: string }) {
+/**
+ * Resolve the app's base URL from the incoming request so invite links point at
+ * whatever host the app is actually served from (any port, preview, or prod
+ * domain) instead of a static env value that can drift. Falls back to
+ * NEXT_PUBLIC_APP_URL, then localhost.
+ */
+async function getAppOrigin(): Promise<string> {
+  try {
+    const h = await headers();
+    const host = h.get("host");
+    if (host) {
+      const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+      return `${proto}://${host}`;
+    }
+  } catch {
+    /* headers() unavailable — fall through */
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
+/**
+ * Send a real Clerk invitation email for a trip. Revokes any existing pending
+ * invitation for the address first, so a fresh email is actually delivered
+ * (createInvitation with ignoreExisting would otherwise silently reuse the old
+ * one without re-sending). Returns whether the email went out.
+ */
+async function sendTripInvitation(email: string, tripId: string): Promise<boolean> {
+  try {
+    const appUrl = await getAppOrigin();
+    // Point at the public sign-up page (which renders Clerk's <SignUp> and
+    // consumes the __clerk_ticket). Landing directly on the protected trip
+    // route would 404 before the invitee can create their account. The trip is
+    // carried via `after` so they land there once signed up.
+    const after = encodeURIComponent(`/trips/${tripId}/itinerary`);
+    const client = await clerkClient();
+
+    try {
+      const list = await client.invitations.getInvitationList({ status: "pending" });
+      await Promise.all(
+        list.data
+          .filter((inv) => inv.emailAddress.toLowerCase() === email && inv.status === "pending")
+          .map((inv) => client.invitations.revokeInvitation(inv.id))
+      );
+    } catch {
+      /* listing/revoking is best-effort — proceed to create regardless */
+    }
+
+    await client.invitations.createInvitation({
+      emailAddress: email,
+      redirectUrl: `${appUrl}/sign-up?after=${after}`,
+      publicMetadata: { tripId },
+      ignoreExisting: true,
+    });
+    return true;
+  } catch (err) {
+    console.error("Clerk invitation failed:", err);
+    return false;
+  }
+}
+
+export interface InviteResult {
+  ok: true;
+  emailSent: boolean;
+  existingUser: boolean;
+  alreadyMember: boolean;
+}
+
+export async function inviteCollaborator(data: {
+  email: string;
+  tripId: string;
+  role?: "editor" | "viewer";
+}): Promise<InviteResult> {
   const dbUser = await getDbUser();
 
   const member = await db.tripMember.findFirst({
@@ -16,16 +89,20 @@ export async function inviteCollaborator(data: { email: string; tripId: string }
   if (!member) throw new Error("Unauthorized");
 
   const validated = inviteCollaboratorSchema.parse(data);
+  const email = validated.email.toLowerCase().trim();
+  const role = validated.role ?? "editor";
 
-  let invitee = await db.user.findUnique({ where: { email: validated.email } });
+  let invitee = await db.user.findUnique({ where: { email } });
+
+  // "New to the app" = no row yet, or only a placeholder awaiting first sign-in.
+  const isNewToApp = !invitee || invitee.clerkId.startsWith("pending_");
 
   if (!invitee) {
-    // Create a placeholder user — they'll link their Clerk account on first sign-in
     invitee = await db.user.create({
       data: {
-        clerkId: `pending_${validated.email}`,
-        email: validated.email,
-        name: validated.email.split("@")[0],
+        clerkId: `pending_${email}`,
+        email,
+        name: email.split("@")[0],
         avatarUrl: null,
       },
     });
@@ -37,11 +114,52 @@ export async function inviteCollaborator(data: { email: string; tripId: string }
 
   if (!existing) {
     await db.tripMember.create({
-      data: { tripId: validated.tripId, userId: invitee.id, role: "editor" },
+      data: { tripId: validated.tripId, userId: invitee.id, role },
     });
   }
 
+  // Send a real invitation email via Clerk for users without an account yet.
+  // Existing Clerk users can't be "invited" (they'd get a duplicate error) —
+  // the trip membership above is enough; they'll see it on next sign-in.
+  const emailSent = isNewToApp ? await sendTripInvitation(email, validated.tripId) : false;
+
   revalidatePath(`/trips/${validated.tripId}/members`);
+
+  return {
+    ok: true,
+    emailSent,
+    existingUser: !isNewToApp,
+    alreadyMember: !!existing,
+  };
+}
+
+/**
+ * Re-send the invitation email to a member who hasn't signed up yet. Any trip
+ * member can trigger this (mirrors who can invite).
+ */
+export async function resendInvite(
+  memberId: string,
+  tripId: string
+): Promise<{ ok: true; emailSent: boolean; pending: boolean }> {
+  const dbUser = await getDbUser();
+
+  const requester = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
+  if (!requester) throw new Error("Unauthorized");
+
+  const target = await db.tripMember.findFirst({
+    where: { id: memberId, tripId },
+    include: { user: true },
+  });
+  if (!target) throw new Error("Member not found");
+
+  // Only placeholder (not-yet-signed-up) users can be re-invited.
+  if (!target.user.clerkId.startsWith("pending_")) {
+    return { ok: true, emailSent: false, pending: false };
+  }
+
+  const emailSent = await sendTripInvitation(target.user.email, tripId);
+  revalidatePath(`/trips/${tripId}/members`);
+  return { ok: true, emailSent, pending: true };
 }
 
 export async function removeMember(memberId: string, tripId: string) {
@@ -52,6 +170,7 @@ export async function removeMember(memberId: string, tripId: string) {
   });
   if (!requester) throw new Error("Only owners can remove members");
 
-  await db.tripMember.delete({ where: { id: memberId } });
+  // Scope the delete to this trip so a member id from another trip can't be hit.
+  await db.tripMember.deleteMany({ where: { id: memberId, tripId } });
   revalidatePath(`/trips/${tripId}/members`);
 }

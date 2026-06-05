@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useTransition } from "react";
 import { Icons } from "@/components/shared/Icons";
 import { AvatarStack } from "@/components/shared/AvatarStack";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
-import { updateTripBudget } from "@/app/trips/[tripId]/budget/actions";
+import { updateTripBudget, updateSplitWeights } from "@/app/trips/[tripId]/budget/actions";
 
 export interface BudgetExpense {
   id: string;
@@ -16,11 +16,20 @@ export interface BudgetExpense {
   eventTitle: string | null;
 }
 
+export interface SplitMember {
+  id: string;
+  userId: string;
+  name: string;
+  weight: number;
+  paid: number;
+}
+
 interface BudgetClientProps {
   tripId: string;
   totalBudget: number | null;
   eyebrow: string;
   members: { id: string; name: string }[];
+  splitMembers: SplitMember[];
   expenses: BudgetExpense[];
 }
 
@@ -104,7 +113,96 @@ function CategoryBlock({
   );
 }
 
-export function BudgetClient({ tripId, totalBudget, eyebrow, members, expenses }: BudgetClientProps) {
+function SplitSection({
+  tripId,
+  members,
+  totalSpent,
+}: {
+  tripId: string;
+  members: SplitMember[];
+  totalSpent: number;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [weights, setWeights] = useState<Record<string, string>>(
+    Object.fromEntries(members.map((m) => [m.id, String(m.weight)]))
+  );
+
+  const parsed = members.map((m) => Math.max(0, Number(weights[m.id]) || 0));
+  const sumW = parsed.reduce((s, w) => s + w, 0);
+  const n = members.length || 1;
+
+  const dirty = members.some((m) => (Number(weights[m.id]) || 0) !== m.weight);
+
+  function setW(id: string, v: string) {
+    setWeights((s) => ({ ...s, [id]: v }));
+  }
+
+  function resetEqual() {
+    setWeights(Object.fromEntries(members.map((m) => [m.id, "1"])));
+  }
+
+  function save() {
+    startTransition(async () => {
+      await updateSplitWeights({
+        tripId,
+        weights: members.map((m) => ({ memberId: m.id, weight: Math.max(0, Number(weights[m.id]) || 0) })),
+      });
+    });
+  }
+
+  return (
+    <div className="split-card">
+      <div className="split-head">
+        <div className="left">
+          <div className="label">Split between travelers</div>
+          <div className="sub">Set each person&apos;s share. Balances show who paid more or less than their portion.</div>
+        </div>
+        <button className="btn btn-ghost" onClick={resetEqual} disabled={isPending} type="button">
+          Reset to equal
+        </button>
+      </div>
+
+      <div className="split-rows">
+        {members.map((m, i) => {
+          const w = parsed[i];
+          const pct = sumW > 0 ? w / sumW : 1 / n;
+          const share = totalSpent * pct;
+          const balance = m.paid - share;
+          const rounded = Math.round(balance);
+          return (
+            <div className="split-row" key={m.id}>
+              <span className="who">{m.name}</span>
+              <div className="weight">
+                <input
+                  className="input mono"
+                  inputMode="decimal"
+                  value={weights[m.id] ?? ""}
+                  onChange={(e) => setW(m.id, e.target.value)}
+                  aria-label={`${m.name} share weight`}
+                />
+                <span className="pct">{(pct * 100).toFixed(0)}%</span>
+              </div>
+              <span className="share">{fmtMoney(share)}<span className="lbl">share</span></span>
+              <span className="paid">{fmtMoney(m.paid)}<span className="lbl">paid</span></span>
+              <span className={`balance ${rounded > 0 ? "pos" : rounded < 0 ? "neg" : "even"}`}>
+                {rounded > 0 ? `+${fmtMoney(rounded)}` : rounded < 0 ? `−${fmtMoney(Math.abs(rounded))}` : "settled"}
+                <span className="lbl">{rounded > 0 ? "owed" : rounded < 0 ? "owes" : ""}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="split-foot">
+        <button className="btn-cta" onClick={save} disabled={!dirty || isPending} type="button">
+          {isPending ? "Saving…" : "Save split"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembers, expenses }: BudgetClientProps) {
   const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; initial: ExpenseInitial | null }>({
     open: false,
     mode: "add",
@@ -117,6 +215,10 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, expenses }
   const remaining = budget - totalSpent;
   const pct = budget > 0 ? Math.min(100, (totalSpent / budget) * 100) : 0;
   const perPerson = members.length ? totalSpent / members.length : totalSpent;
+
+  // Is the budget shared equally, or has a custom split been set? Drives the
+  // hero summary so it stays in sync with the "Split between travelers" card.
+  const splitIsEqual = splitMembers.every((m) => m.weight === (splitMembers[0]?.weight ?? 1));
 
   const catTotals: Record<string, number> = {};
   for (const e of expenses) catTotals[e.category] = (catTotals[e.category] ?? 0) + e.amount;
@@ -172,11 +274,18 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, expenses }
             {remaining >= 0 ? `${fmtMoney(Math.max(0, remaining))} remaining` : `${fmtMoney(Math.abs(remaining))} over`}
           </span>
           {members.length > 1 && totalSpent > 0 && (
-            <span className="pp">
-              <span>≈</span>
-              <span className="num">{fmtMoney(perPerson)}</span>
-              <span>per person</span>
-            </span>
+            splitIsEqual ? (
+              <span className="pp">
+                <span>≈</span>
+                <span className="num">{fmtMoney(perPerson)}</span>
+                <span>per person</span>
+              </span>
+            ) : (
+              <span className="pp">
+                <span className="num">Custom split</span>
+                <span>see breakdown below</span>
+              </span>
+            )
           )}
         </div>
       </section>
@@ -202,6 +311,11 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, expenses }
           </div>
         </div>
       </div>
+
+      {/* Split between travelers */}
+      {splitMembers.length > 0 && (
+        <SplitSection tripId={tripId} members={splitMembers} totalSpent={totalSpent} />
+      )}
 
       {/* Breakdown bar */}
       {totalSpent > 0 && (
