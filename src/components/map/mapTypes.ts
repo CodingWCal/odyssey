@@ -11,6 +11,13 @@ export interface MapEvent {
   notes: string | null;
   lat: number;
   lng: number;
+  destLocation: string | null;
+  destLat: number | null;
+  destLng: number | null;
+  // Line to draw for point-to-point events (flight/transport). Either explicit
+  // (origin → arrival) or inferred for transport (origin → next stop same day).
+  routePath: [number, number][] | null;
+  routeInferred: boolean;
   dayId: string;
   dayLabel: string;
   dayDate: string;

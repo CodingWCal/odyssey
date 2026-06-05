@@ -17,27 +17,43 @@ function markerHtml(ev: MapEvent, active: boolean): string {
   return `<div class="od-marker ${active ? "active" : ""}" style="background:${color}"><span>${ev.globalIdx}</span></div>`;
 }
 
+/** Smaller ringed marker for a route's arrival endpoint (no number). */
+function destMarkerHtml(ev: MapEvent, active: boolean): string {
+  const color = TYPE_HEX[ev.type] ?? TYPE_HEX.misc;
+  return `<div class="od-marker dest ${active ? "active" : ""}" style="border-color:${color};color:${color}"><span>↓</span></div>`;
+}
+
+/** True when the event has an explicit arrival pin to render. */
+function hasDest(ev: MapEvent): boolean {
+  return ev.destLat != null && ev.destLng != null;
+}
+
 export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect }: LeafletMapProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const LRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
+  const destMarkersRef = useRef<Record<string, any>>({});
   const polylineRef = useRef<any>(null);
+  const flightLayersRef = useRef<any[]>([]);
   const [ready, setReady] = useState(false);
 
   // Keep latest onSelect without re-running the init effect.
   const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   // Init map once.
   useEffect(() => {
     let cancelled = false;
+    const el = elRef.current;
     (async () => {
       const L = (await import("leaflet")).default as any;
-      if (cancelled || !elRef.current) return;
-      if ((elRef.current as any)._leaflet_id) delete (elRef.current as any)._leaflet_id;
+      if (cancelled || !el) return;
+      if ((el as any)._leaflet_id) delete (el as any)._leaflet_id;
 
-      const map = L.map(elRef.current, { zoomControl: false, attributionControl: false }).setView([35.6, 139.5], 5);
+      const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([35.6, 139.5], 5);
       L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19 }).addTo(map);
       L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19, pane: "shadowPane" }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
@@ -49,7 +65,7 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     return () => {
       cancelled = true;
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
-      if (elRef.current) delete (elRef.current as any)._leaflet_id;
+      if (el) delete (el as any)._leaflet_id;
     };
   }, []);
 
@@ -62,6 +78,9 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     Object.values(markersRef.current).forEach((m: any) => map.removeLayer(m));
     markersRef.current = {};
     if (polylineRef.current) { map.removeLayer(polylineRef.current); polylineRef.current = null; }
+    flightLayersRef.current.forEach((l: any) => map.removeLayer(l));
+    flightLayersRef.current = [];
+    destMarkersRef.current = {};
 
     const filtered = events.filter((e) => activeDay === "all" || e.dayId === activeDay);
 
@@ -73,6 +92,29 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       m.on("click", () => onSelectRef.current(ev.id));
       m.addTo(map);
       markersRef.current[ev.id] = m;
+
+      // Point-to-point events (flight/transport): draw the path line, plus an
+      // arrival pin when the destination is explicit. Inferred transport lines
+      // are fainter and have no second pin.
+      if (ev.routePath) {
+        const color = TYPE_HEX[ev.type] ?? TYPE_HEX.misc;
+        const path = L.polyline(ev.routePath, ev.routeInferred
+          ? { color, weight: 2, opacity: 0.4, dashArray: "1 9" }
+          : { color, weight: 2.5, opacity: 0.75, dashArray: "2 7" }
+        ).addTo(map);
+        flightLayersRef.current.push(path);
+      }
+
+      if (hasDest(ev)) {
+        const active2 = selectedId === ev.id;
+        const destIcon = L.divIcon({ className: "", html: destMarkerHtml(ev, active2), iconSize: [28, 28], iconAnchor: [14, 28] });
+        const dm = L.marker([ev.destLat, ev.destLng], { icon: destIcon, zIndexOffset: active2 ? 1000 : 0 });
+        dm.bindTooltip(`${ev.globalIdx}. ${ev.title} — arrival${ev.destLocation ? `: ${ev.destLocation}` : ""}`, { className: "od-tip", direction: "top", offset: [0, -24] });
+        dm.on("click", () => onSelectRef.current(ev.id));
+        dm.addTo(map);
+        flightLayersRef.current.push(dm);
+        destMarkersRef.current[ev.id] = dm;
+      }
     });
 
     if (showRoute && filtered.length >= 2) {
@@ -81,10 +123,17 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       }).addTo(map);
     }
 
-    if (filtered.length === 1) {
-      map.setView([filtered[0].lat, filtered[0].lng], 13);
-    } else if (filtered.length > 1) {
-      const bounds = L.latLngBounds(filtered.map((e) => [e.lat, e.lng]));
+    // Bounds include flight arrival endpoints so both ends stay in view.
+    const points: [number, number][] = [];
+    filtered.forEach((e) => {
+      points.push([e.lat, e.lng]);
+      if (hasDest(e)) points.push([e.destLat as number, e.destLng as number]);
+    });
+
+    if (points.length === 1) {
+      map.setView(points[0], 13);
+    } else if (points.length > 1) {
+      const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [80, 80], maxZoom: activeDay === "all" ? 9 : 13 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,6 +151,15 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       m.setIcon(L.divIcon({ className: "", html: markerHtml(ev, active), iconSize: [32, 32], iconAnchor: [16, 32] }));
       m.setZIndexOffset(active ? 1000 : 0);
       if (active) map.panTo([ev.lat, ev.lng], { animate: true, duration: 0.5 });
+    });
+
+    // Mirror active styling onto flight arrival markers.
+    Object.entries(destMarkersRef.current).forEach(([id, m]: [string, any]) => {
+      const ev = events.find((e) => e.id === id);
+      if (!ev) return;
+      const active = selectedId === id;
+      m.setIcon(L.divIcon({ className: "", html: destMarkerHtml(ev, active), iconSize: [28, 28], iconAnchor: [14, 28] }));
+      m.setZIndexOffset(active ? 1000 : 0);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, selectedId]);

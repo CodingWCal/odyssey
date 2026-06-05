@@ -78,6 +78,13 @@ export const Icons = {
       <path d="M3 9h18M8 2v4M16 2v4M7 13h6M7 17h4" />
     </Base>
   ),
+  schedule: ({ size = 16 }: IconProps) => (
+    <Base size={size}>
+      <path d="M3 5.5A1.5 1.5 0 0 1 4.5 4h13A1.5 1.5 0 0 1 19 5.5V11M3 9h16M8 2v4M14 2v4" />
+      <circle cx="17" cy="17" r="4.5" />
+      <path d="M17 15v2l1.5 1" />
+    </Base>
+  ),
   map: ({ size = 16 }: IconProps) => (
     <Base size={size}>
       <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z" />

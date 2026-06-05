@@ -121,7 +121,12 @@ export function MapClient({ days, events, eyebrow, dayCount }: MapClientProps) {
             </div>
             <div className="card-meta">
               {selected.location && (
-                <span className="row"><Icons.pin size={13} /> {selected.location}</span>
+                <span className="row">
+                  <Icons.pin size={13} />{" "}
+                  {(selected.type === "flight" || selected.type === "transport") && selected.destLocation
+                    ? `${selected.location} → ${selected.destLocation}`
+                    : selected.location}
+                </span>
               )}
               {selected.startTime && (
                 <span className="row mono">

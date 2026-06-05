@@ -39,6 +39,11 @@ export default async function MapPage({ params }: Props) {
         notes: e.notes,
         lat: e.lat,
         lng: e.lng,
+        destLocation: e.destLocation,
+        destLat: e.destLat,
+        destLng: e.destLng,
+        routePath: null,
+        routeInferred: false,
         dayId: d.id,
         dayLabel,
         dayDate,
@@ -49,6 +54,24 @@ export default async function MapPage({ params }: Props) {
     });
     if (dayEvents.length > 0) {
       days.push({ id: d.id, label: dayLabel, dateShort: dayDate, events: dayEvents });
+    }
+  });
+
+  // Resolve route lines for point-to-point events (flight + transport):
+  //  - explicit arrival coords  -> solid origin → arrival line
+  //  - transport with no arrival -> inferred faint line to the next stop (same day)
+  allEvents.forEach((e: MapEvent, i: number) => {
+    const isRoute = e.type === "flight" || e.type === "transport";
+    if (!isRoute) return;
+    if (e.destLat != null && e.destLng != null) {
+      e.routePath = [[e.lat, e.lng], [e.destLat, e.destLng]];
+      e.routeInferred = false;
+    } else if (e.type === "transport") {
+      const next = allEvents[i + 1];
+      if (next && next.dayId === e.dayId) {
+        e.routePath = [[e.lat, e.lng], [next.lat, next.lng]];
+        e.routeInferred = true;
+      }
     }
   });
 

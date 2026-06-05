@@ -31,6 +31,9 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
     notes: existing?.notes ?? "",
     lat: existing?.lat ?? undefined as number | undefined,
     lng: existing?.lng ?? undefined as number | undefined,
+    destLocation: existing?.destLocation ?? "",
+    destLat: existing?.destLat ?? undefined as number | undefined,
+    destLng: existing?.destLng ?? undefined as number | undefined,
   });
 
   useEffect(() => {
@@ -45,6 +48,9 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
         notes: existing?.notes ?? "",
         lat: existing?.lat ?? undefined,
         lng: existing?.lng ?? undefined,
+        destLocation: existing?.destLocation ?? "",
+        destLat: existing?.destLat ?? undefined,
+        destLng: existing?.destLng ?? undefined,
       });
     }
   }, [open, existing]);
@@ -52,6 +58,11 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }));
   }
+
+  const isFlight = form.type === "flight";
+  // Flights and transport (Uber/Lyft, trains…) are point-to-point and get a
+  // second "To" endpoint; everything else has a single location.
+  const hasRoute = form.type === "flight" || form.type === "transport";
 
   function handleSave() {
     if (!form.title.trim()) return;
@@ -66,6 +77,11 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
         notes: form.notes || undefined,
         lat: form.lat,
         lng: form.lng,
+        // Arrival endpoint applies to route-type events. Send "" otherwise so
+        // switching away from flight/transport clears any stale destination.
+        destLocation: hasRoute ? form.destLocation || "" : "",
+        destLat: hasRoute ? form.destLat : undefined,
+        destLng: hasRoute ? form.destLng : undefined,
       };
       if (isEdit && existing) {
         await updateEvent(existing.id, payload);
@@ -132,15 +148,30 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
         </div>
 
         <div className="field">
-          <label htmlFor="ev-loc">Location</label>
+          <label htmlFor="ev-loc">
+            {isFlight ? "From (departure)" : hasRoute ? "From (pickup)" : "Location"}
+          </label>
           <LocationAutocomplete
             id="ev-loc"
             value={form.location}
-            placeholder="Narita International Airport"
+            placeholder={isFlight ? "John F. Kennedy International Airport" : hasRoute ? "Hotel lobby" : "Narita International Airport"}
             onChange={(text) => setForm((s) => ({ ...s, location: text }))}
             onPick={(s) => setForm((f) => ({ ...f, location: s.display, lat: s.lat, lng: s.lng }))}
           />
         </div>
+
+        {hasRoute && (
+          <div className="field">
+            <label htmlFor="ev-dest">{isFlight ? "To (arrival)" : "To (drop-off)"}</label>
+            <LocationAutocomplete
+              id="ev-dest"
+              value={form.destLocation}
+              placeholder={isFlight ? "Narita International Airport" : "Leave blank to use the next stop"}
+              onChange={(text) => setForm((s) => ({ ...s, destLocation: text }))}
+              onPick={(s) => setForm((f) => ({ ...f, destLocation: s.display, destLat: s.lat, destLng: s.lng }))}
+            />
+          </div>
+        )}
 
         <div className="field-row">
           <div className="field">
