@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma/db";
-import { createTripSchema, updateTripSchema } from "@/lib/validations";
+import { createTripSchema, updateTripSchema, createTripWizardSchema, type CreateTripWizardInput } from "@/lib/validations";
 import { getOrCreateDbUser } from "@/lib/auth";
 
 const getOrCreateUser = getOrCreateDbUser;
@@ -102,6 +102,49 @@ export async function createTrip(formData: FormData) {
 
   revalidatePath("/dashboard");
   redirect(`/trips/${trip.id}/itinerary`);
+}
+
+/**
+ * Create a trip from the multi-step new-trip wizard. Unlike createTrip, this
+ * returns the new trip id (no redirect) so the client can fire off invites and
+ * then navigate. Cover mood is stored as "grad:<index>" in coverImageUrl.
+ */
+export async function createTripWizard(
+  data: CreateTripWizardInput
+): Promise<{ tripId: string }> {
+  const dbUser = await getOrCreateUser();
+  const v = createTripWizardSchema.parse(data);
+
+  const start = new Date(v.startDate);
+  const end = new Date(v.endDate);
+
+  const trip = await db.trip.create({
+    data: {
+      ownerId: dbUser.id,
+      title: v.title,
+      destination: v.destination,
+      startDate: start,
+      endDate: end,
+      totalBudget: v.totalBudget ?? null,
+      coverImageUrl: v.coverIndex != null ? `grad:${v.coverIndex}` : null,
+      members: { create: { userId: dbUser.id, role: "owner" } },
+    },
+  });
+
+  // Auto-create a Day per calendar day of the trip (mirrors createTrip).
+  const days: Date[] = [];
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+  const endDay = new Date(end);
+  endDay.setHours(0, 0, 0, 0);
+  while (current <= endDay) {
+    days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  await db.day.createMany({ data: days.map((d) => ({ tripId: trip.id, date: d })) });
+
+  revalidatePath("/dashboard");
+  return { tripId: trip.id };
 }
 
 export async function updateTrip(tripId: string, formData: FormData) {

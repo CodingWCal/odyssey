@@ -3,7 +3,7 @@ import { db } from "@/lib/prisma/db";
 import { currentUser } from "@clerk/nextjs/server";
 import { DashboardClient } from "@/components/trips/DashboardClient";
 import type { DashTrip } from "@/components/trips/TripCard";
-import { coverGradient } from "@/components/trips/cover";
+import { resolveCover } from "@/components/trips/cover";
 
 function fmtDate(d: Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
       cost: t.totalBudget ?? 0,
       status,
       countdown,
-      cover: coverGradient(t.id),
+      cover: resolveCover(t.coverImageUrl, t.id),
       members: t.members.map((m: (typeof t.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" })),
     };
   });

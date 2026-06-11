@@ -1,6 +1,6 @@
 // Deterministic cover gradient for a trip, so a trip keeps the same look.
 
-const COVER_GRADIENTS = [
+export const COVER_GRADIENTS = [
   "linear-gradient(135deg, #F8C49A 0%, #E8B5C9 35%, #6F66B7 75%, #2A2F58 100%)",
   "linear-gradient(135deg, #F5D9B0 0%, #E68A6D 50%, #C9533F 100%)",
   "linear-gradient(135deg, #6CA9B5 0%, #4A6B8C 45%, #2A2F58 100%)",
@@ -17,4 +17,16 @@ export function coverGradient(seed: string): string {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = ((h << 5) - h + seed.charCodeAt(i)) & 0xffffffff;
   return COVER_GRADIENTS[Math.abs(h) % COVER_GRADIENTS.length];
+}
+
+/**
+ * Resolve a trip's cover: an explicitly chosen mood (stored as "grad:<index>"
+ * in coverImageUrl) wins; otherwise fall back to the deterministic gradient.
+ */
+export function resolveCover(coverImageUrl: string | null, seed: string): string {
+  if (coverImageUrl && coverImageUrl.startsWith("grad:")) {
+    const i = parseInt(coverImageUrl.slice(5), 10);
+    if (!Number.isNaN(i) && i >= 0 && i < COVER_GRADIENTS.length) return COVER_GRADIENTS[i];
+  }
+  return coverGradient(seed);
 }

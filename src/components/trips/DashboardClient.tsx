@@ -6,6 +6,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Icons } from "@/components/shared/Icons";
 import { AvatarStack } from "@/components/shared/AvatarStack";
 import { TripCard, type DashTrip } from "./TripCard";
+import { NewTripWizard } from "./NewTripWizard";
 
 function fmtMoney(n: number) {
   return "$" + Math.round(Number(n) || 0).toLocaleString("en-US");
@@ -20,13 +21,13 @@ function greeting() {
   return "Up late";
 }
 
-function NewTripCard() {
+function NewTripCard({ onClick }: { onClick: () => void }) {
   return (
-    <Link href="/trips/new" className="new-trip-card">
+    <button type="button" onClick={onClick} className="new-trip-card">
       <div className="plus-large"><Icons.plus size={20} /></div>
       <h3>Plan a new trip</h3>
       <p>Sketch out dates, destinations, and bring your people in.</p>
-    </Link>
+    </button>
   );
 }
 
@@ -70,6 +71,8 @@ function LiveCard({ trip }: { trip: DashTrip }) {
 
 export function DashboardClient({ firstName, trips }: { firstName: string; trips: DashTrip[] }) {
   const [query, setQuery] = useState("");
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const openWizard = () => setWizardOpen(true);
 
   const match = (t: DashTrip) =>
     !query.trim() ||
@@ -106,7 +109,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
             />
             <span className="kbd">⌘K</span>
           </div>
-          <Link href="/trips/new" className="btn-cta"><Icons.plus size={14} /> New trip</Link>
+          <button type="button" onClick={openWizard} className="btn-cta"><Icons.plus size={14} /> New trip</button>
           <UserButton />
         </div>
       </header>
@@ -135,7 +138,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
             </div>
             <div className="trip-grid">
               {upcoming.map((t) => <TripCard key={t.id} trip={t} />)}
-              <NewTripCard />
+              <NewTripCard onClick={openWizard} />
             </div>
           </>
         )}
@@ -153,7 +156,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
 
         {trips.length === 0 && (
           <div className="trip-grid">
-            <NewTripCard />
+            <NewTripCard onClick={openWizard} />
           </div>
         )}
 
@@ -166,6 +169,8 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
           </div>
         )}
       </main>
+
+      <NewTripWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </div>
   );
 }

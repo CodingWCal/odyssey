@@ -3059,3 +3059,104 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ac-item:first-child { border-top: 0; }
 .ac-item:hover, .ac-item.active { background: var(--peri-soft); color: var(--ink); }
 .ac-hint { padding: 9px 14px; font-size: 12px; color: var(--ink-3); }
+
+/* ============ New-trip wizard (modal) ============ */
+.modal:has(.wizard) { max-width: 560px; }
+.wizard { padding: 24px 30px 22px; }
+.wizard-head { display: flex; align-items: center; justify-content: space-between; }
+.wizard-tag {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+}
+.wizard-progress { display: flex; gap: 6px; margin: 16px 0 22px; }
+.wizard-progress .seg { flex: 1; height: 4px; border-radius: 999px; background: var(--paper-3); transition: background .25s ease; }
+.wizard-progress .seg.on { background: var(--ink); }
+.wizard-title { font-family: var(--font-display); font-size: 34px; line-height: 1.05; margin: 0 0 8px; color: var(--ink); }
+.wizard-title em { font-style: italic; color: var(--peri); }
+.wizard-sub { font-size: 13.5px; color: var(--ink-2); margin: 0 0 20px; }
+.wizard-body { display: flex; flex-direction: column; gap: 16px; }
+.wz-label {
+  font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600; margin-bottom: -9px;
+}
+
+/* Step 1 — destination chips + cover preview */
+.wz-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wz-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px; border: 1px solid var(--rule); border-radius: 999px;
+  background: var(--paper); font-size: 12.5px; color: var(--ink); cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.wz-chip:hover { border-color: var(--peri); background: var(--peri-soft); }
+.wz-chip .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.wz-chip .ct { color: var(--ink-3); }
+.wz-cover-preview {
+  height: 124px; border-radius: var(--radius-lg);
+  display: flex; align-items: flex-end; padding: 16px;
+  background-size: cover; background-position: center;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+}
+.wz-cover-preview span {
+  font-family: var(--font-display); font-style: italic; font-size: 15px;
+  color: rgba(255,255,255,.92); text-shadow: 0 1px 8px rgba(0,0,0,.25);
+}
+
+/* Step 2 — vibe presets + dates */
+.wz-vibes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wz-vibe {
+  text-align: left; padding: 14px 16px; cursor: pointer;
+  border: 1px solid var(--rule); border-radius: var(--radius-lg);
+  background: var(--paper); display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.wz-vibe:hover { border-color: var(--peri); }
+.wz-vibe.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.wz-vibe .vt { font-family: var(--font-display); font-size: 16px; color: var(--ink); }
+.wz-vibe .vm { font-size: 11.5px; color: var(--ink-3); font-family: var(--font-mono); }
+.wz-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wz-dates .field { display: flex; flex-direction: column; gap: 8px; }
+
+/* Step 3 — budget chips, invites, cover moods */
+.wz-budget-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wz-bchip {
+  padding: 6px 11px; border: 1px solid var(--rule); border-radius: 999px;
+  background: var(--paper); font-family: var(--font-mono); font-size: 12px;
+  color: var(--ink-2); cursor: pointer; transition: all .15s ease;
+}
+.wz-bchip:hover { border-color: var(--peri); }
+.wz-bchip.on { border-color: var(--ink); color: var(--ink); background: var(--paper-3); }
+.wz-invite-row { display: flex; gap: 8px; }
+.wz-invite-row .input { flex: 1; }
+.wz-add {
+  flex: none; padding: 0 14px; border: 1px solid var(--rule); border-radius: var(--radius-md);
+  background: var(--paper); color: var(--ink-2); font-size: 12.5px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+}
+.wz-add:hover { border-color: var(--peri); color: var(--peri); }
+.wz-invite-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.wz-tag {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px;
+  border-radius: 999px; background: var(--peri-soft); color: var(--peri); font-size: 12px;
+}
+.wz-tag button { display: inline-flex; align-items: center; border: 0; background: none; color: inherit; cursor: pointer; padding: 2px; }
+.wz-moods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.wz-mood {
+  height: 54px; border-radius: var(--radius-md); cursor: pointer;
+  border: 2px solid transparent; background-size: cover; background-position: center;
+  transition: transform .12s ease;
+}
+.wz-mood:hover { transform: translateY(-1px); }
+.wz-mood.on { box-shadow: 0 0 0 2px var(--paper-2), 0 0 0 4px var(--ink); }
+
+/* Footer */
+.wizard-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.wz-back { background: none; border: 0; color: var(--ink-2); font-size: 13px; cursor: pointer; }
+.wz-back:hover { color: var(--ink); }
+.wz-count { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); margin-left: auto; margin-right: 14px; }
+.wz-next {
+  background: var(--ink); color: var(--paper); border: 0; border-radius: var(--radius-md);
+  padding: 11px 20px; font-weight: 600; font-size: 13.5px; cursor: pointer;
+  transition: opacity .15s ease;
+}
+.wz-next:disabled { opacity: .45; cursor: default; }
