@@ -11,6 +11,16 @@ export const createTripSchema = z.object({
 
 export const updateTripSchema = createTripSchema.partial();
 
+export const createTripWizardSchema = z.object({
+  title: z.string().min(1, "Trip name is required").max(100),
+  destination: z.string().min(1, "Destination is required").max(200),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  totalBudget: z.coerce.number().min(0).optional(),
+  coverIndex: z.coerce.number().int().min(0).max(7).optional(),
+  invites: z.array(z.string().email()).optional(),
+});
+
 export const createEventSchema = z.object({
   dayId: z.string().min(1),
   tripId: z.string().min(1),
@@ -88,6 +98,7 @@ export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type InviteCollaboratorInput = z.infer<typeof inviteCollaboratorSchema>;
 export type UpdateSplitInput = z.infer<typeof updateSplitSchema>;
+export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;
 export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;
