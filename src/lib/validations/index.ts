@@ -81,13 +81,18 @@ export const createPollSchema = z.object({
 
 export const setSlotsSchema = z.object({
   tripId: z.string().min(1),
-  slots: z.array(
-    z.object({
-      date: z.string().min(1),
-      block: z.enum(["all_day", "morning", "afternoon", "evening"]),
-      status: z.enum(["available", "maybe", "unavailable"]),
-    })
-  ),
+  // Cap the batch: a poll spans at most a few months × 4 blocks. 2000 is a
+  // generous ceiling that prevents a member from forcing an enormous
+  // upsert transaction (DoS).
+  slots: z
+    .array(
+      z.object({
+        date: z.string().min(1),
+        block: z.enum(["all_day", "morning", "afternoon", "evening"]),
+        status: z.enum(["available", "maybe", "unavailable"]),
+      })
+    )
+    .max(2000),
 });
 
 export const applyWindowSchema = z.object({
