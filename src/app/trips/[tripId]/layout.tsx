@@ -14,7 +14,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
 
   return (
     <div className="app-shell">
-      <WorkspaceSidebar trip={trip} />
+      <WorkspaceSidebar trip={trip} canEdit={trip.myRole !== "viewer"} />
       <main className="main">{children}</main>
     </div>
   );

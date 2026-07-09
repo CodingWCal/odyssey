@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma/db";
 import { inviteCollaboratorSchema } from "@/lib/validations";
-import { getOrCreateDbUser } from "@/lib/auth";
+import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 
 const getDbUser = getOrCreateDbUser;
 
@@ -46,12 +46,27 @@ async function sendTripInvitation(email: string, tripId: string): Promise<boolea
     const client = await clerkClient();
 
     try {
-      const list = await client.invitations.getInvitationList({ status: "pending" });
-      await Promise.all(
-        list.data
-          .filter((inv) => inv.emailAddress.toLowerCase() === email && inv.status === "pending")
-          .map((inv) => client.invitations.revokeInvitation(inv.id))
-      );
+      // Paginate through ALL pending invitations — the default page size (10)
+      // would otherwise hide the stale invite and no fresh email would go out
+      // (ODY-006).
+      const pageSize = 100;
+      let offset = 0;
+      const toRevoke: string[] = [];
+      for (;;) {
+        const page = await client.invitations.getInvitationList({
+          status: "pending",
+          limit: pageSize,
+          offset,
+        });
+        for (const inv of page.data) {
+          if (inv.emailAddress.toLowerCase() === email && inv.status === "pending") {
+            toRevoke.push(inv.id);
+          }
+        }
+        if (page.data.length < pageSize) break;
+        offset += pageSize;
+      }
+      await Promise.all(toRevoke.map((id) => client.invitations.revokeInvitation(id)));
     } catch {
       /* listing/revoking is best-effort — proceed to create regardless */
     }
@@ -83,10 +98,8 @@ export async function inviteCollaborator(data: {
 }): Promise<InviteResult> {
   const dbUser = await getDbUser();
 
-  const member = await db.tripMember.findFirst({
-    where: { tripId: data.tripId, userId: dbUser.id },
-  });
-  if (!member) throw new Error("Unauthorized");
+  // Inviting requires editor+ — viewers can't grow the member list (ODY-001).
+  await assertTripRole(data.tripId, dbUser.id, "editor");
 
   const validated = inviteCollaboratorSchema.parse(data);
   const email = validated.email.toLowerCase().trim();
@@ -143,8 +156,7 @@ export async function resendInvite(
 ): Promise<{ ok: true; emailSent: boolean; pending: boolean }> {
   const dbUser = await getDbUser();
 
-  const requester = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
-  if (!requester) throw new Error("Unauthorized");
+  await assertTripRole(tripId, dbUser.id, "editor"); // mirrors who can invite (ODY-001)
 
   const target = await db.tripMember.findFirst({
     where: { id: memberId, tripId },

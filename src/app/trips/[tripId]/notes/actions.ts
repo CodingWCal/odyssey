@@ -2,15 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
-import { getOrCreateDbUser } from "@/lib/auth";
+import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 
 const getDbUser = getOrCreateDbUser;
 
 export async function upsertNote(tripId: string, content: object) {
   const dbUser = await getDbUser();
 
-  const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
-  if (!member) throw new Error("Unauthorized");
+  await assertTripRole(tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
 
   await db.note.upsert({
     where: { tripId },

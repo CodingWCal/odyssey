@@ -59,7 +59,7 @@ export default async function MembersPage({ params }: Props) {
           </div>
         </div>
         <div className="hero-row">
-          <span>Everyone here can edit the itinerary, log expenses, and leave notes.</span>
+          <span>Editors can edit the itinerary, log expenses, and leave notes. Viewers follow along read-only.</span>
         </div>
       </section>
 
@@ -105,7 +105,7 @@ export default async function MembersPage({ params }: Props) {
                 memberId={m.id}
                 tripId={tripId}
                 memberName={m.user?.name ?? "this traveler"}
-                isPending={isPending}
+                isPending={isPending && trip.myRole !== "viewer"}
                 canRemove={canRemove}
               />
             </div>
@@ -113,11 +113,13 @@ export default async function MembersPage({ params }: Props) {
         })}
       </div>
 
-      <div className="invite-card">
-        <h3>Invite a <em>friend</em></h3>
-        <p className="sub">They&apos;ll get an email with a link to join. No account needed yet — they sign up after clicking.</p>
-        <InviteForm tripId={tripId} />
-      </div>
+      {trip.myRole !== "viewer" && (
+        <div className="invite-card">
+          <h3>Invite a <em>friend</em></h3>
+          <p className="sub">They&apos;ll get an email with a link to join. No account needed yet — they sign up after clicking.</p>
+          <InviteForm tripId={tripId} />
+        </div>
+      )}
     </div>
   );
 }

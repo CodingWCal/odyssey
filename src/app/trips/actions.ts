@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma/db";
 import { createTripSchema, updateTripSchema, createTripWizardSchema, type CreateTripWizardInput } from "@/lib/validations";
-import { getOrCreateDbUser } from "@/lib/auth";
+import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 
 const getOrCreateUser = getOrCreateDbUser;
 
@@ -54,7 +54,14 @@ export async function getTripById(tripId: string) {
     },
   });
 
-  return trip;
+  if (!trip) return null;
+
+  // Surface the caller's own role so pages can hide edit affordances for
+  // viewers (ODY-001). Server actions enforce this regardless.
+  const myRole = (trip.members.find((m) => m.userId === dbUser.id)?.role ??
+    "viewer") as "owner" | "editor" | "viewer";
+
+  return { ...trip, myRole };
 }
 
 export async function createTrip(formData: FormData) {
@@ -140,11 +147,8 @@ export async function createTripWizard(
 export async function updateTrip(tripId: string, formData: FormData) {
   const dbUser = await getOrCreateUser();
 
-  // Any trip member can edit shared trip details (e.g. the name).
-  const member = await db.tripMember.findFirst({
-    where: { tripId, userId: dbUser.id },
-  });
-  if (!member) throw new Error("Unauthorized");
+  // Any editor+ can edit shared trip details; viewers are read-only (ODY-001).
+  await assertTripRole(tripId, dbUser.id, "editor");
 
   const raw = {
     title: formData.get("title") || undefined,

@@ -54,6 +54,7 @@ export default async function BudgetPage({ params }: Props) {
       members={members}
       splitMembers={splitMembers}
       expenses={expenses}
+      readOnly={trip.myRole === "viewer"}
     />
   );
 }

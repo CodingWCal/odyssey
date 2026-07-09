@@ -8,13 +8,15 @@ interface DayNotesProps {
   dayId: string;
   tripId: string;
   initialNotes: string | null;
+  /** Viewers can read but not edit day notes (ODY-001). */
+  readOnly?: boolean;
 }
 
 /**
  * Slim per-day note (`.day-notes`), autosaving on blur. Matches the design's
  * day-level note panel.
  */
-export function DayNotes({ dayId, tripId, initialNotes }: DayNotesProps) {
+export function DayNotes({ dayId, tripId, initialNotes, readOnly = false }: DayNotesProps) {
   const [value, setValue] = useState(initialNotes ?? "");
   const [, startTransition] = useTransition();
   const lastSaved = useRef(initialNotes ?? "");
@@ -34,10 +36,11 @@ export function DayNotes({ dayId, tripId, initialNotes }: DayNotesProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => save(value)}
-        placeholder="A note for this day…"
+        placeholder={readOnly ? "No note for this day." : "A note for this day…"}
         rows={1}
+        readOnly={readOnly}
       />
-      {value && (
+      {value && !readOnly && (
         <button
           className="icon-btn"
           aria-label="Clear day note"

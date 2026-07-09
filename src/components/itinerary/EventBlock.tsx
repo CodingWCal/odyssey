@@ -21,9 +21,11 @@ interface EventBlockProps {
   tripId: string;
   isDragging?: boolean;
   dragHandle?: React.ReactNode;
+  /** Viewers see events without edit/delete controls (ODY-001). */
+  readOnly?: boolean;
 }
 
-export function EventBlock({ event, tripId, isDragging, dragHandle }: EventBlockProps) {
+export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false }: EventBlockProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
@@ -53,14 +55,16 @@ export function EventBlock({ event, tripId, isDragging, dragHandle }: EventBlock
               <div className="event-headline">
                 <TypeBadge type={event.type} />
                 <h4 className="event-title">{event.title}</h4>
-                <div className="event-actions">
-                  <button className="icon-btn" title="Edit event" aria-label="Edit event" onClick={() => setEditOpen(true)}>
-                    <Icons.edit size={14} />
-                  </button>
-                  <button className="icon-btn danger" title="Delete event" aria-label="Delete event" onClick={handleDelete} disabled={isPending}>
-                    <Icons.trash size={14} />
-                  </button>
-                </div>
+                {!readOnly && (
+                  <div className="event-actions">
+                    <button className="icon-btn" title="Edit event" aria-label="Edit event" onClick={() => setEditOpen(true)}>
+                      <Icons.edit size={14} />
+                    </button>
+                    <button className="icon-btn danger" title="Delete event" aria-label="Delete event" onClick={handleDelete} disabled={isPending}>
+                      <Icons.trash size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {(event.location || event.cost != null) && (

@@ -26,9 +26,11 @@ function formatRange(start: Date, end: Date): string {
 
 interface WorkspaceSidebarProps {
   trip: { id: string; title: string; destination: string; startDate: Date; endDate: Date };
+  /** Viewers can't edit trip details (ODY-001). */
+  canEdit?: boolean;
 }
 
-export function WorkspaceSidebar({ trip }: WorkspaceSidebarProps) {
+export function WorkspaceSidebar({ trip, canEdit = true }: WorkspaceSidebarProps) {
   const pathname = usePathname();
   const [editOpen, setEditOpen] = useState(false);
 
@@ -46,14 +48,16 @@ export function WorkspaceSidebar({ trip }: WorkspaceSidebarProps) {
       <div className="trip-meta">
         <div className="title-row">
           <h1 className="title">{trip.title}</h1>
-          <button
-            className="icon-btn"
-            onClick={() => setEditOpen(true)}
-            aria-label="Edit trip name"
-            title="Edit trip name"
-          >
-            <Icons.edit size={13} />
-          </button>
+          {canEdit && (
+            <button
+              className="icon-btn"
+              onClick={() => setEditOpen(true)}
+              aria-label="Edit trip name"
+              title="Edit trip name"
+            >
+              <Icons.edit size={13} />
+            </button>
+          )}
         </div>
         <span className="dest">
           <Icons.pin size={11} /> {trip.destination} · {formatRange(trip.startDate, trip.endDate)}
