@@ -7,13 +7,15 @@ import { Icons } from "@/components/shared/Icons";
 interface TripNotesProps {
   tripId: string;
   initialText: string;
+  /** Viewers can read but not edit trip notes (ODY-001). */
+  readOnly?: boolean;
 }
 
 /**
  * Pinned trip-level notes card (`.notes-card`). Autosaves on blur to the Note
  * model as plain text (`{ text }`).
  */
-export function TripNotes({ tripId, initialText }: TripNotesProps) {
+export function TripNotes({ tripId, initialText, readOnly = false }: TripNotesProps) {
   const [value, setValue] = useState(initialText);
   const [focused, setFocused] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -48,8 +50,9 @@ export function TripNotes({ tripId, initialText }: TripNotesProps) {
         onChange={(e) => setValue(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => { setFocused(false); save(); }}
-        placeholder="What's the vibe? Confirmations, must-knows, packing reminders…"
+        placeholder={readOnly ? "No trip notes yet." : "What's the vibe? Confirmations, must-knows, packing reminders…"}
         rows={2}
+        readOnly={readOnly}
       />
     </div>
   );

@@ -33,3 +33,23 @@ export async function getOrCreateDbUser() {
     data: { clerkId: user.id, email, name, avatarUrl },
   });
 }
+
+export type TripRole = "viewer" | "editor" | "owner";
+
+const ROLE_RANK: Record<TripRole, number> = { viewer: 0, editor: 1, owner: 2 };
+
+/**
+ * Assert the user is a member of the trip with at least `minRole`
+ * (owner > editor > viewer). Viewers are read-only: every mutating server
+ * action must require at least "editor" (ODY-001). Returns the membership row.
+ */
+export async function assertTripRole(
+  tripId: string,
+  userId: string,
+  minRole: TripRole = "viewer"
+) {
+  const member = await db.tripMember.findFirst({ where: { tripId, userId } });
+  const rank = ROLE_RANK[member?.role as TripRole] ?? -1;
+  if (!member || rank < ROLE_RANK[minRole]) throw new Error("Unauthorized");
+  return member;
+}

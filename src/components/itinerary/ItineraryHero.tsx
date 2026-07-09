@@ -16,6 +16,8 @@ interface ItineraryHeroProps {
   totalDays: number;
   totalEvents: number;
   trip: { startDate: Date; endDate: Date };
+  /** Viewers can't edit trip details (ODY-001). */
+  canEdit?: boolean;
 }
 
 const CONDITION_ICONS: Record<string, string> = {
@@ -34,6 +36,7 @@ export function ItineraryHero({
   totalDays,
   totalEvents,
   trip,
+  canEdit = true,
 }: ItineraryHeroProps) {
   const [editOpen, setEditOpen] = useState(false);
 
@@ -45,14 +48,16 @@ export function ItineraryHero({
             <div className="hero-eyebrow">{destination} · {dateRange}</div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <h1 className="hero-title">{titleParts.head}<em>{titleParts.tail}</em></h1>
-              <button
-                className="icon-btn"
-                onClick={() => setEditOpen(true)}
-                aria-label="Edit trip"
-                title="Edit trip details"
-              >
-                <Icons.edit size={16} />
-              </button>
+              {canEdit && (
+                <button
+                  className="icon-btn"
+                  onClick={() => setEditOpen(true)}
+                  aria-label="Edit trip"
+                  title="Edit trip details"
+                >
+                  <Icons.edit size={16} />
+                </button>
+              )}
             </div>
           </div>
           {members.length > 0 && (

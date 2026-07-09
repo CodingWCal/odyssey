@@ -30,6 +30,7 @@ export default async function ItineraryPage({ params }: Props) {
   const { head, tail } = titleParts(trip.title);
   const noteContent = trip.note?.content as { text?: string } | null;
   const noteText = typeof noteContent?.text === "string" ? noteContent.text : "";
+  const readOnly = trip.myRole === "viewer"; // ODY-001
 
   return (
     <div className="canvas">
@@ -44,9 +45,10 @@ export default async function ItineraryPage({ params }: Props) {
         totalDays={trip.days.length}
         totalEvents={totalEvents}
         trip={{ startDate: trip.startDate, endDate: trip.endDate }}
+        canEdit={!readOnly}
       />
 
-      <TripNotes tripId={tripId} initialText={noteText} />
+      <TripNotes tripId={tripId} initialText={noteText} readOnly={readOnly} />
 
       {trip.days.length === 0 ? (
         <div style={{ textAlign: "center", padding: "64px 24px", background: "var(--paper-2)", borderRadius: "var(--radius-xl)", border: "1px solid var(--rule)" }}>
@@ -56,7 +58,7 @@ export default async function ItineraryPage({ params }: Props) {
         </div>
       ) : (
         trip.days.map((day: (typeof trip.days)[number], index: number) => (
-          <DayBlock key={day.id} day={day as TripDay} tripId={tripId} dayNumber={index + 1} />
+          <DayBlock key={day.id} day={day as TripDay} tripId={tripId} dayNumber={index + 1} readOnly={readOnly} />
         ))
       )}
     </div>

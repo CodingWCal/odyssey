@@ -26,8 +26,8 @@ import { Icons } from "@/components/shared/Icons";
 import type { TripDay } from "@/types";
 import { formatDate } from "@/lib/utils";
 
-function SortableEvent({ event, tripId }: { event: TripDay["events"][number]; tripId: string }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: event.id });
+function SortableEvent({ event, tripId, readOnly }: { event: TripDay["events"][number]; tripId: string; readOnly?: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: event.id, disabled: readOnly });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
@@ -36,10 +36,13 @@ function SortableEvent({ event, tripId }: { event: TripDay["events"][number]; tr
         event={event}
         tripId={tripId}
         isDragging={isDragging}
+        readOnly={readOnly}
         dragHandle={
-          <span {...listeners} className="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
-            <Icons.drag size={14} />
-          </span>
+          readOnly ? undefined : (
+            <span {...listeners} className="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
+              <Icons.drag size={14} />
+            </span>
+          )
         }
       />
     </div>
@@ -50,9 +53,11 @@ interface DayBlockProps {
   day: TripDay;
   tripId: string;
   dayNumber: number;
+  /** Viewers get a read-only itinerary (ODY-001). */
+  readOnly?: boolean;
 }
 
-export function DayBlock({ day, tripId, dayNumber }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockProps) {
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -111,29 +116,31 @@ export function DayBlock({ day, tripId, dayNumber }: DayBlockProps) {
       </header>
 
       <div className="day-body" ref={bodyRef} style={{ maxHeight: maxH }}>
-        <DayNotes dayId={day.id} tripId={tripId} initialNotes={day.notes} />
+        <DayNotes dayId={day.id} tripId={tripId} initialNotes={day.notes} readOnly={readOnly} />
 
         <DndContext id={`dnd-day-${day.id}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
             <div className="timeline">
               {events.length === 0 && (
                 <p style={{ color: "var(--ink-3)", fontStyle: "italic", fontSize: 13, padding: "12px 0" }}>
-                  No events yet — add your first one below.
+                  {readOnly ? "No events planned for this day yet." : "No events yet — add your first one below."}
                 </p>
               )}
               {events.map((event) => (
-                <SortableEvent key={event.id} event={event} tripId={tripId} />
+                <SortableEvent key={event.id} event={event} tripId={tripId} readOnly={readOnly} />
               ))}
             </div>
           </SortableContext>
         </DndContext>
 
-        <div style={{ marginLeft: 38, marginTop: 8 }}>
-          <button className="add-event" onClick={(e) => { e.stopPropagation(); setAddOpen(true); }}>
-            <span className="plus"><Icons.plus size={12} /></span>
-            <span>Add event to Day {dayNumber}</span>
-          </button>
-        </div>
+        {!readOnly && (
+          <div style={{ marginLeft: 38, marginTop: 8 }}>
+            <button className="add-event" onClick={(e) => { e.stopPropagation(); setAddOpen(true); }}>
+              <span className="plus"><Icons.plus size={12} /></span>
+              <span>Add event to Day {dayNumber}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <AddEventModal

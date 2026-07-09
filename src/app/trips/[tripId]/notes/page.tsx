@@ -24,7 +24,9 @@ export default async function NotesPage({ params }: Props) {
           Trip <em style={{ fontStyle: "italic", color: "var(--peri)" }}>notes</em>
         </h1>
         <p style={{ color: "var(--ink-2)", fontSize: 13.5, margin: 0 }}>
-          Shared pad for the whole crew. Autosaves on blur.
+          {trip.myRole === "viewer"
+            ? "Shared pad for the whole crew. You have view-only access."
+            : "Shared pad for the whole crew. Autosaves on blur."}
         </p>
       </div>
 
@@ -37,6 +39,7 @@ export default async function NotesPage({ params }: Props) {
           initialContent={note?.content as object | null}
           lastUpdated={note?.updatedAt ?? null}
           lastUpdatedBy={note?.user?.name ?? null}
+          readOnly={trip.myRole === "viewer"}
         />
       </div>
     </div>

@@ -4,13 +4,13 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { createEventSchema, updateEventSchema } from "@/lib/validations";
-import { getOrCreateDbUser } from "@/lib/auth";
+import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 
 const getDbUser = getOrCreateDbUser;
 
+// All itinerary mutations require editor+ — viewers are read-only (ODY-001).
 async function assertTripAccess(tripId: string, userId: string) {
-  const member = await db.tripMember.findFirst({ where: { tripId, userId } });
-  if (!member) throw new Error("Unauthorized");
+  await assertTripRole(tripId, userId, "editor");
 }
 
 /**

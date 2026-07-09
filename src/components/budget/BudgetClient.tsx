@@ -31,6 +31,8 @@ interface BudgetClientProps {
   members: { id: string; name: string }[];
   splitMembers: SplitMember[];
   expenses: BudgetExpense[];
+  /** Viewers get a read-only budget (ODY-001). */
+  readOnly?: boolean;
 }
 
 function fmtMoney(n: number) {
@@ -44,6 +46,7 @@ function CategoryBlock({
   grandTotal,
   onAdd,
   onEdit,
+  readOnly,
 }: {
   category: Category;
   expenses: BudgetExpense[];
@@ -51,6 +54,7 @@ function CategoryBlock({
   grandTotal: number;
   onAdd: (c: Category) => void;
   onEdit: (e: BudgetExpense) => void;
+  readOnly?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -98,16 +102,20 @@ function CategoryBlock({
                 <span className="sub">Paid by {e.who}{e.eventTitle ? ` · linked to "${e.eventTitle}"` : ""}</span>
               </div>
               <div className="amount">{fmtMoney(e.amount)}</div>
-              <div className="row-actions">
-                <button className="icon-btn" onClick={() => onEdit(e)} aria-label="Edit"><Icons.edit size={13} /></button>
-              </div>
+              {!readOnly && (
+                <div className="row-actions">
+                  <button className="icon-btn" onClick={() => onEdit(e)} aria-label="Edit"><Icons.edit size={13} /></button>
+                </div>
+              )}
             </div>
           ))}
         </div>
-        <button className="cat-add" onClick={() => onAdd(category)}>
-          <span className="plus"><Icons.plus size={12} /></span>
-          <span>Add {CAT_LABEL[category].toLowerCase()} expense</span>
-        </button>
+        {!readOnly && (
+          <button className="cat-add" onClick={() => onAdd(category)}>
+            <span className="plus"><Icons.plus size={12} /></span>
+            <span>Add {CAT_LABEL[category].toLowerCase()} expense</span>
+          </button>
+        )}
       </div>
     </section>
   );
@@ -202,7 +210,7 @@ function SplitSection({
   );
 }
 
-export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembers, expenses }: BudgetClientProps) {
+export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembers, expenses, readOnly = false }: BudgetClientProps) {
   const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; initial: ExpenseInitial | null }>({
     open: false,
     mode: "add",
@@ -291,29 +299,31 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
       </section>
 
       {/* Trip budget editor */}
-      <div className="budget-set">
-        <div className="left">
-          <div className="label">Trip budget</div>
-          <div className="sub">A soft ceiling — we&apos;ll warn before you blow past it.</div>
-        </div>
-        <div className="right">
-          <div className="input-with-prefix">
-            <span className="prefix">$</span>
-            <input
-              className="input mono"
-              inputMode="decimal"
-              value={budgetVal}
-              onChange={(e) => setBudgetVal(e.target.value)}
-              onBlur={saveBudget}
-              onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
-              placeholder="0"
-            />
+      {!readOnly && (
+        <div className="budget-set">
+          <div className="left">
+            <div className="label">Trip budget</div>
+            <div className="sub">A soft ceiling — we&apos;ll warn before you blow past it.</div>
+          </div>
+          <div className="right">
+            <div className="input-with-prefix">
+              <span className="prefix">$</span>
+              <input
+                className="input mono"
+                inputMode="decimal"
+                value={budgetVal}
+                onChange={(e) => setBudgetVal(e.target.value)}
+                onBlur={saveBudget}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
+                placeholder="0"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Split between travelers */}
-      {splitMembers.length > 0 && (
+      {splitMembers.length > 0 && !readOnly && (
         <SplitSection tripId={tripId} members={splitMembers} totalSpent={totalSpent} />
       )}
 
@@ -352,9 +362,11 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
       {/* By category */}
       <div className="page-bar">
         <h2>By category</h2>
-        <button className="btn-cta" onClick={() => openAdd(null)}>
-          <Icons.plus size={14} /> Add expense
-        </button>
+        {!readOnly && (
+          <button className="btn-cta" onClick={() => openAdd(null)}>
+            <Icons.plus size={14} /> Add expense
+          </button>
+        )}
       </div>
 
       {byCategory.length === 0 ? (
@@ -373,6 +385,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
             grandTotal={totalSpent}
             onAdd={openAdd}
             onEdit={openEdit}
+            readOnly={readOnly}
           />
         ))
       )}

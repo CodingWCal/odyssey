@@ -10,11 +10,14 @@ interface TiptapEditorProps {
   initialContent: object | null;
   lastUpdated: Date | null;
   lastUpdatedBy: string | null;
+  /** Viewers can read but not edit notes (ODY-001). */
+  readOnly?: boolean;
 }
 
-export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedBy }: TiptapEditorProps) {
+export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedBy, readOnly = false }: TiptapEditorProps) {
   const editor = useEditor({
     extensions: [StarterKit],
+    editable: !readOnly,
     content: initialContent ?? { type: "doc", content: [{ type: "paragraph" }] },
     editorProps: {
       attributes: {
@@ -26,9 +29,9 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
   });
 
   const handleBlur = useCallback(async () => {
-    if (!editor) return;
+    if (!editor || readOnly) return;
     await upsertNote(tripId, editor.getJSON());
-  }, [editor, tripId]);
+  }, [editor, tripId, readOnly]);
 
   useEffect(() => {
     if (!editor) return;
@@ -38,7 +41,7 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
 
   return (
     <div>
-      {editor && (
+      {editor && !readOnly && (
         <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
           {[
             { action: () => editor.chain().focus().toggleBold().run(), label: "Bold", active: editor.isActive("bold"), text: "B" },

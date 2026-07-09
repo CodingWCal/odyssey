@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
 import { createExpenseSchema, updateSplitSchema, updateBudgetSchema, type UpdateSplitInput } from "@/lib/validations";
-import { getOrCreateDbUser } from "@/lib/auth";
+import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 
 const getDbUser = getOrCreateDbUser;
 
@@ -15,8 +15,7 @@ export async function createExpense(data: {
   category: string;
 }) {
   const dbUser = await getDbUser();
-  const member = await db.tripMember.findFirst({ where: { tripId: data.tripId, userId: dbUser.id } });
-  if (!member) throw new Error("Unauthorized");
+  await assertTripRole(data.tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
 
   const validated = createExpenseSchema.parse(data);
 
@@ -41,8 +40,7 @@ export async function updateExpense(
   data: { label: string; amount: number; category: string }
 ) {
   const dbUser = await getDbUser();
-  const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
-  if (!member) throw new Error("Unauthorized");
+  await assertTripRole(tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
 
   // Scope to the trip so an expense id from another trip can't be edited.
   await db.expense.updateMany({
@@ -54,8 +52,7 @@ export async function updateExpense(
 
 export async function deleteExpense(expenseId: string, tripId: string) {
   const dbUser = await getDbUser();
-  const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
-  if (!member) throw new Error("Unauthorized");
+  await assertTripRole(tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
 
   // Scope to the trip so an expense id from another trip can't be deleted.
   await db.expense.deleteMany({ where: { id: expenseId, tripId } });
@@ -64,10 +61,9 @@ export async function deleteExpense(expenseId: string, tripId: string) {
 
 export async function updateTripBudget(tripId: string, totalBudget: number) {
   const dbUser = await getDbUser();
-  // Any trip member can adjust the budget ceiling at any point (consistent with
-  // expense editing), not just the owner.
-  const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
-  if (!member) throw new Error("Unauthorized");
+  // Any editor+ can adjust the budget ceiling (consistent with expense
+  // editing), not just the owner.
+  await assertTripRole(tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
 
   const validated = updateBudgetSchema.parse({ tripId, totalBudget });
 
@@ -77,8 +73,7 @@ export async function updateTripBudget(tripId: string, totalBudget: number) {
 
 export async function updateSplitWeights(data: UpdateSplitInput) {
   const dbUser = await getDbUser();
-  const member = await db.tripMember.findFirst({ where: { tripId: data.tripId, userId: dbUser.id } });
-  if (!member) throw new Error("Unauthorized");
+  await assertTripRole(data.tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
 
   const validated = updateSplitSchema.parse(data);
 
