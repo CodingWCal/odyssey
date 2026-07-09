@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
-import { createExpenseSchema, updateSplitSchema, type UpdateSplitInput } from "@/lib/validations";
+import { createExpenseSchema, updateSplitSchema, updateBudgetSchema, type UpdateSplitInput } from "@/lib/validations";
 import { getOrCreateDbUser } from "@/lib/auth";
 
 const getDbUser = getOrCreateDbUser;
@@ -69,7 +69,9 @@ export async function updateTripBudget(tripId: string, totalBudget: number) {
   const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
   if (!member) throw new Error("Unauthorized");
 
-  await db.trip.update({ where: { id: tripId }, data: { totalBudget } });
+  const validated = updateBudgetSchema.parse({ tripId, totalBudget });
+
+  await db.trip.update({ where: { id: tripId }, data: { totalBudget: validated.totalBudget } });
   revalidatePath(`/trips/${tripId}/budget`);
 }
 

@@ -60,10 +60,15 @@ export const updateSplitSchema = z.object({
     .array(
       z.object({
         memberId: z.string().min(1),
-        weight: z.coerce.number().min(0),
+        weight: z.coerce.number().finite().min(0).max(100),
       })
     )
     .min(1),
+});
+
+export const updateBudgetSchema = z.object({
+  tripId: z.string().min(1),
+  totalBudget: z.coerce.number().finite().min(0).max(10_000_000),
 });
 
 export const createPollSchema = z.object({
