@@ -23,6 +23,7 @@ import { AddEventModal } from "./AddEventModal";
 import { DayNotes } from "./DayNotes";
 import { reorderEvents } from "@/app/trips/[tripId]/itinerary/actions";
 import { Icons } from "@/components/shared/Icons";
+import { toast } from "@/components/shared/Toast";
 import type { TripDay } from "@/types";
 import { formatDate } from "@/lib/utils";
 
@@ -92,9 +93,15 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockP
     if (!over || active.id === over.id) return;
     const oldIndex = events.findIndex((ev) => ev.id === active.id);
     const newIndex = events.findIndex((ev) => ev.id === over.id);
+    const previous = events;
     const reordered = arrayMove(events, oldIndex, newIndex);
     setEvents(reordered);
-    await reorderEvents(reordered.map((ev, i) => ({ id: ev.id, orderIndex: i })), tripId);
+    try {
+      await reorderEvents(reordered.map((ev, i) => ({ id: ev.id, orderIndex: i })), tripId);
+    } catch {
+      setEvents(previous); // revert visibly on failure (ODY-013)
+      toast("Reorder didn't stick — put back the way it was.");
+    }
   }
 
   const weekday = new Date(day.date).toLocaleDateString("en-US", { weekday: "long" });

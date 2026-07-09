@@ -3,6 +3,7 @@
 import { useState, useRef, useTransition } from "react";
 import { upsertNote } from "@/app/trips/[tripId]/notes/actions";
 import { Icons } from "@/components/shared/Icons";
+import { toast } from "@/components/shared/Toast";
 
 interface TripNotesProps {
   tripId: string;
@@ -24,11 +25,17 @@ export function TripNotes({ tripId, initialText, readOnly = false }: TripNotesPr
 
   function save() {
     if (value === lastSaved.current) return;
+    const previous = lastSaved.current;
     lastSaved.current = value;
     startTransition(async () => {
-      await upsertNote(tripId, { text: value });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2200);
+      try {
+        await upsertNote(tripId, { text: value });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2200);
+      } catch {
+        lastSaved.current = previous;
+        toast("Trip notes didn't save — try again.");
+      }
     });
   }
 
