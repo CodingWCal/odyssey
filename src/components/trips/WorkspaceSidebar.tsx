@@ -65,6 +65,8 @@ export function WorkspaceSidebar({ trip }: WorkspaceSidebarProps) {
         tripId={trip.id}
         initialTitle={trip.title}
         initialDestination={trip.destination}
+        initialStartDate={trip.startDate}
+        initialEndDate={trip.endDate}
         onClose={() => setEditOpen(false)}
       />
 

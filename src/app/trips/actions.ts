@@ -166,18 +166,49 @@ export async function updateTrip(tripId: string, formData: FormData) {
 
   const validated = updateTripSchema.parse(raw);
 
+  // Parse dates in local timezone (date string like "2026-07-17" should be July 17 local)
+  const startDate = validated.startDate ? parseDateString(validated.startDate) : undefined;
+  const endDate = validated.endDate ? parseDateString(validated.endDate) : undefined;
+
   await db.trip.update({
     where: { id: tripId },
     data: {
       ...validated,
-      startDate: validated.startDate ? new Date(validated.startDate) : undefined,
-      endDate: validated.endDate ? new Date(validated.endDate) : undefined,
+      startDate,
+      endDate,
     },
   });
+
+  // If dates changed, regenerate Day records to match the new date range
+  if (startDate && endDate) {
+    // Delete old days
+    await db.day.deleteMany({ where: { tripId } });
+
+    // Create new days for each day in the updated range
+    const days: Date[] = [];
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const endDay = new Date(endDate);
+    endDay.setHours(0, 0, 0, 0);
+    while (current <= endDay) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    await db.day.createMany({
+      data: days.map((d) => ({ tripId, date: d })),
+    });
+  }
 
   // Revalidate the whole trip layout so the sidebar/hero pick up the new name.
   revalidatePath(`/trips/${tripId}`, "layout");
   revalidatePath("/dashboard");
+}
+
+function parseDateString(dateStr: string): Date {
+  // Parse "YYYY-MM-DD" as local date (not UTC)
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
+  return date;
 }
 
 export async function deleteTrip(tripId: string) {
