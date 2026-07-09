@@ -70,34 +70,28 @@ export async function createTrip(formData: FormData) {
 
   const validated = createTripSchema.parse(raw);
 
-  const start = new Date(validated.startDate);
-  const end = new Date(validated.endDate);
+  // Local-midnight parsing keeps "2026-07-10" on July 10 regardless of TZ
+  // (matches updateTrip; ODY-003).
+  const start = parseDateString(validated.startDate);
+  const end = parseDateString(validated.endDate);
 
-  const trip = await db.trip.create({
-    data: {
-      ownerId: dbUser.id,
-      title: validated.title,
-      destination: validated.destination,
-      startDate: start,
-      endDate: end,
-      totalBudget: validated.totalBudget ?? null,
-      members: { create: { userId: dbUser.id, role: "owner" } },
-    },
-  });
-
-  // Auto-create Day records for each day of the trip
-  const days: Date[] = [];
-  const current = new Date(start);
-  current.setHours(0, 0, 0, 0);
-  const endDay = new Date(end);
-  endDay.setHours(0, 0, 0, 0);
-  while (current <= endDay) {
-    days.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-
-  await db.day.createMany({
-    data: days.map((d) => ({ tripId: trip.id, date: d })),
+  // Trip + its Day rows commit together (ODY-005).
+  const trip = await db.$transaction(async (tx) => {
+    const created = await tx.trip.create({
+      data: {
+        ownerId: dbUser.id,
+        title: validated.title,
+        destination: validated.destination,
+        startDate: start,
+        endDate: end,
+        totalBudget: validated.totalBudget ?? null,
+        members: { create: { userId: dbUser.id, role: "owner" } },
+      },
+    });
+    await tx.day.createMany({
+      data: enumerateDays(start, end).map((d) => ({ tripId: created.id, date: d })),
+    });
+    return created;
   });
 
   revalidatePath("/dashboard");
@@ -115,33 +109,29 @@ export async function createTripWizard(
   const dbUser = await getOrCreateUser();
   const v = createTripWizardSchema.parse(data);
 
-  const start = new Date(v.startDate);
-  const end = new Date(v.endDate);
+  // Local-midnight parsing keeps dates on the intended calendar day (ODY-003).
+  const start = parseDateString(v.startDate);
+  const end = parseDateString(v.endDate);
 
-  const trip = await db.trip.create({
-    data: {
-      ownerId: dbUser.id,
-      title: v.title,
-      destination: v.destination,
-      startDate: start,
-      endDate: end,
-      totalBudget: v.totalBudget ?? null,
-      coverImageUrl: v.coverIndex != null ? `grad:${v.coverIndex}` : null,
-      members: { create: { userId: dbUser.id, role: "owner" } },
-    },
+  // Trip + its Day rows commit together (ODY-005). Mirrors createTrip.
+  const trip = await db.$transaction(async (tx) => {
+    const created = await tx.trip.create({
+      data: {
+        ownerId: dbUser.id,
+        title: v.title,
+        destination: v.destination,
+        startDate: start,
+        endDate: end,
+        totalBudget: v.totalBudget ?? null,
+        coverImageUrl: v.coverIndex != null ? `grad:${v.coverIndex}` : null,
+        members: { create: { userId: dbUser.id, role: "owner" } },
+      },
+    });
+    await tx.day.createMany({
+      data: enumerateDays(start, end).map((d) => ({ tripId: created.id, date: d })),
+    });
+    return created;
   });
-
-  // Auto-create a Day per calendar day of the trip (mirrors createTrip).
-  const days: Date[] = [];
-  const current = new Date(start);
-  current.setHours(0, 0, 0, 0);
-  const endDay = new Date(end);
-  endDay.setHours(0, 0, 0, 0);
-  while (current <= endDay) {
-    days.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-  await db.day.createMany({ data: days.map((d) => ({ tripId: trip.id, date: d })) });
 
   revalidatePath("/dashboard");
   return { tripId: trip.id };
@@ -179,29 +169,55 @@ export async function updateTrip(tripId: string, formData: FormData) {
     },
   });
 
-  // If dates changed, regenerate Day records to match the new date range
+  // If dates changed, reconcile Day records to the new range WITHOUT destroying
+  // days that hold events. Create missing days; delete out-of-range days only
+  // when they are empty (preserve out-of-range days that still contain events).
   if (startDate && endDate) {
-    // Delete old days
-    await db.day.deleteMany({ where: { tripId } });
-
-    // Create new days for each day in the updated range
-    const days: Date[] = [];
-    const current = new Date(startDate);
-    current.setHours(0, 0, 0, 0);
-    const endDay = new Date(endDate);
-    endDay.setHours(0, 0, 0, 0);
-    while (current <= endDay) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    await db.day.createMany({
-      data: days.map((d) => ({ tripId, date: d })),
+    const existing = await db.day.findMany({
+      where: { tripId },
+      select: { id: true, date: true, _count: { select: { events: true } } },
     });
+
+    // Key a date by its local calendar day (matches how days are stored).
+    const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+    // Target dates in the new range (local midnight), deduped by calendar day.
+    const target = new Map<string, Date>();
+    for (const d of enumerateDays(startDate, endDate)) target.set(dayKey(d), d);
+
+    const existingKeys = new Set(existing.map((d) => dayKey(d.date)));
+
+    const toCreate = [...target.entries()]
+      .filter(([k]) => !existingKeys.has(k))
+      .map(([, d]) => ({ tripId, date: d }));
+
+    const toDelete = existing
+      .filter((d) => !target.has(dayKey(d.date)) && d._count.events === 0)
+      .map((d) => d.id);
+
+    const ops = [];
+    if (toDelete.length) ops.push(db.day.deleteMany({ where: { id: { in: toDelete } } }));
+    if (toCreate.length) ops.push(db.day.createMany({ data: toCreate }));
+    if (ops.length) await db.$transaction(ops);
   }
 
   // Revalidate the whole trip layout so the sidebar/hero pick up the new name.
   revalidatePath(`/trips/${tripId}`, "layout");
   revalidatePath("/dashboard");
+}
+
+/** One Date per calendar day in [start, end], normalized to local midnight. */
+function enumerateDays(start: Date, end: Date): Date[] {
+  const days: Date[] = [];
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+  const endDay = new Date(end);
+  endDay.setHours(0, 0, 0, 0);
+  while (current <= endDay) {
+    days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return days;
 }
 
 function parseDateString(dateStr: string): Date {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { createEventSchema, updateEventSchema } from "@/lib/validations";
 import { getOrCreateDbUser } from "@/lib/auth";
 
@@ -64,20 +65,23 @@ const EVENT_TYPE_TO_CATEGORY: Record<string, string> = {
  * price: a positive cost creates/updates a linked expense; clearing it removes
  * the link. The expense stays editable on the Budget page.
  */
-async function syncLinkedExpense(event: {
-  id: string;
-  tripId: string;
-  type: string;
-  title: string;
-  cost: number | null;
-  createdBy: string;
-}) {
-  const existing = await db.expense.findFirst({ where: { eventId: event.id } });
+async function syncLinkedExpense(
+  event: {
+    id: string;
+    tripId: string;
+    type: string;
+    title: string;
+    cost: number | null;
+    createdBy: string;
+  },
+  tx: Prisma.TransactionClient = db
+) {
+  const existing = await tx.expense.findFirst({ where: { eventId: event.id } });
   if (event.cost != null && event.cost > 0) {
     if (existing) {
-      await db.expense.update({ where: { id: existing.id }, data: { amount: event.cost } });
+      await tx.expense.update({ where: { id: existing.id }, data: { amount: event.cost } });
     } else {
-      await db.expense.create({
+      await tx.expense.create({
         data: {
           tripId: event.tripId,
           eventId: event.id,
@@ -89,7 +93,7 @@ async function syncLinkedExpense(event: {
       });
     }
   } else if (existing) {
-    await db.expense.delete({ where: { id: existing.id } });
+    await tx.expense.delete({ where: { id: existing.id } });
   }
 }
 
@@ -143,28 +147,32 @@ export async function createEvent(data: {
     }
   }
 
-  const event = await db.event.create({
-    data: {
-      dayId: validated.dayId,
-      tripId: validated.tripId,
-      type: validated.type,
-      title: validated.title,
-      location: validated.location || null,
-      startTime: validated.startTime || null,
-      endTime: validated.endTime || null,
-      notes: validated.notes || null,
-      cost: validated.cost ?? null,
-      lat,
-      lng,
-      destLocation: validated.destLocation || null,
-      destLat,
-      destLng,
-      orderIndex: (lastEvent?.orderIndex ?? -1) + 1,
-      createdBy: dbUser.id,
-    },
+  // Event + linked expense commit together (ODY-005): no orphaned half-state.
+  const event = await db.$transaction(async (tx) => {
+    const created = await tx.event.create({
+      data: {
+        dayId: validated.dayId,
+        tripId: validated.tripId,
+        type: validated.type,
+        title: validated.title,
+        location: validated.location || null,
+        startTime: validated.startTime || null,
+        endTime: validated.endTime || null,
+        notes: validated.notes || null,
+        cost: validated.cost ?? null,
+        lat,
+        lng,
+        destLocation: validated.destLocation || null,
+        destLat,
+        destLng,
+        orderIndex: (lastEvent?.orderIndex ?? -1) + 1,
+        createdBy: dbUser.id,
+      },
+    });
+    await syncLinkedExpense(created, tx);
+    return created;
   });
 
-  await syncLinkedExpense(event);
   revalidateTrip(validated.tripId);
   return event;
 }
@@ -227,23 +235,27 @@ export async function updateEvent(eventId: string, data: Partial<{
     }
   }
 
-  const updated = await db.event.update({
-    where: { id: eventId },
-    data: {
-      ...validated,
-      location: newLocation,
-      startTime: validated.startTime || null,
-      endTime: validated.endTime || null,
-      notes: validated.notes || null,
-      lat,
-      lng,
-      destLocation: newDestLocation,
-      destLat,
-      destLng,
-    },
+  // Event + linked expense commit together (ODY-005).
+  const updated = await db.$transaction(async (tx) => {
+    const next = await tx.event.update({
+      where: { id: eventId },
+      data: {
+        ...validated,
+        location: newLocation,
+        startTime: validated.startTime || null,
+        endTime: validated.endTime || null,
+        notes: validated.notes || null,
+        lat,
+        lng,
+        destLocation: newDestLocation,
+        destLat,
+        destLng,
+      },
+    });
+    await syncLinkedExpense(next, tx);
+    return next;
   });
 
-  await syncLinkedExpense(updated);
   revalidateTrip(event.tripId);
   return updated;
 }
@@ -255,9 +267,12 @@ export async function deleteEvent(eventId: string) {
   if (!event) throw new Error("Event not found");
   await assertTripAccess(event.tripId, dbUser.id);
 
-  // Remove any budget expense linked to this event so the budget stays consistent.
-  await db.expense.deleteMany({ where: { eventId } });
-  await db.event.delete({ where: { id: eventId } });
+  // Remove any budget expense linked to this event so the budget stays
+  // consistent — atomically with the event itself (ODY-005).
+  await db.$transaction([
+    db.expense.deleteMany({ where: { eventId } }),
+    db.event.delete({ where: { id: eventId } }),
+  ]);
   revalidateTrip(event.tripId);
 }
 
@@ -266,7 +281,8 @@ export async function reorderEvents(updates: { id: string; orderIndex: number }[
   await assertTripAccess(tripId, dbUser.id);
 
   // Scope each update to this trip so foreign event ids are ignored.
-  await Promise.all(
+  // Single transaction so a reorder never half-applies (ODY-005).
+  await db.$transaction(
     updates.map((u) => db.event.updateMany({ where: { id: u.id, tripId }, data: { orderIndex: u.orderIndex } }))
   );
 
