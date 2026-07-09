@@ -338,7 +338,10 @@ export async function applyWindow(data: ApplyWindowInput) {
     data: { startDate: start, endDate: end },
   });
 
-  // Reconcile Day rows for the new range — mirror createTrip's day loop.
+  // Reconcile Day rows for the new range WITHOUT destroying days that hold
+  // events. Event.day cascades on delete, so a blind deleteMany of out-of-range
+  // days would silently delete their events — same data-loss class as ODY-002.
+  // Create missing days; delete out-of-range days only when they are empty.
   const days: Date[] = [];
   const current = new Date(start);
   current.setHours(0, 0, 0, 0);
@@ -349,19 +352,24 @@ export async function applyWindow(data: ApplyWindowInput) {
     current.setDate(current.getDate() + 1);
   }
 
-  // Create missing Day rows (skipDuplicates respects @@unique([tripId, date])).
-  await db.day.createMany({
-    data: days.map((d) => ({ tripId: validated.tripId, date: d })),
-    skipDuplicates: true,
-  });
-
-  // Delete Day rows that fall outside the new range.
-  await db.day.deleteMany({
+  const outOfRange = await db.day.findMany({
     where: {
       tripId: validated.tripId,
       OR: [{ date: { lt: start } }, { date: { gt: end } }],
     },
+    select: { id: true, _count: { select: { events: true } } },
   });
+  const emptyOutOfRange = outOfRange.filter((d) => d._count.events === 0).map((d) => d.id);
+
+  await db.$transaction([
+    db.day.createMany({
+      data: days.map((d) => ({ tripId: validated.tripId, date: d })),
+      skipDuplicates: true,
+    }),
+    ...(emptyOutOfRange.length
+      ? [db.day.deleteMany({ where: { id: { in: emptyOutOfRange } } })]
+      : []),
+  ]);
 
   revalidatePath(`/trips/${validated.tripId}/itinerary`);
   revalidatePath(`/trips/${validated.tripId}/schedule`);
