@@ -179,24 +179,43 @@ export async function updateTrip(tripId: string, formData: FormData) {
     },
   });
 
-  // If dates changed, regenerate Day records to match the new date range
+  // If dates changed, reconcile Day records to the new range WITHOUT destroying
+  // days that hold events. Create missing days; delete out-of-range days only
+  // when they are empty (preserve out-of-range days that still contain events).
   if (startDate && endDate) {
-    // Delete old days
-    await db.day.deleteMany({ where: { tripId } });
+    const existing = await db.day.findMany({
+      where: { tripId },
+      select: { id: true, date: true, _count: { select: { events: true } } },
+    });
 
-    // Create new days for each day in the updated range
-    const days: Date[] = [];
+    // Key a date by its local calendar day (matches how days are stored).
+    const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+    // Target dates in the new range (local midnight), deduped by calendar day.
+    const target = new Map<string, Date>();
     const current = new Date(startDate);
     current.setHours(0, 0, 0, 0);
     const endDay = new Date(endDate);
     endDay.setHours(0, 0, 0, 0);
     while (current <= endDay) {
-      days.push(new Date(current));
+      target.set(dayKey(current), new Date(current));
       current.setDate(current.getDate() + 1);
     }
-    await db.day.createMany({
-      data: days.map((d) => ({ tripId, date: d })),
-    });
+
+    const existingKeys = new Set(existing.map((d) => dayKey(d.date)));
+
+    const toCreate = [...target.entries()]
+      .filter(([k]) => !existingKeys.has(k))
+      .map(([, d]) => ({ tripId, date: d }));
+
+    const toDelete = existing
+      .filter((d) => !target.has(dayKey(d.date)) && d._count.events === 0)
+      .map((d) => d.id);
+
+    const ops = [];
+    if (toDelete.length) ops.push(db.day.deleteMany({ where: { id: { in: toDelete } } }));
+    if (toCreate.length) ops.push(db.day.createMany({ data: toCreate }));
+    if (ops.length) await db.$transaction(ops);
   }
 
   // Revalidate the whole trip layout so the sidebar/hero pick up the new name.
