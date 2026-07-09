@@ -18,6 +18,27 @@ Size: S (<1h) · M (1–3h) · L (3h+) · Model hint: `haiku` for S mechanical, 
 
 ## P0 — Correctness & Security
 
+### ODY-036 · Configure production Clerk instance with Google Cloud OAuth — M, sonnet
+**Production blocker.** The app currently uses Clerk dev keys on production
+(`pk_test_*`), which restricts sign-ups and auth. Need to set up a production Clerk
+instance and configure Google Cloud OAuth connector for real authentication.
+- Create/configure a production Clerk application in Clerk dashboard.
+- Set up Google Cloud project and OAuth 2.0 credentials for Clerk connector.
+- Update `.env.production` with production Clerk keys (`pk_live_*` and secret key).
+- Test sign-in/sign-up flow with real Google OAuth.
+- Acceptance: users can sign up and authenticate on production with real credentials (not dev instance limitations).
+
+### ODY-037 · Enable real invitations, join flow, and view-only guest access — L, sonnet
+**Depends on ODY-036.** Current invitation system is a placeholder. Need to:
+1. **Real invitations:** sending an invite creates a real invite link that a non-user can click to sign up and join the trip (currently only existing users can join).
+2. **View-only guest access:** allow trip owner to generate a shareable "view-only" link (no auth required) so external viewers can see the itinerary without signing up or joining.
+- Add guest session support (no auth required, read-only access) with a trip-specific token/UUID.
+- Update `InviteForm` to support "guest link" generation (copy-able URL, no email needed).
+- Modify routes to accept `?guestToken=...` and validate guest token for read-only viewing.
+- Real invitation: improve `sendTripInvitation` to generate a join link that creates a new user + adds them to the trip if they don't exist.
+- UI: add "Share for viewing" and "Invite to collaborate" buttons on Members page; show active guest links with revoke option.
+- Acceptance: (1) non-user can click invite link, sign up, and auto-join trip; (2) non-authenticated user can view itinerary via guest link; (3) owner can revoke both invite and guest links.
+
 ### ODY-001 · Enforce the `viewer` role (currently decorative) — M, sonnet
 `TripMember.role` supports `"viewer"` and `InviteForm` lets you invite viewers, but **no
 server action checks role** — every mutation only checks membership
@@ -129,6 +150,15 @@ Zero tests, no CI. The riskiest logic is pure and cheap to test: split-balance m
 ---
 
 ## P2 — Quality of Life
+
+### ODY-038 · Mobile UX for adding events and cross-tab navigation — L, sonnet
+On mobile (< 768px), adding itinerary items is cumbersome (modals/forms not touch-optimized),
+and navigating between trip tabs (itinerary, budget, schedule, map, members) requires
+scrolling back to the sidebar or menu. Forms are cramped; workflows interrupt focus.
+- **Event add/edit:** bottom sheet modal instead of centered modal on mobile (easier thumb reach, full-height input); larger touch targets, clearer submit buttons.
+- **Navigation:** add a mobile-optimized bottom tab bar or persistent top navigation on mobile showing current section + quick jump to other tabs; keep sidebar hidden/collapsed by default on < 768px.
+- **Forms:** stacked layout on mobile (full-width inputs), adjust modal widths/padding for 375px viewport.
+- Acceptance: adding an event on mobile is as easy as desktop (no hand strain, no excessive scrolling); switching between tabs feels native and intuitive.
 
 ### ODY-020 · Landing page honesty pass — S, haiku
 The landing claims "Loved by 4,200 travelers", a five-star row, a named testimonial
