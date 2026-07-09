@@ -6,6 +6,7 @@ import { AvatarStack } from "@/components/shared/AvatarStack";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights } from "@/app/trips/[tripId]/budget/actions";
+import { toast } from "@/components/shared/Toast";
 
 export interface BudgetExpense {
   id: string;
@@ -151,10 +152,15 @@ function SplitSection({
 
   function save() {
     startTransition(async () => {
-      await updateSplitWeights({
-        tripId,
-        weights: members.map((m) => ({ memberId: m.id, weight: Math.max(0, Number(weights[m.id]) || 0) })),
-      });
+      try {
+        await updateSplitWeights({
+          tripId,
+          weights: members.map((m) => ({ memberId: m.id, weight: Math.max(0, Number(weights[m.id]) || 0) })),
+        });
+        toast("Split saved.", "success");
+      } catch {
+        toast("The split didn't save — try again.");
+      }
     });
   }
 
@@ -244,10 +250,15 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
     setModal({ open: true, mode: "edit", initial: { id: e.id, label: e.label, amount: e.amount, category: e.category } });
   }
 
-  function saveBudget() {
+  async function saveBudget() {
     const n = Number(budgetVal) || 0;
     if (n === budget) return;
-    updateTripBudget(tripId, n);
+    try {
+      await updateTripBudget(tripId, n);
+    } catch {
+      setBudgetVal(totalBudget != null ? String(totalBudget) : "");
+      toast("The budget didn't save — try again.");
+    }
   }
 
   return (

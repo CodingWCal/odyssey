@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Manrope, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "@/components/shared/Toast";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -36,7 +37,10 @@ export default function RootLayout({
         lang="en"
         className={`${instrumentSerif.variable} ${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
-        <body className="min-h-full">{children}</body>
+        <body className="min-h-full">
+          {children}
+          <Toaster />
+        </body>
       </html>
     </ClerkProvider>
   );

@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { upsertNote } from "@/app/trips/[tripId]/notes/actions";
+import { toast } from "@/components/shared/Toast";
 import { useCallback, useEffect } from "react";
 
 interface TiptapEditorProps {
@@ -30,7 +31,11 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
 
   const handleBlur = useCallback(async () => {
     if (!editor || readOnly) return;
-    await upsertNote(tripId, editor.getJSON());
+    try {
+      await upsertNote(tripId, editor.getJSON());
+    } catch {
+      toast("Notes didn't save — try again.");
+    }
   }, [editor, tripId, readOnly]);
 
   useEffect(() => {

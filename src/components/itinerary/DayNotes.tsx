@@ -3,6 +3,7 @@
 import { useState, useRef, useTransition } from "react";
 import { updateDayNotes } from "@/app/trips/[tripId]/itinerary/actions";
 import { Icons } from "@/components/shared/Icons";
+import { toast } from "@/components/shared/Toast";
 
 interface DayNotesProps {
   dayId: string;
@@ -23,9 +24,15 @@ export function DayNotes({ dayId, tripId, initialNotes, readOnly = false }: DayN
 
   function save(next: string) {
     if (next === lastSaved.current) return;
+    const previous = lastSaved.current;
     lastSaved.current = next;
     startTransition(async () => {
-      await updateDayNotes(dayId, tripId, next);
+      try {
+        await updateDayNotes(dayId, tripId, next);
+      } catch {
+        lastSaved.current = previous;
+        toast("Day note didn't save — try again.");
+      }
     });
   }
 

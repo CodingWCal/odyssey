@@ -5,6 +5,7 @@ import { AddEventModal } from "./AddEventModal";
 import { deleteEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
+import { toast } from "@/components/shared/Toast";
 import type { TripEvent } from "@/types";
 
 const TYPE_VAR: Record<string, string> = {
@@ -32,7 +33,11 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
 
   function handleDelete() {
     startTransition(async () => {
-      await deleteEvent(event.id);
+      try {
+        await deleteEvent(event.id);
+      } catch {
+        toast(`Couldn't delete "${event.title}" — try again.`);
+      }
     });
   }
 
