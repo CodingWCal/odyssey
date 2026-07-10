@@ -23,10 +23,11 @@ const CYCLE: Record<string, AvailabilityStatus | undefined> = {
   unavailable: undefined, // back to empty
 };
 
-function cellStyle(status: AvailabilityStatus | undefined): React.CSSProperties {
-  if (status === "available") return { background: "var(--teal)", color: "#fff" };
-  if (status === "maybe") return { background: "var(--peach)", color: "var(--ink)" };
-  return { background: "var(--paper-3)", color: "var(--ink-3)" };
+// Status → .av-cell-btn variant class in globals.css.
+function cellClass(status: AvailabilityStatus | undefined): string {
+  if (status === "available") return "is-available";
+  if (status === "maybe") return "is-maybe";
+  return "is-unset";
 }
 
 function cellLabel(status: AvailabilityStatus | undefined): string {
@@ -78,37 +79,33 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
   }
 
   return (
-    <section className="cat-block" style={{ padding: 0 }}>
-      <header className="cat-head" style={{ cursor: "default" }}>
+    <section className="cat-block av-block">
+      <header className="cat-head av-head">
         <div>
           <h2 className="cat-title">Your availability</h2>
           <div className="cat-meta">Tap a cell to cycle: free → maybe → busy → clear. Saves automatically.</div>
         </div>
       </header>
 
-      <div className="cat-body" style={{ maxHeight: "none", overflowX: "auto", padding: "0 18px 18px" }}>
-        <div style={{ display: "flex", gap: 16, margin: "10px 0 16px", fontSize: 12, color: "var(--ink-3)" }}>
+      <div className="cat-body av-body">
+        <div className="av-legend">
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded" style={{ background: "var(--teal)" }} /> Free
+            <span className="inline-block w-3 h-3 rounded av-sw-free" /> Free
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded" style={{ background: "var(--peach)" }} /> Maybe
+            <span className="inline-block w-3 h-3 rounded av-sw-maybe" /> Maybe
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded" style={{ background: "var(--paper-3)" }} /> Busy / unset
+            <span className="inline-block w-3 h-3 rounded av-sw-busy" /> Busy / unset
           </span>
         </div>
 
-        <table className="w-full border-separate" style={{ borderSpacing: "6px" }}>
+        <table className="w-full border-separate av-table">
           <thead>
             <tr>
-              <th className="text-left text-xs font-medium" style={{ color: "var(--ink-3)" }} />
+              <th className="text-left text-xs font-medium av-th" />
               {blocks.map((block) => (
-                <th
-                  key={block}
-                  className="text-xs font-medium text-center"
-                  style={{ color: "var(--ink-3)", minWidth: 88 }}
-                >
+                <th key={block} className="text-xs font-medium text-center av-th-block">
                   {BLOCK_LABEL[block]}
                 </th>
               ))}
@@ -120,13 +117,8 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
               const { weekday, day } = formatDayLabel(date);
               return (
                 <tr key={dateKey}>
-                  <th
-                    className="text-left whitespace-nowrap pr-2"
-                    style={{ color: "var(--ink-2)" }}
-                  >
-                    <span className="block text-xs uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-                      {weekday}
-                    </span>
+                  <th className="text-left whitespace-nowrap pr-2 av-th-day">
+                    <span className="block text-xs uppercase tracking-wide week">{weekday}</span>
                     <span className="block text-sm font-medium">{day}</span>
                   </th>
                   {blocks.map((block) => {
@@ -136,8 +128,7 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
                         <button
                           type="button"
                           onClick={() => cycle(dateKey, block)}
-                          className="w-full rounded-lg text-xs font-medium transition-colors"
-                          style={{ height: 40, minWidth: 80, border: "1px solid var(--rule)", ...cellStyle(status) }}
+                          className={`w-full rounded-lg text-xs font-medium transition-colors av-cell-btn ${cellClass(status)}`}
                           aria-label={`${weekday} ${day} ${BLOCK_LABEL[block]}: ${cellLabel(status) || "unset"}`}
                         >
                           {cellLabel(status)}

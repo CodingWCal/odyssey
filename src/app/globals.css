@@ -3334,3 +3334,49 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-footer-tag { margin-left: 8px; }
 .ld-footer-links { display: flex; gap: 20px; }
 .ld-footer-links a { color: var(--ink-3); }
+
+/* ── Availability grid + heatmap (ODY-011b — migrated from inline styles) ── */
+.av-block { padding: 0; }
+.av-head { cursor: default; }
+.av-body { max-height: none; overflow-x: auto; padding: 0 18px 18px; }
+
+.av-table { border-spacing: 6px; }
+.av-th { color: var(--ink-3); }
+.av-th-block { color: var(--ink-3); min-width: 88px; }
+.av-th-day { color: var(--ink-2); }
+.av-th-day .week { color: var(--ink-3); }
+
+.av-cell { height: 40px; min-width: 80px; }
+
+/* Heatmap intensity is computed per-cell in TS and passed as custom props
+   (documented dynamic-value exception). */
+.av-heat {
+  border: 1px solid var(--rule);
+  background: var(--cell-bg);
+  color: var(--cell-fg);
+}
+
+.av-best {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 16px 18px; margin: 12px 0 18px;
+  background: var(--teal-soft); border: 1px solid var(--rule-2);
+}
+.av-best-label { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+.av-best-dates { font-family: var(--font-display); font-size: 20px; color: var(--ink); }
+.av-best-count { font-size: 13px; color: var(--ink-2); }
+
+.av-empty {
+  padding: 28px 18px; margin: 12px 0 18px; text-align: center;
+  border-radius: var(--radius-lg); background: var(--paper-2);
+  border: 1px solid var(--rule); color: var(--ink-3); font-size: 13px;
+}
+
+.av-legend { display: flex; gap: 16px; margin: 10px 0 16px; font-size: 12px; color: var(--ink-3); }
+.av-sw-free { background: var(--teal); }
+.av-sw-maybe { background: var(--peach); }
+.av-sw-busy { background: var(--paper-3); }
+
+.av-cell-btn { height: 40px; min-width: 80px; border: 1px solid var(--rule); }
+.av-cell-btn.is-available { background: var(--teal); color: #fff; }
+.av-cell-btn.is-maybe { background: var(--peach); color: var(--ink); }
+.av-cell-btn.is-unset { background: var(--paper-3); color: var(--ink-3); }
