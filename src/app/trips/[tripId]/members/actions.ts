@@ -182,7 +182,10 @@ export async function removeMember(memberId: string, tripId: string) {
   });
   if (!requester) throw new Error("Only owners can remove members");
 
+  // Owners can't be removed — a trip must always keep its owner (audit #4).
   // Scope the delete to this trip so a member id from another trip can't be hit.
-  await db.tripMember.deleteMany({ where: { id: memberId, tripId } });
+  await db.tripMember.deleteMany({
+    where: { id: memberId, tripId, role: { not: "owner" } },
+  });
   revalidatePath(`/trips/${tripId}/members`);
 }
