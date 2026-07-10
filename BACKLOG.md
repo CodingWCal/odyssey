@@ -205,6 +205,16 @@ Only default metadata; no OG image, no per-route titles.
 - `metadata` exports: landing (brand tagline), dashboard/trip routes (`"Trip title — Odyssey"` via `generateMetadata`), OG image in brand palette (static PNG is fine), proper favicon set from the brand mark.
 - Acceptance: link unfurls show brand card; tab titles are contextual.
 
+### ODY-039 · Event notes as bullet points — S, haiku
+Event notes render as one flat span (`src/components/itinerary/EventBlock.tsx`,
+`.event-notes`), so multi-item notes ("bring passport, check in online, gate
+closes 30 min early") read as an unscannable run-on line; newlines typed in the
+notes textarea (`AddEventModal`) are collapsed on display.
+- Display-only transform (storage stays the plain string, no schema change, no new editor): split notes on newlines; lines starting with `-` or `*` render as a real `<ul>` bullet list, plain lines as separate paragraphs.
+- Optional nicety: small prose ⇄ bullets toggle on the event card; default to auto-detect.
+- Keep XSS discipline: render text nodes only — no HTML parsing of note content.
+- Acceptance: a note typed with newlines/dashes shows as readable bullets on the itinerary card; single-line notes look unchanged; day notes and trip notes unaffected.
+
 ---
 
 ## P3 — New Features
