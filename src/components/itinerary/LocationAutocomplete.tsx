@@ -19,8 +19,10 @@ interface LocationAutocompleteProps {
 }
 
 /**
- * Address field with live Nominatim suggestions. Debounced + aborts in-flight
- * requests per keystroke. Picking a result fills the text and resolves
+ * Address field with live place suggestions. Debounced + aborts in-flight
+ * requests per keystroke. Queries go through our authenticated /api/geocode
+ * proxy (cached + rate-limited server-side, ODY-010) — never straight to
+ * Nominatim from the browser. Picking a result fills the text and resolves
  * coordinates so the map pin matches the chosen place. (#2)
  */
 export function LocationAutocomplete({
@@ -54,18 +56,15 @@ export function LocationAutocomplete({
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5`,
-          { headers: { "Accept-Language": "en" }, signal: controller.signal }
-        );
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`geocode ${res.status}`);
         const data = await res.json();
-        const next: Suggestion[] = (Array.isArray(data) ? data : [])
-          .map((d: { display_name: string; lat: string; lon: string }) => ({
-            display: d.display_name,
-            lat: parseFloat(d.lat),
-            lng: parseFloat(d.lon),
-          }))
-          .filter((s: Suggestion) => !Number.isNaN(s.lat) && !Number.isNaN(s.lng));
+        // The proxy returns suggestions already normalized to {display, lat, lng}.
+        const next: Suggestion[] = (Array.isArray(data) ? data : []).filter(
+          (s: Suggestion) => s.display && !Number.isNaN(s.lat) && !Number.isNaN(s.lng)
+        );
         setResults(next);
         setOpen(true);
         setActive(-1);
