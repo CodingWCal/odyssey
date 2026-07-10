@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Modal } from "@/components/shared/Modal";
 import { Icons } from "@/components/shared/Icons";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
@@ -25,21 +25,21 @@ interface ExpenseModalProps {
 export function ExpenseModal({ open, tripId, mode, initial, onClose, onSuccess }: ExpenseModalProps) {
   const isEdit = mode === "edit";
   const [isPending, startTransition] = useTransition();
-  const [form, setForm] = useState({
+
+  const initialForm = () => ({
     category: (initial?.category ?? "misc") as Category,
     label: initial?.label ?? "",
     amount: initial?.amount != null ? String(initial.amount) : "",
   });
+  const [form, setForm] = useState(initialForm);
 
-  useEffect(() => {
-    if (open) {
-      setForm({
-        category: (initial?.category ?? "misc") as Category,
-        label: initial?.label ?? "",
-        amount: initial?.amount != null ? String(initial.amount) : "",
-      });
-    }
-  }, [open, initial]);
+  // Re-seed the form each time the modal opens ("adjust state during render"
+  // — the React-sanctioned replacement for a reset-on-open effect).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setForm(initialForm());
+  }
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }));
