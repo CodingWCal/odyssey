@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
-import type { Prisma } from "@/generated/prisma/client";
 import { createEventSchema, updateEventSchema } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 // Shared cached Nominatim client (ODY-010). Server-side geocoding stays the
 // authoritative source of truth for pin coordinates so a map pin always
 // matches the written address.
 import { geocode } from "@/lib/geocode";
+// Event↔expense linkage lives in lib so it's unit-testable (ODY-016).
+import { syncLinkedExpense } from "@/lib/expenses";
 
 const getDbUser = getOrCreateDbUser;
 
@@ -22,53 +23,6 @@ function revalidateTrip(tripId: string) {
   revalidatePath(`/trips/${tripId}/map`);
   revalidatePath(`/trips/${tripId}/budget`);
   revalidatePath(`/trips/${tripId}`);
-}
-
-// Event type → budget expense category.
-const EVENT_TYPE_TO_CATEGORY: Record<string, string> = {
-  flight: "flights",
-  hotel: "lodging",
-  restaurant: "food",
-  activity: "activities",
-  transport: "transport",
-  misc: "misc",
-};
-
-/**
- * Keep a budget expense in sync with an event's cost (#5). Itinerary owns the
- * price: a positive cost creates/updates a linked expense; clearing it removes
- * the link. The expense stays editable on the Budget page.
- */
-async function syncLinkedExpense(
-  event: {
-    id: string;
-    tripId: string;
-    type: string;
-    title: string;
-    cost: number | null;
-    createdBy: string;
-  },
-  tx: Prisma.TransactionClient = db
-) {
-  const existing = await tx.expense.findFirst({ where: { eventId: event.id } });
-  if (event.cost != null && event.cost > 0) {
-    if (existing) {
-      await tx.expense.update({ where: { id: existing.id }, data: { amount: event.cost } });
-    } else {
-      await tx.expense.create({
-        data: {
-          tripId: event.tripId,
-          eventId: event.id,
-          label: event.title,
-          amount: event.cost,
-          category: EVENT_TYPE_TO_CATEGORY[event.type] ?? "misc",
-          addedBy: event.createdBy,
-        },
-      });
-    }
-  } else if (existing) {
-    await tx.expense.delete({ where: { id: existing.id } });
-  }
 }
 
 export async function createEvent(data: {

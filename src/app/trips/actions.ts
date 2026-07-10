@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma/db";
 import { createTripSchema, updateTripSchema, createTripWizardSchema, type CreateTripWizardInput } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
+// Local-calendar helpers live in lib so they're unit-testable (ODY-016).
+import { parseDateString, enumerateDays, dayKey } from "@/lib/dates";
 
 const getOrCreateUser = getOrCreateDbUser;
 
@@ -182,9 +184,6 @@ export async function updateTrip(tripId: string, formData: FormData) {
       select: { id: true, date: true, _count: { select: { events: true } } },
     });
 
-    // Key a date by its local calendar day (matches how days are stored).
-    const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-
     // Target dates in the new range (local midnight), deduped by calendar day.
     const target = new Map<string, Date>();
     for (const d of enumerateDays(startDate, endDate)) target.set(dayKey(d), d);
@@ -208,27 +207,6 @@ export async function updateTrip(tripId: string, formData: FormData) {
   // Revalidate the whole trip layout so the sidebar/hero pick up the new name.
   revalidatePath(`/trips/${tripId}`, "layout");
   revalidatePath("/dashboard");
-}
-
-/** One Date per calendar day in [start, end], normalized to local midnight. */
-function enumerateDays(start: Date, end: Date): Date[] {
-  const days: Date[] = [];
-  const current = new Date(start);
-  current.setHours(0, 0, 0, 0);
-  const endDay = new Date(end);
-  endDay.setHours(0, 0, 0, 0);
-  while (current <= endDay) {
-    days.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-  return days;
-}
-
-function parseDateString(dateStr: string): Date {
-  // Parse "YYYY-MM-DD" as local date (not UTC)
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
-  return date;
 }
 
 export async function deleteTrip(tripId: string) {

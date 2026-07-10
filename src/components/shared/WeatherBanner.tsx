@@ -1,3 +1,5 @@
+import { getConditionFromCode } from "@/lib/weather";
+
 interface WeatherData {
   temperature: number;
   condition: string;
@@ -14,17 +16,6 @@ const CONDITION_ICONS: Record<string, string> = {
   wind: "💨",
   default: "🌤️",
 };
-
-function getConditionFromCode(code: number): string {
-  if (code === 0) return "clear";
-  if (code <= 3) return "cloudy";
-  if (code <= 48) return "fog";
-  if (code <= 67) return "rain";
-  if (code <= 77) return "snow";
-  if (code <= 82) return "rain";
-  if (code <= 99) return "storm";
-  return "default";
-}
 
 function getIcon(condition: string) {
   return CONDITION_ICONS[condition] ?? CONDITION_ICONS.default;
