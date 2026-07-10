@@ -53,18 +53,19 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
     return out;
   }, [slots, blocks]);
 
-  function intensityStyle(count: number): React.CSSProperties {
+  // Per-cell intensity passed as CSS custom properties (the documented
+  // dynamic-value exception) — consumed by .av-heat in globals.css.
+  function intensityVars(count: number): React.CSSProperties {
     if (count === 0 || totalMembers === 0) {
-      return { background: "var(--paper-3)", color: "var(--ink-3)", border: "1px solid var(--rule)" };
+      return { "--cell-bg": "var(--paper-3)", "--cell-fg": "var(--ink-3)" } as React.CSSProperties;
     }
     const ratio = Math.min(1, count / totalMembers);
     // Teal fill, opacity scaled by share of travelers available.
     const opacity = 0.2 + 0.8 * ratio;
     return {
-      background: `color-mix(in srgb, var(--teal) ${Math.round(opacity * 100)}%, var(--paper-2))`,
-      color: ratio > 0.5 ? "#fff" : "var(--ink)",
-      border: "1px solid var(--rule)",
-    };
+      "--cell-bg": `color-mix(in srgb, var(--teal) ${Math.round(opacity * 100)}%, var(--paper-2))`,
+      "--cell-fg": ratio > 0.5 ? "#fff" : "var(--ink)",
+    } as React.CSSProperties;
   }
 
   function handleApply() {
@@ -88,8 +89,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
   }
 
   return (
-    <section className="cat-block" style={{ padding: 0 }}>
-      <header className="cat-head" style={{ cursor: "default" }}>
+    <section className="cat-block av-block">
+      <header className="cat-head av-head">
         <div>
           <h2 className="cat-title">Group availability</h2>
           <div className="cat-meta">
@@ -98,31 +99,16 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
         </div>
       </header>
 
-      <div className="cat-body" style={{ maxHeight: "none", overflowX: "auto", padding: "0 18px 18px" }}>
+      <div className="cat-body av-body">
         {/* Best window card */}
         {bestWindow ? (
-          <div
-            className="rounded-xl"
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 16,
-              padding: "16px 18px",
-              margin: "12px 0 18px",
-              background: "var(--teal-soft)",
-              border: "1px solid var(--rule-2)",
-            }}
-          >
+          <div className="rounded-xl av-best">
             <div>
-              <div style={{ fontSize: 12, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".04em" }}>
-                Best window
-              </div>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 20, color: "var(--ink)" }}>
+              <div className="av-best-label">Best window</div>
+              <div className="av-best-dates">
                 {formatWindowDate(bestWindow.startDate)} – {formatWindowDate(bestWindow.endDate)}
               </div>
-              <div style={{ fontSize: 13, color: "var(--ink-2)" }}>
+              <div className="av-best-count">
                 {bestWindow.availableCount} traveler{bestWindow.availableCount === 1 ? "" : "s"} free
               </div>
             </div>
@@ -133,32 +119,15 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
             )}
           </div>
         ) : (
-          <div
-            style={{
-              padding: "28px 18px",
-              margin: "12px 0 18px",
-              textAlign: "center",
-              borderRadius: "var(--radius-lg)",
-              background: "var(--paper-2)",
-              border: "1px solid var(--rule)",
-              color: "var(--ink-3)",
-              fontSize: 13,
-            }}
-          >
-            No availability marked yet.
-          </div>
+          <div className="av-empty">No availability marked yet.</div>
         )}
 
-        <table className="w-full border-separate" style={{ borderSpacing: "6px" }}>
+        <table className="w-full border-separate av-table">
           <thead>
             <tr>
-              <th className="text-left text-xs font-medium" style={{ color: "var(--ink-3)" }} />
+              <th className="text-left text-xs font-medium av-th" />
               {blocks.map((block: AvailabilityBlock) => (
-                <th
-                  key={block}
-                  className="text-xs font-medium text-center"
-                  style={{ color: "var(--ink-3)", minWidth: 88 }}
-                >
+                <th key={block} className="text-xs font-medium text-center av-th-block">
                   {BLOCK_LABEL[block]}
                 </th>
               ))}
@@ -170,10 +139,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
               const { weekday, day } = formatDayLabel(date);
               return (
                 <tr key={dateKey}>
-                  <th className="text-left whitespace-nowrap pr-2" style={{ color: "var(--ink-2)" }}>
-                    <span className="block text-xs uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-                      {weekday}
-                    </span>
+                  <th className="text-left whitespace-nowrap pr-2 av-th-day">
+                    <span className="block text-xs uppercase tracking-wide week">{weekday}</span>
                     <span className="block text-sm font-medium">{day}</span>
                   </th>
                   {blocks.map((block: AvailabilityBlock) => {
@@ -181,8 +148,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
                     return (
                       <td key={block} className="text-center">
                         <div
-                          className="w-full rounded-lg text-xs font-semibold flex items-center justify-center"
-                          style={{ height: 40, minWidth: 80, ...intensityStyle(count) }}
+                          className="w-full rounded-lg text-xs font-semibold flex items-center justify-center av-cell av-heat"
+                          style={intensityVars(count)}
                           title={`${count} of ${totalMembers} free`}
                         >
                           {count > 0 ? count : ""}
