@@ -59,14 +59,19 @@ function CategoryBlock({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [maxH, setMaxH] = useState<string>("none");
 
+  // Collapse animation: write max-height straight to the DOM node (external
+  // system) instead of routing measured pixels through state.
   useLayoutEffect(() => {
-    if (!bodyRef.current) return;
-    if (collapsed) setMaxH("0px");
-    else {
-      setMaxH(bodyRef.current.scrollHeight + "px");
-      const t = setTimeout(() => setMaxH("4000px"), 350);
+    const el = bodyRef.current;
+    if (!el) return;
+    if (collapsed) {
+      el.style.maxHeight = "0px";
+    } else {
+      el.style.maxHeight = el.scrollHeight + "px";
+      const t = setTimeout(() => {
+        el.style.maxHeight = "4000px";
+      }, 350);
       return () => clearTimeout(t);
     }
   }, [collapsed, expenses.length]);
@@ -91,7 +96,7 @@ function CategoryBlock({
         </div>
       </header>
 
-      <div className="cat-body" ref={bodyRef} style={{ maxHeight: maxH }}>
+      <div className="cat-body" ref={bodyRef}>
         <div className="expense-list">
           {expenses.map((e) => (
             <div className={`expense-row c-${e.category}`} key={e.id}>

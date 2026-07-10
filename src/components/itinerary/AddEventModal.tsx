@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { createEvent, updateEvent, deleteEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import { Modal } from "@/components/shared/Modal";
 import { Icons, EVENT_TYPES } from "@/components/shared/Icons";
@@ -21,7 +21,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
   const isEdit = !!existing;
   const [isPending, startTransition] = useTransition();
 
-  const [form, setForm] = useState({
+  const initialForm = () => ({
     type: (existing?.type ?? "activity") as EventType,
     title: existing?.title ?? "",
     location: existing?.location ?? "",
@@ -29,31 +29,21 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
     endTime: existing?.endTime ?? "",
     cost: existing?.cost != null ? String(existing.cost) : "",
     notes: existing?.notes ?? "",
-    lat: existing?.lat ?? undefined as number | undefined,
-    lng: existing?.lng ?? undefined as number | undefined,
+    lat: (existing?.lat ?? undefined) as number | undefined,
+    lng: (existing?.lng ?? undefined) as number | undefined,
     destLocation: existing?.destLocation ?? "",
-    destLat: existing?.destLat ?? undefined as number | undefined,
-    destLng: existing?.destLng ?? undefined as number | undefined,
+    destLat: (existing?.destLat ?? undefined) as number | undefined,
+    destLng: (existing?.destLng ?? undefined) as number | undefined,
   });
+  const [form, setForm] = useState(initialForm);
 
-  useEffect(() => {
-    if (open) {
-      setForm({
-        type: (existing?.type ?? "activity") as EventType,
-        title: existing?.title ?? "",
-        location: existing?.location ?? "",
-        startTime: existing?.startTime ?? "",
-        endTime: existing?.endTime ?? "",
-        cost: existing?.cost != null ? String(existing.cost) : "",
-        notes: existing?.notes ?? "",
-        lat: existing?.lat ?? undefined,
-        lng: existing?.lng ?? undefined,
-        destLocation: existing?.destLocation ?? "",
-        destLat: existing?.destLat ?? undefined,
-        destLng: existing?.destLng ?? undefined,
-      });
-    }
-  }, [open, existing]);
+  // Re-seed the form each time the modal opens ("adjust state during render"
+  // — the React-sanctioned replacement for a reset-on-open effect).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setForm(initialForm());
+  }
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }));

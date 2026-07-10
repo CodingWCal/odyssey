@@ -40,6 +40,18 @@ export function LocationAutocomplete({
   const justPicked = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
+  // Clear suggestions the moment the query drops below the minimum ("adjust
+  // state during render" — keeps setState out of the effect body).
+  const q = value.trim();
+  const [prevQ, setPrevQ] = useState(q);
+  if (q !== prevQ) {
+    setPrevQ(q);
+    if (q.length < 3) {
+      if (results.length > 0) setResults([]);
+      if (open) setOpen(false);
+    }
+  }
+
   // Debounced search whenever the typed value changes.
   useEffect(() => {
     if (justPicked.current) {
@@ -47,11 +59,7 @@ export function LocationAutocomplete({
       return;
     }
     const q = value.trim();
-    if (q.length < 3) {
-      setResults([]);
-      setOpen(false);
-      return;
-    }
+    if (q.length < 3) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);

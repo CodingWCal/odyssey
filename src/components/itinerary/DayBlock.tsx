@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
+import { useState, useRef, useLayoutEffect, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -63,22 +63,28 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockP
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [maxH, setMaxH] = useState<string>("3000px");
 
-  // Keep local state in sync with server data after revalidation.
+  // Keep local state in sync with server data after revalidation ("adjust
+  // state during render" — replaces the old sync-in-effect + lint disable).
   const eventsSig = useMemo(() => JSON.stringify(day.events), [day.events]);
-  useEffect(() => {
+  const [prevSig, setPrevSig] = useState(eventsSig);
+  if (eventsSig !== prevSig) {
+    setPrevSig(eventsSig);
     setEvents(day.events);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventsSig]);
+  }
 
+  // Collapse animation: write max-height straight to the DOM node (external
+  // system) instead of routing measured pixels through state.
   useLayoutEffect(() => {
-    if (!bodyRef.current) return;
+    const el = bodyRef.current;
+    if (!el) return;
     if (collapsed) {
-      setMaxH("0px");
+      el.style.maxHeight = "0px";
     } else {
-      setMaxH(bodyRef.current.scrollHeight + "px");
-      const t = setTimeout(() => setMaxH("3000px"), 360);
+      el.style.maxHeight = el.scrollHeight + "px";
+      const t = setTimeout(() => {
+        el.style.maxHeight = "3000px";
+      }, 360);
       return () => clearTimeout(t);
     }
   }, [collapsed, events.length]);
@@ -122,7 +128,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockP
         </span>
       </header>
 
-      <div className="day-body" ref={bodyRef} style={{ maxHeight: maxH }}>
+      <div className="day-body" ref={bodyRef}>
         <DayNotes dayId={day.id} tripId={tripId} initialNotes={day.notes} readOnly={readOnly} />
 
         <DndContext id={`dnd-day-${day.id}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

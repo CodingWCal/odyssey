@@ -1,8 +1,10 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
+import type { Map as LeafletMapInstance, Marker, Polyline, Layer } from "leaflet";
 import { TYPE_HEX, type MapEvent } from "./mapTypes";
+
+type LeafletNS = typeof import("leaflet");
 
 interface LeafletMapProps {
   events: MapEvent[];
@@ -30,12 +32,12 @@ function hasDest(ev: MapEvent): boolean {
 
 export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect }: LeafletMapProps) {
   const elRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const LRef = useRef<any>(null);
-  const markersRef = useRef<Record<string, any>>({});
-  const destMarkersRef = useRef<Record<string, any>>({});
-  const polylineRef = useRef<any>(null);
-  const flightLayersRef = useRef<any[]>([]);
+  const mapRef = useRef<LeafletMapInstance | null>(null);
+  const LRef = useRef<LeafletNS | null>(null);
+  const markersRef = useRef<Record<string, Marker>>({});
+  const destMarkersRef = useRef<Record<string, Marker>>({});
+  const polylineRef = useRef<Polyline | null>(null);
+  const flightLayersRef = useRef<Layer[]>([]);
   const [ready, setReady] = useState(false);
 
   // Keep latest onSelect without re-running the init effect.
@@ -44,14 +46,25 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     onSelectRef.current = onSelect;
   }, [onSelect]);
 
+  // The marker-render effect reads the selection for initial styling but must
+  // not redraw every marker on each selection change (the lighter effect below
+  // handles that) — so it reads through a ref instead of depending on it.
+  const selectedIdRef = useRef(selectedId);
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
   // Init map once.
   useEffect(() => {
     let cancelled = false;
     const el = elRef.current;
     (async () => {
-      const L = (await import("leaflet")).default as any;
+      const mod = await import("leaflet");
+      const L = (mod.default ?? mod) as LeafletNS;
       if (cancelled || !el) return;
-      if ((el as any)._leaflet_id) delete (el as any)._leaflet_id;
+      // Leaflet tags containers it has claimed; clear a stale tag from HMR.
+      const claimed = el as HTMLDivElement & { _leaflet_id?: number };
+      if (claimed._leaflet_id) delete claimed._leaflet_id;
 
       const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([35.6, 139.5], 5);
       L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19 }).addTo(map);
@@ -65,7 +78,7 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     return () => {
       cancelled = true;
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
-      if (el) delete (el as any)._leaflet_id;
+      if (el) delete (el as HTMLDivElement & { _leaflet_id?: number })._leaflet_id;
     };
   }, []);
 
@@ -75,17 +88,17 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     const map = mapRef.current;
     if (!ready || !L || !map) return;
 
-    Object.values(markersRef.current).forEach((m: any) => map.removeLayer(m));
+    Object.values(markersRef.current).forEach((m) => map.removeLayer(m));
     markersRef.current = {};
     if (polylineRef.current) { map.removeLayer(polylineRef.current); polylineRef.current = null; }
-    flightLayersRef.current.forEach((l: any) => map.removeLayer(l));
+    flightLayersRef.current.forEach((l) => map.removeLayer(l));
     flightLayersRef.current = [];
     destMarkersRef.current = {};
 
     const filtered = events.filter((e) => activeDay === "all" || e.dayId === activeDay);
 
     filtered.forEach((ev) => {
-      const active = selectedId === ev.id;
+      const active = selectedIdRef.current === ev.id;
       const icon = L.divIcon({ className: "", html: markerHtml(ev, active), iconSize: [32, 32], iconAnchor: [16, 32] });
       const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: active ? 1000 : 0 });
       m.bindTooltip(`${ev.globalIdx}. ${ev.title}`, { className: "od-tip", direction: "top", offset: [0, -28] });
@@ -106,9 +119,9 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       }
 
       if (hasDest(ev)) {
-        const active2 = selectedId === ev.id;
+        const active2 = selectedIdRef.current === ev.id;
         const destIcon = L.divIcon({ className: "", html: destMarkerHtml(ev, active2), iconSize: [28, 28], iconAnchor: [14, 28] });
-        const dm = L.marker([ev.destLat, ev.destLng], { icon: destIcon, zIndexOffset: active2 ? 1000 : 0 });
+        const dm = L.marker([ev.destLat as number, ev.destLng as number], { icon: destIcon, zIndexOffset: active2 ? 1000 : 0 });
         dm.bindTooltip(`${ev.globalIdx}. ${ev.title} — arrival${ev.destLocation ? `: ${ev.destLocation}` : ""}`, { className: "od-tip", direction: "top", offset: [0, -24] });
         dm.on("click", () => onSelectRef.current(ev.id));
         dm.addTo(map);
@@ -136,7 +149,6 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [80, 80], maxZoom: activeDay === "all" ? 9 : 13 });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, activeDay, showRoute, events]);
 
   // Update marker styling + pan when the selection changes.
@@ -144,7 +156,7 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     const L = LRef.current;
     const map = mapRef.current;
     if (!ready || !L || !map) return;
-    Object.entries(markersRef.current).forEach(([id, m]: [string, any]) => {
+    Object.entries(markersRef.current).forEach(([id, m]) => {
       const ev = events.find((e) => e.id === id);
       if (!ev) return;
       const active = selectedId === id;
@@ -154,15 +166,14 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     });
 
     // Mirror active styling onto flight arrival markers.
-    Object.entries(destMarkersRef.current).forEach(([id, m]: [string, any]) => {
+    Object.entries(destMarkersRef.current).forEach(([id, m]) => {
       const ev = events.find((e) => e.id === id);
       if (!ev) return;
       const active = selectedId === id;
       m.setIcon(L.divIcon({ className: "", html: destMarkerHtml(ev, active), iconSize: [28, 28], iconAnchor: [14, 28] }));
       m.setZIndexOffset(active ? 1000 : 0);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, selectedId]);
+  }, [ready, selectedId, events]);
 
   return <div id="leaflet-map" ref={elRef} />;
 }
