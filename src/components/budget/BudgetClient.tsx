@@ -7,6 +7,7 @@ import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
+import { computeSplit } from "@/lib/budget";
 
 export interface BudgetExpense {
   id: string;
@@ -141,9 +142,11 @@ function SplitSection({
     Object.fromEntries(members.map((m) => [m.id, String(m.weight)]))
   );
 
-  const parsed = members.map((m) => Math.max(0, Number(weights[m.id]) || 0));
-  const sumW = parsed.reduce((s, w) => s + w, 0);
-  const n = members.length || 1;
+  // Pure split math lives in lib/budget.ts (unit-tested, ODY-016).
+  const rows = computeSplit(
+    members.map((m) => ({ id: m.id, weight: Number(weights[m.id]) || 0, paid: m.paid })),
+    totalSpent
+  );
 
   const dirty = members.some((m) => (Number(weights[m.id]) || 0) !== m.weight);
 
@@ -183,10 +186,7 @@ function SplitSection({
 
       <div className="split-rows">
         {members.map((m, i) => {
-          const w = parsed[i];
-          const pct = sumW > 0 ? w / sumW : 1 / n;
-          const share = totalSpent * pct;
-          const balance = m.paid - share;
+          const { pct, share, balance } = rows[i];
           const rounded = Math.round(balance);
           return (
             <div className="split-row" key={m.id}>

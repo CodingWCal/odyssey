@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholder credentials: the build never connects to the DB or Clerk
+      # (all data routes are dynamic; Prisma pools lazily), it just needs the
+      # vars to exist. Verified locally with these exact values.
+      DATABASE_URL: postgresql://user:pass@localhost:5432/placeholder
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
+      CLERK_SECRET_KEY: sk_test_placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci runs the postinstall hook (prisma generate), so the generated
+      # client exists before lint/typecheck.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint src
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
