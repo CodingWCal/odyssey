@@ -51,7 +51,10 @@ User sync: Clerk user -> getOrCreateUser() in each action file.
 
 ## Do Not
 - Use localStorage or sessionStorage
-- Add inline styles (Tailwind classes only)
+- Add inline styles (Tailwind utilities or globals.css classes only).
+  Exception: truly dynamic per-element values (progress widths, per-item
+  accent colors, animation delays) may be passed inline as CSS custom
+  properties, e.g. `style={{ "--f-color": color }}`, consumed by a class.
 - Import Leaflet on server (use dynamic import with ssr: false)
 - Use Pages Router patterns
 - Hardcode hex values outside globals.css
