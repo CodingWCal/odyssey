@@ -5,42 +5,16 @@ import { db } from "@/lib/prisma/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { createEventSchema, updateEventSchema } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
+// Shared cached Nominatim client (ODY-010). Server-side geocoding stays the
+// authoritative source of truth for pin coordinates so a map pin always
+// matches the written address.
+import { geocode } from "@/lib/geocode";
 
 const getDbUser = getOrCreateDbUser;
 
 // All itinerary mutations require editor+ — viewers are read-only (ODY-001).
 async function assertTripAccess(tripId: string, userId: string) {
   await assertTripRole(tripId, userId, "editor");
-}
-
-/**
- * Server-side geocoding via Nominatim. Authoritative source of truth for pin
- * coordinates so a map pin always matches the written address — independent of
- * whether the user clicked the client-side "📍 Pin" button.
- */
-async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
-      {
-        headers: {
-          "Accept-Language": "en",
-          // Nominatim usage policy requires a descriptive User-Agent.
-          "User-Agent": "Odyssey-TripPlanner/1.0 (collaborative itinerary app)",
-        },
-        cache: "no-store",
-      }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data[0]) return null;
-    const lat = parseFloat(data[0].lat);
-    const lng = parseFloat(data[0].lon);
-    if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
-    return { lat, lng };
-  } catch {
-    return null;
-  }
 }
 
 function revalidateTrip(tripId: string) {
