@@ -18,30 +18,61 @@ const TYPE_VAR: Record<string, string> = {
   misc: "slate",
 };
 
-/**
- * Display-only notes formatting (ODY-039): storage stays the plain string;
- * parsing lives in lib/notes.ts (unit-tested). Text nodes only — note content
- * is never parsed as HTML.
- */
-function NotesBody({ text }: { text: string }) {
-  const chunks = parseNoteChunks(text);
+/** A note is "long" past this length even without line breaks (ODY-040). */
+const NOTE_COLLAPSE_CHARS = 140;
 
-  if (!chunks) return <span className="notes-body">{text}</span>;
+/**
+ * Event note display (ODY-039/040): storage stays the plain string; parsing
+ * lives in lib/notes.ts (unit-tested). Multi-line notes render as bullets/
+ * paragraphs; long notes collapse to their first line with a toggle so busy
+ * days don't bloat the page. Text nodes only — never parsed as HTML.
+ */
+function EventNotes({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const chunks = parseNoteChunks(text);
+  const isLong = chunks !== null || text.length > NOTE_COLLAPSE_CHARS;
+
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const preview = (lines[0] ?? "").replace(/^[-*•]\s*/, "");
+  const lineCount = lines.length;
 
   return (
-    <span className="notes-body">
-      {chunks.map((c, i) =>
-        c.kind === "ul" ? (
-          <ul key={i}>
-            {c.items.map((item, j) => (
-              <li key={j}>{item}</li>
-            ))}
-          </ul>
+    <div className="event-notes">
+      <span className="icon"><Icons.note size={12} /></span>
+      <span className="notes-body">
+        {!isLong ? (
+          text
+        ) : open ? (
+          chunks ? (
+            chunks.map((c, i) =>
+              c.kind === "ul" ? (
+                <ul key={i}>
+                  {c.items.map((item, j) => (
+                    <li key={j}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p key={i}>{c.text}</p>
+              )
+            )
+          ) : (
+            text
+          )
         ) : (
-          <p key={i}>{c.text}</p>
-        )
-      )}
-    </span>
+          <span className="notes-preview">{preview}</span>
+        )}
+        {isLong && (
+          <button
+            type="button"
+            className="notes-toggle"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+          >
+            {open ? "Show less" : lineCount > 1 ? `Show note · ${lineCount} lines` : "Show more"}
+          </button>
+        )}
+      </span>
+    </div>
   );
 }
 
@@ -117,10 +148,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
               )}
 
               {event.notes && (
-                <div className="event-notes">
-                  <span className="icon"><Icons.note size={12} /></span>
-                  <NotesBody text={event.notes} />
-                </div>
+                <EventNotes text={event.notes} />
               )}
             </div>
           </div>

@@ -3504,3 +3504,14 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .icon-btn.sm { width: 22px; height: 22px; }
 /* Landing globe mount — size flows in per-instance (011d) */
 .globe-wrap { width: var(--globe-size); height: var(--globe-size); max-width: 100%; margin: 0 auto; }
+
+/* Collapsible event notes (ODY-040) */
+.event-notes .notes-preview {
+  display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.event-notes .notes-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: 0; padding: 0; margin-top: 4px;
+  font-size: 12px; font-weight: 600; color: var(--peri); cursor: pointer;
+}
+.event-notes .notes-toggle:hover { text-decoration: underline; }
