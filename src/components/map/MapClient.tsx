@@ -8,7 +8,7 @@ import { TYPE_HEX, type MapDay, type MapEvent } from "./mapTypes";
 
 const LeafletMap = dynamic(() => import("./LeafletMap").then((m) => m.LeafletMap), {
   ssr: false,
-  loading: () => <div style={{ position: "absolute", inset: 0, background: "var(--paper-3)" }} />,
+  loading: () => <div className="map-loading" />,
 });
 
 interface MapClientProps {
@@ -28,12 +28,12 @@ export function MapClient({ days, events, eyebrow, dayCount }: MapClientProps) {
 
   if (events.length === 0) {
     return (
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--paper-3)", textAlign: "center", padding: 32 }}>
-        <p style={{ fontSize: 48, marginBottom: 16 }} aria-hidden="true">🗺️</p>
-        <h3 style={{ fontFamily: "var(--font-display)", fontSize: 28, margin: "0 0 8px", color: "var(--ink)" }}>
-          No pins <em style={{ fontStyle: "italic", color: "var(--peri)" }}>yet</em>
+      <div className="map-empty">
+        <p className="map-empty-icon" aria-hidden="true">🗺️</p>
+        <h3>
+          No pins <em>yet</em>
         </h3>
-        <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 360, margin: 0 }}>
+        <p className="map-empty-sub">
           Add a location to events in the itinerary — they&apos;ll appear here on the map.
         </p>
       </div>
@@ -111,8 +111,8 @@ export function MapClient({ days, events, eyebrow, dayCount }: MapClientProps) {
         {selected && (
           <div className="map-card">
             <div className="card-head">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ marginBottom: 8 }}><TypeBadge type={selected.type} /></div>
+              <div className="main">
+                <div className="badge-row"><TypeBadge type={selected.type} /></div>
                 <h3>{selected.title}</h3>
               </div>
               <button className="icon-btn" onClick={() => setSelectedId(null)} aria-label="Close">
@@ -133,7 +133,7 @@ export function MapClient({ days, events, eyebrow, dayCount }: MapClientProps) {
                   <Icons.clock size={13} /> {selected.startTime}{selected.endTime ? ` → ${selected.endTime}` : ""}
                 </span>
               )}
-              <span className="row" style={{ color: "var(--peri)" }}>
+              <span className="row day">
                 {selected.dayLabel} · {selected.dayDate}
               </span>
               {selected.cost != null && (

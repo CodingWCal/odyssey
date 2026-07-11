@@ -3380,3 +3380,20 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .av-cell-btn.is-available { background: var(--teal); color: #fff; }
 .av-cell-btn.is-maybe { background: var(--peach); color: var(--ink); }
 .av-cell-btn.is-unset { background: var(--paper-3); color: var(--ink-3); }
+
+/* ── Map client (ODY-011c — migrated from inline styles) ── */
+.map-loading { position: absolute; inset: 0; background: var(--paper-3); }
+
+.map-empty {
+  height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--paper-3); text-align: center; padding: 32px;
+}
+.map-empty-icon { font-size: 48px; margin-bottom: 16px; }
+.map-empty h3 { font-family: var(--font-display); font-size: 28px; margin: 0 0 8px; color: var(--ink); }
+.map-empty h3 em { font-style: italic; color: var(--peri); }
+.map-empty-sub { color: var(--ink-2); font-size: 14px; max-width: 360px; margin: 0; }
+
+.map-card .card-head .main { flex: 1; min-width: 0; }
+.map-card .badge-row { margin-bottom: 8px; }
+.map-card .row.day { color: var(--peri); }
