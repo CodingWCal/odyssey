@@ -25,9 +25,9 @@ import { reorderEvents } from "@/app/trips/[tripId]/itinerary/actions";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import type { TripDay } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { formatDate, type TimeFormat } from "@/lib/utils";
 
-function SortableEvent({ event, tripId, readOnly }: { event: TripDay["events"][number]; tripId: string; readOnly?: boolean }) {
+function SortableEvent({ event, tripId, readOnly, timeFormat }: { event: TripDay["events"][number]; tripId: string; readOnly?: boolean; timeFormat?: TimeFormat }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: event.id, disabled: readOnly });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
@@ -38,6 +38,7 @@ function SortableEvent({ event, tripId, readOnly }: { event: TripDay["events"][n
         tripId={tripId}
         isDragging={isDragging}
         readOnly={readOnly}
+        timeFormat={timeFormat}
         dragHandle={
           readOnly ? undefined : (
             <span {...listeners} className="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
@@ -56,9 +57,11 @@ interface DayBlockProps {
   dayNumber: number;
   /** Viewers get a read-only itinerary (ODY-001). */
   readOnly?: boolean;
+  /** Trip-level 12h/24h display preference (ODY-041). */
+  timeFormat?: TimeFormat;
 }
 
-export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h" }: DayBlockProps) {
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -140,7 +143,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockP
                 </p>
               )}
               {events.map((event) => (
-                <SortableEvent key={event.id} event={event} tripId={tripId} readOnly={readOnly} />
+                <SortableEvent key={event.id} event={event} tripId={tripId} readOnly={readOnly} timeFormat={timeFormat} />
               ))}
             </div>
           </SortableContext>

@@ -81,6 +81,7 @@ export default async function MapPage({ params }: Props) {
       events={allEvents}
       eyebrow={`${trip.destination} · ${dateRange}`}
       dayCount={trip.days.length}
+      timeFormat={trip.timeFormat as "12h" | "24h"}
     />
   );
 }

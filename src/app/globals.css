@@ -3515,3 +3515,11 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-size: 12px; font-weight: 600; color: var(--peri); cursor: pointer;
 }
 .event-notes .notes-toggle:hover { text-decoration: underline; }
+
+/* Small option-chip toggle (trip edit modal, ODY-041) */
+.opt-chips { display: flex; gap: 8px; }
+.opt-chip {
+  padding: 8px 14px; font-size: 13px; border: 1px solid var(--rule-2);
+  cursor: pointer; background: var(--paper); color: var(--ink-2);
+}
+.opt-chip.on { background: var(--ink); color: var(--paper); }

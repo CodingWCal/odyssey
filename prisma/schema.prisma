@@ -33,6 +33,7 @@ model Trip {
   endDate       DateTime
   coverImageUrl String?
   totalBudget   Float?
+  timeFormat    String   @default("12h") // "12h" | "24h" — display-only preference (ODY-041)
   createdAt     DateTime @default(now())
 
   owner    User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)

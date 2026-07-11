@@ -23,7 +23,10 @@ export const createTripSchema = z.object({
   totalBudget: z.coerce.number().min(0).optional(),
 });
 
-export const updateTripSchema = createTripSchema.partial();
+export const updateTripSchema = createTripSchema.partial().extend({
+  // Display-only 12h/24h preference (ODY-041).
+  timeFormat: z.enum(["12h", "24h"]).optional(),
+});
 
 export const createTripWizardSchema = z.object({
   title: z.string().min(1, "Trip name is required").max(100),

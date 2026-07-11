@@ -253,7 +253,7 @@ characters) collapses to a one-line preview with a small periwinkle toggle
 - Display-only; per-card local state, no schema change, no persistence.
 - Acceptance: long notes collapsed by default; toggle expands/collapses; short notes unaffected.
 
-### ODY-041 · 12-hour / 24-hour time display toggle — S, haiku
+### ODY-041 · 12-hour / 24-hour time display toggle — S, haiku — ✅ DONE (PR #21)
 > **In plain terms:** Event times currently show only in military time (14:30). This adds a setting so a trip can show friendly 2:30 PM times instead — whichever the crew prefers.
 Event `startTime`/`endTime` come from `<input type="time">` as "HH:MM" strings and
 are displayed raw, so everything reads as military time.

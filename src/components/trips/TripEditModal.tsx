@@ -19,17 +19,20 @@ interface TripEditModalProps {
   initialDestination: string;
   initialStartDate?: Date;
   initialEndDate?: Date;
+  /** Trip-level 12h/24h time display preference (ODY-041). */
+  initialTimeFormat?: "12h" | "24h";
   onClose: () => void;
 }
 
 // Inner form is mounted only while the modal is open, so its initial state is
 // always seeded fresh from the current trip values (no reset effect needed).
-function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDate, initialEndDate, onClose }: Omit<TripEditModalProps, "open">) {
+function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDate, initialEndDate, initialTimeFormat = "12h", onClose }: Omit<TripEditModalProps, "open">) {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(initialTitle);
   const [destination, setDestination] = useState(initialDestination);
   const [startDate, setStartDate] = useState(initialStartDate ? formatDateForInput(initialStartDate) : "");
   const [endDate, setEndDate] = useState(initialEndDate ? formatDateForInput(initialEndDate) : "");
+  const [timeFormat, setTimeFormat] = useState<"12h" | "24h">(initialTimeFormat);
 
   function handleSave() {
     if (!title.trim()) return;
@@ -42,6 +45,7 @@ function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDa
     if (destination.trim()) fd.set("destination", destination.trim());
     if (startDate) fd.set("startDate", startDate);
     if (endDate) fd.set("endDate", endDate);
+    fd.set("timeFormat", timeFormat);
     startTransition(async () => {
       await updateTrip(tripId, fd);
       onClose();
@@ -105,6 +109,28 @@ function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDa
             onChange={(e) => setEndDate(e.target.value)}
           />
         </div>
+
+        <div className="field">
+          <label>Time display</label>
+          <div className="opt-chips">
+            <button
+              type="button"
+              className={`rounded-xl opt-chip ${timeFormat === "12h" ? "on" : ""}`}
+              aria-pressed={timeFormat === "12h"}
+              onClick={() => setTimeFormat("12h")}
+            >
+              2:30 PM
+            </button>
+            <button
+              type="button"
+              className={`rounded-xl opt-chip ${timeFormat === "24h" ? "on" : ""}`}
+              aria-pressed={timeFormat === "24h"}
+              onClick={() => setTimeFormat("24h")}
+            >
+              14:30
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="modal-foot">
@@ -117,7 +143,7 @@ function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDa
   );
 }
 
-export function TripEditModal({ open, tripId, initialTitle, initialDestination, initialStartDate, initialEndDate, onClose }: TripEditModalProps) {
+export function TripEditModal({ open, tripId, initialTitle, initialDestination, initialStartDate, initialEndDate, initialTimeFormat, onClose }: TripEditModalProps) {
   return (
     <Modal open={open} onClose={onClose} ariaLabel="Edit trip">
       <TripEditForm
@@ -126,6 +152,7 @@ export function TripEditModal({ open, tripId, initialTitle, initialDestination, 
         initialDestination={initialDestination}
         initialStartDate={initialStartDate}
         initialEndDate={initialEndDate}
+        initialTimeFormat={initialTimeFormat}
         onClose={onClose}
       />
     </Modal>

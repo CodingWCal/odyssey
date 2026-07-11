@@ -25,7 +25,7 @@ function formatRange(start: Date, end: Date): string {
 }
 
 interface WorkspaceSidebarProps {
-  trip: { id: string; title: string; destination: string; startDate: Date; endDate: Date };
+  trip: { id: string; title: string; destination: string; startDate: Date; endDate: Date; timeFormat?: string };
   /** Viewers can't edit trip details (ODY-001). */
   canEdit?: boolean;
 }
@@ -71,6 +71,7 @@ export function WorkspaceSidebar({ trip, canEdit = true }: WorkspaceSidebarProps
         initialDestination={trip.destination}
         initialStartDate={trip.startDate}
         initialEndDate={trip.endDate}
+        initialTimeFormat={trip.timeFormat as "12h" | "24h" | undefined}
         onClose={() => setEditOpen(false)}
       />
 
