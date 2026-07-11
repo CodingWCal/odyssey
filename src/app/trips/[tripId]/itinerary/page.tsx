@@ -51,10 +51,10 @@ export default async function ItineraryPage({ params }: Props) {
       <TripNotes tripId={tripId} initialText={noteText} readOnly={readOnly} />
 
       {trip.days.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "64px 24px", background: "var(--paper-2)", borderRadius: "var(--radius-xl)", border: "1px solid var(--rule)" }}>
-          <p style={{ fontSize: 32, marginBottom: 12 }} aria-hidden="true">🗓</p>
-          <p style={{ color: "var(--ink-2)", fontFamily: "var(--font-display)", fontSize: 22 }}>No days found for this trip.</p>
-          <p style={{ color: "var(--ink-3)", fontSize: 13, marginTop: 6 }}>Check your trip dates in settings.</p>
+        <div className="empty-card tall">
+          <p className="glyph sm" aria-hidden="true">🗓</p>
+          <p className="headline soft">No days found for this trip.</p>
+          <p className="sub mt">Check your trip dates in settings.</p>
         </div>
       ) : (
         trip.days.map((day: (typeof trip.days)[number], index: number) => (

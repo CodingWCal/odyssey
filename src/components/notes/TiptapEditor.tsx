@@ -47,7 +47,7 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
   return (
     <div>
       {editor && !readOnly && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        <div className="tt-toolbar">
           {[
             { action: () => editor.chain().focus().toggleBold().run(), label: "Bold", active: editor.isActive("bold"), text: "B" },
             { action: () => editor.chain().focus().toggleItalic().run(), label: "Italic", active: editor.isActive("italic"), text: "I" },
@@ -60,13 +60,7 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
               type="button"
               onClick={btn.action}
               aria-label={btn.label}
-              style={{
-                padding: "4px 12px", fontSize: 13, borderRadius: 8, cursor: "pointer",
-                border: "1px solid var(--rule-2)", fontFamily: "var(--font-mono)",
-                background: btn.active ? "var(--peri)" : "var(--paper)",
-                color: btn.active ? "white" : "var(--ink-2)",
-                transition: "all .15s ease",
-              }}
+              className={`tt-btn ${btn.active ? "active" : ""}`}
             >
               {btn.text}
             </button>
@@ -77,7 +71,7 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
       <EditorContent editor={editor} />
 
       {lastUpdated && (
-        <p style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 16 }}>
+        <p className="tt-meta">
           Last edited {new Date(lastUpdated).toLocaleString()}{lastUpdatedBy ? ` by ${lastUpdatedBy}` : ""}
         </p>
       )}

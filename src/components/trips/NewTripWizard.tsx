@@ -177,13 +177,16 @@ function WizardBody({ onClose }: { onClose: () => void }) {
                   className="wz-chip"
                   onClick={() => setDestination(`${d.name}, ${d.country}`)}
                 >
-                  <span className="dot" style={{ background: d.dot }} />
+                  <span className="dot dot-var" style={{ "--dot-c": d.dot } as React.CSSProperties} />
                   <span className="nm">{d.name}</span>
                   <span className="ct">· {d.country}</span>
                 </button>
               ))}
             </div>
-            <div className="wz-cover-preview" style={{ backgroundImage: `${COVER_ACCENT}, ${COVER_GRADIENTS[coverIndex]}` }}>
+            <div
+              className="wz-cover-preview cover-art"
+              style={{ "--cover-img": `${COVER_ACCENT}, ${COVER_GRADIENTS[coverIndex]}` } as React.CSSProperties}
+            >
               <span>Your trip&apos;s cover will live here.</span>
             </div>
           </>
@@ -263,8 +266,8 @@ function WizardBody({ onClose }: { onClose: () => void }) {
             <div className="wz-moods">
               {COVER_GRADIENTS.map((g, i) => (
                 <button key={i} type="button" aria-label={`Cover mood ${i + 1}`}
-                  className={`wz-mood ${coverIndex === i ? "on" : ""}`}
-                  style={{ backgroundImage: g }} onClick={() => setCoverIndex(i)} />
+                  className={`wz-mood cover-art ${coverIndex === i ? "on" : ""}`}
+                  style={{ "--cover-img": g } as React.CSSProperties} onClick={() => setCoverIndex(i)} />
               ))}
             </div>
           </>

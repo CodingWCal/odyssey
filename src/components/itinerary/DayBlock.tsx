@@ -135,7 +135,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockP
           <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
             <div className="timeline">
               {events.length === 0 && (
-                <p style={{ color: "var(--ink-3)", fontStyle: "italic", fontSize: 13, padding: "12px 0" }}>
+                <p className="day-empty-note">
                   {readOnly ? "No events planned for this day yet." : "No events yet — add your first one below."}
                 </p>
               )}
@@ -147,7 +147,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false }: DayBlockP
         </DndContext>
 
         {!readOnly && (
-          <div style={{ marginLeft: 38, marginTop: 8 }}>
+          <div className="add-event-row">
             <button className="add-event" onClick={(e) => { e.stopPropagation(); setAddOpen(true); }}>
               <span className="plus"><Icons.plus size={12} /></span>
               <span>Add event to Day {dayNumber}</span>

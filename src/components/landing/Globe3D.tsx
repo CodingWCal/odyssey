@@ -190,7 +190,8 @@ export function Globe3D({ size = 300 }: Globe3DProps) {
     <div
       ref={mountRef}
       aria-label="Interactive globe — drag to spin"
-      style={{ width: size, height: size, maxWidth: "100%", margin: "0 auto" }}
+      className="globe-wrap"
+      style={{ "--globe-size": `${size}px` } as React.CSSProperties}
     />
   );
 }
