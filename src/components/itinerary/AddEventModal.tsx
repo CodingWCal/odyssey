@@ -203,7 +203,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
 
       <div className="modal-foot">
         {isEdit && (
-          <button className="btn btn-danger" onClick={handleDelete} disabled={isPending} style={{ marginRight: "auto" }}>
+          <button className="btn btn-danger mr-auto" onClick={handleDelete} disabled={isPending}>
             <Icons.trash size={14} /> Delete
           </button>
         )}

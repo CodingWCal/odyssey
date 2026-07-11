@@ -49,11 +49,10 @@ export function DayNotes({ dayId, tripId, initialNotes, readOnly = false }: DayN
       />
       {value && !readOnly && (
         <button
-          className="icon-btn"
+          className="icon-btn sm"
           aria-label="Clear day note"
           title="Clear"
           onClick={() => { setValue(""); save(""); }}
-          style={{ width: 22, height: 22 }}
         >
           <Icons.close size={12} />
         </button>

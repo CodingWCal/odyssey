@@ -65,7 +65,7 @@ export default async function MembersPage({ params }: Props) {
 
       <div className="page-bar">
         <h2>Travelers</h2>
-        <span style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>{members.length} active</span>
+        <span className="members-count">{members.length} active</span>
       </div>
 
       <div className="members-grid">
@@ -86,7 +86,7 @@ export default async function MembersPage({ params }: Props) {
               )}
               <div className="member-top">
                 <span className={`member-avatar ${avatarColor(m.id)}`}>{initialsOf(m.user?.name ?? "?")}</span>
-                <div style={{ minWidth: 0, paddingTop: 4 }}>
+                <div className="member-id">
                   <h3 className="member-name">{m.user?.name ?? "Traveler"}</h3>
                   <div className="member-email">{m.user?.email}</div>
                 </div>
@@ -99,7 +99,7 @@ export default async function MembersPage({ params }: Props) {
               <div className="member-foot">
                 <span>{joined}</span>
                 <span>·</span>
-                <span style={{ textTransform: "capitalize" }}>{role}</span>
+                <span className="member-role">{role}</span>
               </div>
               <MemberActions
                 memberId={m.id}

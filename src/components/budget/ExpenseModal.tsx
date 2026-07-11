@@ -92,8 +92,7 @@ export function ExpenseModal({ open, tripId, mode, initial, onClose, onSuccess }
                 <button
                   key={c}
                   type="button"
-                  className={`type-chip c-${c} ${form.category === c ? "selected" : ""}`}
-                  style={{ "--type-color": "var(--cat-color)", "--type-soft": "var(--cat-soft)" } as React.CSSProperties}
+                  className={`type-chip cat c-${c} ${form.category === c ? "selected" : ""}`}
                   onClick={() => set("category", c)}
                 >
                   <Icon size={18} />
@@ -134,7 +133,7 @@ export function ExpenseModal({ open, tripId, mode, initial, onClose, onSuccess }
 
       <div className="modal-foot">
         {isEdit && (
-          <button className="btn btn-danger" onClick={handleDelete} disabled={isPending} style={{ marginRight: "auto" }}>
+          <button className="btn btn-danger mr-auto" onClick={handleDelete} disabled={isPending}>
             <Icons.trash size={14} /> Delete
           </button>
         )}

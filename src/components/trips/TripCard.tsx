@@ -33,7 +33,10 @@ export function TripCard({ trip }: { trip: DashTrip }) {
 
   return (
     <Link href={`/trips/${trip.id}/itinerary`} className={`trip-card ${isPast ? "past" : ""}`}>
-      <div className="cover" style={{ backgroundImage: `${COVER_ACCENT}, ${trip.cover}` }}>
+      <div
+        className="cover cover-art"
+        style={{ "--cover-img": `${COVER_ACCENT}, ${trip.cover}` } as React.CSSProperties}
+      >
         <span className="countdown">{trip.countdown}</span>
         <div className="cover-bottom">
           <div className="dest">{trip.destination}</div>
@@ -47,7 +50,7 @@ export function TripCard({ trip }: { trip: DashTrip }) {
           <AvatarStack members={trip.members} />
           <span className="cost">
             {isPast
-              ? <>{fmtMoney(trip.spent)} <span style={{ color: "var(--ink-3)", fontWeight: 400 }}>spent</span></>
+              ? <>{fmtMoney(trip.spent)} <span className="muted-spent">spent</span></>
               : trip.spent > 0
                 ? <>{fmtMoney(trip.spent)} / {fmtMoney(trip.cost)}</>
                 : <>{fmtMoney(trip.cost)} budget</>}

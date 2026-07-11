@@ -3405,3 +3405,102 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .map-card .card-head .main { flex: 1; min-width: 0; }
 .map-card .badge-row { margin-bottom: 8px; }
 .map-card .row.day { color: var(--peri); }
+
+/* ── ODY-011d: remaining inline-style migration ── */
+/* Poll setup form */
+.poll-form { display: flex; flex-direction: column; gap: 18px; margin-top: 8px; }
+.poll-form .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.poll-blocks { display: flex; flex-wrap: wrap; gap: 8px; }
+.poll-chip {
+  padding: 8px 14px; font-size: 13px; border: 1px solid var(--rule-2);
+  cursor: pointer; background: var(--paper); color: var(--ink-2);
+}
+.poll-chip.on { background: var(--ink); color: var(--paper); }
+.poll-length { max-width: 260px; }
+.form-error { font-size: 13px; color: var(--coral); margin: 0; }
+.form-error.mt { margin-top: 12px; }
+
+/* Dashboard */
+.dash-empty { padding: 64px 0; text-align: center; color: var(--ink-3); }
+.dash-empty .headline { font-family: var(--font-display); font-size: 24px; color: var(--ink-2); margin: 0; }
+.dash-empty .sub { font-size: 13px; margin-top: 8px; }
+
+/* Trip cards / covers: per-item art + progress flow through custom props */
+.cover-art { background-image: var(--cover-img); }
+.bar .fill-w { width: var(--w); }
+.muted-spent { color: var(--ink-3); font-weight: 400; }
+
+/* Invite form */
+.invite-send { height: 42px; }
+
+/* Trip form (legacy shadcn form) */
+.btn-ink { background: var(--ink); color: var(--paper); }
+/* Per-item accent dot (wizard destination list) */
+.dot-var { background: var(--dot-c); }
+/* Budget page (011d) */
+.progress-fill.fill-w { width: var(--w); }
+.seg-grow { flex-grow: var(--grow); background: var(--cat-color); }
+.budget-empty {
+  text-align: center; padding: 60px 24px; background: var(--paper-2);
+  border-radius: var(--radius-xl); border: 1px solid var(--rule);
+}
+.budget-empty .glyph { font-size: 36px; margin-bottom: 12px; }
+.budget-empty .headline { font-family: var(--font-display); font-size: 22px; color: var(--ink); margin: 0 0 6px; }
+.budget-empty .sub { color: var(--ink-3); font-size: 13px; margin: 0; }
+.type-chip.cat { --type-color: var(--cat-color); --type-soft: var(--cat-soft); }
+
+/* Tiptap notes editor (011d) */
+.tt-toolbar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.tt-btn {
+  padding: 4px 12px; font-size: 13px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--rule-2); font-family: var(--font-mono);
+  background: var(--paper); color: var(--ink-2);
+  transition: all .15s ease;
+}
+.tt-btn.active { background: var(--peri); color: white; }
+.tt-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 16px; }
+
+/* Notes page (011d) */
+.canvas-narrow { max-width: 680px; }
+.notes-head { margin-bottom: 28px; }
+.notes-head h1 { font-family: var(--font-display); font-size: 40px; margin: 0 0 6px; color: var(--ink); }
+.notes-head h1 em { font-style: italic; color: var(--peri); }
+.notes-head .sub { color: var(--ink-2); font-size: 13.5px; margin: 0; }
+.notes-shell {
+  background: var(--paper-2); border: 1px solid var(--rule);
+  border-radius: var(--radius-lg); padding: 22px 24px;
+}
+/* Shared route empty-state card (011d — schedule + itinerary pages) */
+.empty-card {
+  text-align: center; padding: 60px 24px; background: var(--paper-2);
+  border-radius: var(--radius-xl); border: 1px solid var(--rule);
+}
+.empty-card.tall { padding: 64px 24px; }
+.empty-card .glyph { font-size: 36px; margin-bottom: 12px; }
+.empty-card .glyph.sm { font-size: 32px; }
+.empty-card .headline { font-family: var(--font-display); font-size: 22px; color: var(--ink); margin: 0 0 6px; }
+.empty-card .headline.soft { color: var(--ink-2); margin: 0; }
+.empty-card .sub { color: var(--ink-3); font-size: 13px; margin: 0; }
+.empty-card .sub.mt { margin-top: 6px; }
+
+/* Members page (011d) */
+.members-count { font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); }
+.member-id { min-width: 0; padding-top: 4px; }
+.member-role { text-transform: capitalize; }
+
+/* Auth pages (011d) */
+.auth-shell {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--paper); padding: 24px 16px;
+}
+.auth-shell .brand { margin-bottom: 28px; }
+
+/* Itinerary bits (011d) */
+.hero-title-row { display: flex; align-items: center; gap: 8px; }
+.hero-cond { opacity: 0.8; }
+.day-empty-note { color: var(--ink-3); font-style: italic; font-size: 13px; padding: 12px 0; }
+.add-event-row { margin-left: 38px; margin-top: 8px; }
+.icon-btn.sm { width: 22px; height: 22px; }
+/* Landing globe mount — size flows in per-instance (011d) */
+.globe-wrap { width: var(--globe-size); height: var(--globe-size); max-width: 100%; margin: 0 auto; }
