@@ -8,6 +8,7 @@ import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import type { TripEvent } from "@/types";
 import { parseNoteChunks } from "@/lib/notes";
+import { formatTime, type TimeFormat } from "@/lib/utils";
 
 const TYPE_VAR: Record<string, string> = {
   flight: "coral",
@@ -83,9 +84,11 @@ interface EventBlockProps {
   dragHandle?: React.ReactNode;
   /** Viewers see events without edit/delete controls (ODY-001). */
   readOnly?: boolean;
+  /** Trip-level 12h/24h display preference (ODY-041). */
+  timeFormat?: TimeFormat;
 }
 
-export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false }: EventBlockProps) {
+export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h" }: EventBlockProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
@@ -111,8 +114,8 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
             {dragHandle}
 
             <div className="event-time">
-              <span>{event.startTime || "—"}</span>
-              {event.endTime && <span className="end">→ {event.endTime}</span>}
+              <span>{event.startTime ? formatTime(event.startTime, timeFormat) : "—"}</span>
+              {event.endTime && <span className="end">→ {formatTime(event.endTime, timeFormat)}</span>}
             </div>
 
             <div className="event-main">

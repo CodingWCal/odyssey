@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
 import { TYPE_HEX, type MapDay, type MapEvent } from "./mapTypes";
+import { formatTime, type TimeFormat } from "@/lib/utils";
 
 const LeafletMap = dynamic(() => import("./LeafletMap").then((m) => m.LeafletMap), {
   ssr: false,
@@ -16,9 +17,11 @@ interface MapClientProps {
   events: MapEvent[];
   eyebrow: string;
   dayCount: number;
+  /** Trip-level 12h/24h display preference (ODY-041). */
+  timeFormat?: TimeFormat;
 }
 
-export function MapClient({ days, events, eyebrow, dayCount }: MapClientProps) {
+export function MapClient({ days, events, eyebrow, dayCount, timeFormat = "12h" }: MapClientProps) {
   const [activeDay, setActiveDay] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showRoute, setShowRoute] = useState(true);
@@ -76,7 +79,7 @@ export function MapClient({ days, events, eyebrow, dayCount }: MapClientProps) {
                   <div className="body">
                     <div className="title">{ev.title}</div>
                     <div className="meta">
-                      {ev.startTime && <span>{ev.startTime}</span>}
+                      {ev.startTime && <span>{formatTime(ev.startTime, timeFormat)}</span>}
                       {ev.location && <span>{ev.startTime ? " · " : ""}{ev.location}</span>}
                     </div>
                   </div>
@@ -130,7 +133,7 @@ export function MapClient({ days, events, eyebrow, dayCount }: MapClientProps) {
               )}
               {selected.startTime && (
                 <span className="row mono">
-                  <Icons.clock size={13} /> {selected.startTime}{selected.endTime ? ` → ${selected.endTime}` : ""}
+                  <Icons.clock size={13} /> {formatTime(selected.startTime, timeFormat)}{selected.endTime ? ` → ${formatTime(selected.endTime, timeFormat)}` : ""}
                 </span>
               )}
               <span className="row day">

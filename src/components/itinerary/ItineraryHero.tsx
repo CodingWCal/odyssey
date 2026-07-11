@@ -15,7 +15,7 @@ interface ItineraryHeroProps {
   weather: { condition: string; temperature: number } | null;
   totalDays: number;
   totalEvents: number;
-  trip: { startDate: Date; endDate: Date };
+  trip: { startDate: Date; endDate: Date; timeFormat?: string };
   /** Viewers can't edit trip details (ODY-001). */
   canEdit?: boolean;
 }
@@ -93,6 +93,7 @@ export function ItineraryHero({
         initialDestination={destination}
         initialStartDate={trip.startDate}
         initialEndDate={trip.endDate}
+        initialTimeFormat={trip.timeFormat as "12h" | "24h" | undefined}
         onClose={() => setEditOpen(false)}
       />
     </>

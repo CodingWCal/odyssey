@@ -44,7 +44,7 @@ export default async function ItineraryPage({ params }: Props) {
         weather={weather}
         totalDays={trip.days.length}
         totalEvents={totalEvents}
-        trip={{ startDate: trip.startDate, endDate: trip.endDate }}
+        trip={{ startDate: trip.startDate, endDate: trip.endDate, timeFormat: trip.timeFormat }}
         canEdit={!readOnly}
       />
 
@@ -58,7 +58,7 @@ export default async function ItineraryPage({ params }: Props) {
         </div>
       ) : (
         trip.days.map((day: (typeof trip.days)[number], index: number) => (
-          <DayBlock key={day.id} day={day as TripDay} tripId={tripId} dayNumber={index + 1} readOnly={readOnly} />
+          <DayBlock key={day.id} day={day as TripDay} tripId={tripId} dayNumber={index + 1} readOnly={readOnly} timeFormat={trip.timeFormat as "12h" | "24h"} />
         ))
       )}
     </div>
