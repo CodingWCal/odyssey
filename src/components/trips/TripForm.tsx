@@ -59,8 +59,7 @@ export function TripForm() {
         <Button
           type="submit"
           disabled={isPending}
-          className="flex-1 rounded-xl"
-          style={{ background: "var(--ink)", color: "var(--paper)" }}
+          className="flex-1 rounded-xl btn-ink"
         >
           {isPending ? "Creating..." : "Create Trip"}
         </Button>

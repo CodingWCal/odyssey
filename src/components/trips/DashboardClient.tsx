@@ -38,7 +38,10 @@ function LiveCard({ trip }: { trip: DashTrip }) {
   const pct = trip.days ? (dayOf / trip.days) * 100 : 0;
   return (
     <Link className="live-card" href={`/trips/${trip.id}/itinerary`}>
-      <div className="cover" style={{ backgroundImage: `radial-gradient(60% 70% at 80% 20%, rgba(255,255,255,.22) 0%, transparent 55%), ${trip.cover}` }}>
+      <div
+        className="cover cover-art"
+        style={{ "--cover-img": `radial-gradient(60% 70% at 80% 20%, rgba(255,255,255,.22) 0%, transparent 55%), ${trip.cover}` } as React.CSSProperties}
+      >
         <span className="live-pill"><span className="live-dot" />Live · Day {dayOf} of {trip.days}</span>
         <div className="cover-info">
           <div className="dest">{trip.destination}</div>
@@ -53,7 +56,7 @@ function LiveCard({ trip }: { trip: DashTrip }) {
         </div>
         <div>
           <div className="progress-trip">
-            <div className="bar"><div className="fill" style={{ width: pct + "%" }} /></div>
+            <div className="bar"><div className="fill fill-w" style={{ "--w": pct + "%" } as React.CSSProperties} /></div>
             <div className="pmeta">
               <span>{trip.startStr} → {trip.endStr}</span>
               <span>{Math.round(pct)}% there</span>
@@ -161,11 +164,11 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
         )}
 
         {nothing && trips.length > 0 && (
-          <div style={{ padding: "64px 0", textAlign: "center", color: "var(--ink-3)" }}>
-            <p style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-2)", margin: 0 }}>
+          <div className="dash-empty">
+            <p className="headline">
               No trips match &ldquo;{query}&rdquo;
             </p>
-            <p style={{ fontSize: 13, marginTop: 8 }}>Try a different search, or plan something new.</p>
+            <p className="sub">Try a different search, or plan something new.</p>
           </div>
         )}
       </main>

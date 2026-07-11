@@ -46,7 +46,7 @@ export function ItineraryHero({
         <div className="hero-top">
           <div className="left">
             <div className="hero-eyebrow">{destination} · {dateRange}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="hero-title-row">
               <h1 className="hero-title">{titleParts.head}<em>{titleParts.tail}</em></h1>
               {canEdit && (
                 <button
@@ -73,7 +73,7 @@ export function ItineraryHero({
               <span className="hero-weather">
                 <span>{CONDITION_ICONS[weather.condition] ?? CONDITION_ICONS.default}</span>
                 <span className="temp">{Math.round(weather.temperature)}°F</span>
-                <span style={{ opacity: 0.8 }}>· {weather.condition}</span>
+                <span className="hero-cond">· {weather.condition}</span>
               </span>
               <span className="dot" />
             </>

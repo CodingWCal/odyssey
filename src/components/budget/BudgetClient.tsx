@@ -289,7 +289,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
         </div>
         {budget > 0 && (
           <div className="progress" aria-label={`${pct.toFixed(0)} percent of budget spent`}>
-            <div className="progress-fill" style={{ width: pct + "%" }} />
+            <div className="progress-fill fill-w" style={{ "--w": pct + "%" } as React.CSSProperties} />
           </div>
         )}
         <div className="progress-meta">
@@ -354,7 +354,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
             {CATEGORIES.map((c) => {
               const v = catTotals[c] ?? 0;
               if (v === 0) return null;
-              return <div key={c} className={`seg c-${c}`} style={{ flexGrow: v, background: "var(--cat-color)" }} title={`${CAT_LABEL[c]} — ${fmtMoney(v)}`} />;
+              return <div key={c} className={`seg seg-grow c-${c}`} style={{ "--grow": v } as React.CSSProperties} title={`${CAT_LABEL[c]} — ${fmtMoney(v)}`} />;
             })}
           </div>
           <div className="cat-legend">
@@ -386,10 +386,10 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
       </div>
 
       {byCategory.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 24px", background: "var(--paper-2)", borderRadius: "var(--radius-xl)", border: "1px solid var(--rule)" }}>
-          <p style={{ fontSize: 36, marginBottom: 12 }} aria-hidden="true">💰</p>
-          <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink)", margin: "0 0 6px" }}>No expenses yet.</p>
-          <p style={{ color: "var(--ink-3)", fontSize: 13, margin: 0 }}>Add one above, or set a cost on an itinerary event.</p>
+        <div className="budget-empty">
+          <p className="glyph" aria-hidden="true">💰</p>
+          <p className="headline">No expenses yet.</p>
+          <p className="sub">Add one above, or set a cost on an itinerary event.</p>
         </div>
       ) : (
         byCategory.map((g) => (

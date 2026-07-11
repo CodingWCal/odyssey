@@ -62,14 +62,14 @@ export function InviteForm({ tripId }: InviteFormProps) {
             <option value="viewer">Viewer</option>
           </select>
         </div>
-        <button type="submit" className="btn btn-primary" style={{ height: 42 }} disabled={isPending || !email}>
+        <button type="submit" className="btn btn-primary invite-send" disabled={isPending || !email}>
           <Icons.plus size={14} /> {isPending ? "Sending…" : "Send invite"}
         </button>
       </form>
       {message && (
         <div className="invite-success">{message}</div>
       )}
-      {error && <p style={{ fontSize: 13, color: "var(--coral)", marginTop: 12 }}>{error}</p>}
+      {error && <p className="form-error mt">{error}</p>}
     </>
   );
 }

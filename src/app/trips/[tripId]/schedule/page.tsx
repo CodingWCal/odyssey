@@ -42,20 +42,12 @@ export default async function SchedulePage({ params }: Props) {
       {!poll && isOwner && <PollSetupForm tripId={tripId} />}
 
       {!poll && !isOwner && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 24px",
-            background: "var(--paper-2)",
-            borderRadius: "var(--radius-xl)",
-            border: "1px solid var(--rule)",
-          }}
-        >
-          <p style={{ fontSize: 36, marginBottom: 12 }} aria-hidden="true">🗓️</p>
-          <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink)", margin: "0 0 6px" }}>
+        <div className="empty-card">
+          <p className="glyph" aria-hidden="true">🗓️</p>
+          <p className="headline">
             No scheduling poll yet.
           </p>
-          <p style={{ color: "var(--ink-3)", fontSize: 13, margin: 0 }}>
+          <p className="sub">
             The trip owner hasn&apos;t opened a scheduling poll yet.
           </p>
         </div>

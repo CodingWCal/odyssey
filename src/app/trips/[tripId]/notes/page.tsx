@@ -18,22 +18,19 @@ export default async function NotesPage({ params }: Props) {
   });
 
   return (
-    <div className="canvas" style={{ maxWidth: 680 }}>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: 40, margin: "0 0 6px", color: "var(--ink)" }}>
-          Trip <em style={{ fontStyle: "italic", color: "var(--peri)" }}>notes</em>
+    <div className="canvas canvas-narrow">
+      <div className="notes-head">
+        <h1>
+          Trip <em>notes</em>
         </h1>
-        <p style={{ color: "var(--ink-2)", fontSize: 13.5, margin: 0 }}>
+        <p className="sub">
           {trip.myRole === "viewer"
             ? "Shared pad for the whole crew. You have view-only access."
             : "Shared pad for the whole crew. Autosaves on blur."}
         </p>
       </div>
 
-      <div style={{
-        background: "var(--paper-2)", border: "1px solid var(--rule)",
-        borderRadius: "var(--radius-lg)", padding: "22px 24px",
-      }}>
+      <div className="notes-shell">
         <TiptapEditor
           tripId={tripId}
           initialContent={note?.content as object | null}

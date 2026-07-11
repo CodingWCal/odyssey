@@ -70,8 +70,8 @@ export function PollSetupForm({ tripId }: PollSetupFormProps) {
         and Odyssey surfaces the window that works for the most people.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 8 }}>
-        <div className="field-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <form onSubmit={handleSubmit} className="poll-form">
+        <div className="field-row">
           <div className="field">
             <label htmlFor="poll-start">Earliest date</label>
             <input
@@ -99,7 +99,7 @@ export function PollSetupForm({ tripId }: PollSetupFormProps) {
 
         <div className="field">
           <label>Time blocks to ask about</label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div className="poll-blocks">
             {ALL_BLOCKS.map((block) => {
               const on = blocks[block];
               return (
@@ -108,15 +108,7 @@ export function PollSetupForm({ tripId }: PollSetupFormProps) {
                   key={block}
                   onClick={() => toggleBlock(block)}
                   aria-pressed={on}
-                  className="rounded-xl"
-                  style={{
-                    padding: "8px 14px",
-                    fontSize: 13,
-                    border: "1px solid var(--rule-2)",
-                    cursor: "pointer",
-                    background: on ? "var(--ink)" : "var(--paper)",
-                    color: on ? "var(--paper)" : "var(--ink-2)",
-                  }}
+                  className={`rounded-xl poll-chip ${on ? "on" : ""}`}
                 >
                   {BLOCK_LABEL[block]}
                 </button>
@@ -125,7 +117,7 @@ export function PollSetupForm({ tripId }: PollSetupFormProps) {
           </div>
         </div>
 
-        <div className="field" style={{ maxWidth: 260 }}>
+        <div className="field poll-length">
           <label htmlFor="poll-length">Desired trip length (days, optional)</label>
           <input
             id="poll-length"
@@ -138,7 +130,7 @@ export function PollSetupForm({ tripId }: PollSetupFormProps) {
           />
         </div>
 
-        {error && <p style={{ fontSize: 13, color: "var(--coral)", margin: 0 }}>{error}</p>}
+        {error && <p className="form-error">{error}</p>}
 
         <div>
           <button type="submit" className="btn-cta" disabled={isPending}>
