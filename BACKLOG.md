@@ -205,7 +205,7 @@ Only default metadata; no OG image, no per-route titles.
 - `metadata` exports: landing (brand tagline), dashboard/trip routes (`"Trip title — Odyssey"` via `generateMetadata`), OG image in brand palette (static PNG is fine), proper favicon set from the brand mark.
 - Acceptance: link unfurls show brand card; tab titles are contextual.
 
-### ODY-039 · Event notes as bullet points — S, haiku
+### ODY-039 · Event notes as bullet points — S, haiku — ✅ DONE (PR #17)
 Event notes render as one flat span (`src/components/itinerary/EventBlock.tsx`,
 `.event-notes`), so multi-item notes ("bring passport, check in online, gate
 closes 30 min early") read as an unscannable run-on line; newlines typed in the

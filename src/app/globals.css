@@ -479,6 +479,14 @@
   display: flex; gap: 8px;
 }
 .event-notes .icon { color: var(--peri); flex-shrink: 0; margin-top: 2px; }
+/* Notes body (ODY-039): multi-line notes render as paragraphs/bullets. */
+.event-notes .notes-body { flex: 1; min-width: 0; }
+.event-notes .notes-body p { margin: 0 0 3px; }
+.event-notes .notes-body p:last-child { margin-bottom: 0; }
+.event-notes .notes-body ul { margin: 0 0 3px; padding-left: 18px; list-style: disc; }
+.event-notes .notes-body ul:last-child { margin-bottom: 0; }
+.event-notes .notes-body li { margin: 0 0 2px; }
+.event-notes .notes-body li::marker { color: var(--peri); }
 .event-notes textarea {
   flex: 1; border: 0; background: transparent; resize: none;
   font: inherit; color: var(--ink-2); outline: none; padding: 0;

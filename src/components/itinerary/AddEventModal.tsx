@@ -196,7 +196,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
             className="input"
             value={form.notes}
             onChange={(e) => set("notes", e.target.value)}
-            placeholder="Confirmation #, what to bring, who's meeting where…"
+            placeholder="Confirmation #, what to bring… Start lines with - for bullets."
           />
         </div>
       </div>

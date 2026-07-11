@@ -7,6 +7,7 @@ import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import type { TripEvent } from "@/types";
+import { parseNoteChunks } from "@/lib/notes";
 
 const TYPE_VAR: Record<string, string> = {
   flight: "coral",
@@ -16,6 +17,33 @@ const TYPE_VAR: Record<string, string> = {
   transport: "peri",
   misc: "slate",
 };
+
+/**
+ * Display-only notes formatting (ODY-039): storage stays the plain string;
+ * parsing lives in lib/notes.ts (unit-tested). Text nodes only — note content
+ * is never parsed as HTML.
+ */
+function NotesBody({ text }: { text: string }) {
+  const chunks = parseNoteChunks(text);
+
+  if (!chunks) return <span className="notes-body">{text}</span>;
+
+  return (
+    <span className="notes-body">
+      {chunks.map((c, i) =>
+        c.kind === "ul" ? (
+          <ul key={i}>
+            {c.items.map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={i}>{c.text}</p>
+        )
+      )}
+    </span>
+  );
+}
 
 interface EventBlockProps {
   event: TripEvent;
@@ -91,7 +119,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
               {event.notes && (
                 <div className="event-notes">
                   <span className="icon"><Icons.note size={12} /></span>
-                  <span style={{ flex: 1 }}>{event.notes}</span>
+                  <NotesBody text={event.notes} />
                 </div>
               )}
             </div>
