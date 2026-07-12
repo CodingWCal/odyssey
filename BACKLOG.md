@@ -125,7 +125,7 @@ each in `MapClient.tsx` and `trips/new/page.tsx`, plus more (~120 total). Meanwh
 - Suggested split: (a) LandingPage, (b) Availability grid+heatmap, (c) MapClient + trips/new, (d) remainder.
 - Acceptance: visual diff-free (screenshot before/after), zero static `style={{}}` blocks outside the documented dynamic-value exception.
 
-### ODY-012 · Consolidate the styling system & prune globals.css — L, sonnet
+### ODY-012 · Consolidate the styling system & prune globals.css — L, sonnet — ✅ DONE (PR #22)
 > **In plain terms:** The app has two competing naming systems for its colors and styles, plus a lot of leftover dead styling. This picks one system, translates the old names onto it, and throws out what nothing uses.
 Two parallel systems coexist: the CLAUDE.md `odyssey-*` Tailwind tokens (used in
 `WeatherBanner`, older components) and the newer `--paper/--ink/--peri` editorial

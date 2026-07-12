@@ -24,19 +24,25 @@ and invite collaborators in real time.
 - Custom color tokens use `odyssey-` prefix in Tailwind classes
 - Tailwind v4 tokens defined in globals.css @theme block (no tailwind.config.ts)
 
-## Design Tokens
-- odyssey-teal: #5DCAA5 (primary actions, CTAs)
-- odyssey-slate: #4A6B8C (nav, secondary)
-- odyssey-periwinkle: #7F77C0 (day headers, selected)
-- odyssey-coral: #D9634F (alerts, flight type)
-- odyssey-peach: #F0A08A (hover, food type)
-- odyssey-cream: #F5D9B0 (backgrounds, empty states)
-- odyssey-ink: #1C1C2E (primary text)
-- odyssey-mist: #F0EEF8 (light page bg)
+## Design Tokens (the editorial system — canonical, ODY-012)
+One token system: CSS custom properties defined in the `:root` of
+`src/app/globals.css`. Use them via `var(--…)` in globals.css classes.
+The legacy `odyssey-*` Tailwind aliases were removed — do not reintroduce them.
+- --peri (periwinkle): accents, links, day headers, selected states
+- --teal: success, availability, activity type
+- --coral: alerts, danger, flight type
+- --peach: warm accents, maybe-states, restaurant type
+- --gold: ratings, hotel type
+- --slate: secondary, misc/transport contexts
+- --ink / --ink-2 / --ink-3: text (primary → muted)
+- --paper / --paper-2 / --paper-3: backgrounds (page → cards → wells)
+- --rule / --rule-2: borders; --radius-md/lg/xl: corners
+- Soft variants exist for fills: --peri-soft, --teal-soft, …
 
 ## Event Type Colors
-flight -> coral | hotel -> slate | restaurant -> peach
-activity -> teal | transport -> periwinkle | misc -> cream
+flight -> coral | hotel -> gold | restaurant -> peach
+activity -> teal | transport -> peri | misc -> slate
+(see TYPE_VAR in EventBlock.tsx / TYPE_HEX in mapTypes.ts)
 
 ## File Naming
 - Components: PascalCase.tsx
