@@ -6,14 +6,7 @@ import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { Icons } from "@/components/shared/Icons";
 import { TripEditModal } from "./TripEditModal";
-
-const NAV_ITEMS = [
-  { href: "schedule", label: "Schedule", Icon: Icons.schedule },
-  { href: "itinerary", label: "Itinerary", Icon: Icons.itinerary },
-  { href: "map", label: "Map", Icon: Icons.map },
-  { href: "budget", label: "Budget", Icon: Icons.budget },
-  { href: "members", label: "Members", Icon: Icons.members },
-] as const;
+import { NAV_ITEMS } from "./navItems";
 
 function formatRange(start: Date, end: Date): string {
   const s = new Date(start);
