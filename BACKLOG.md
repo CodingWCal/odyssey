@@ -171,7 +171,7 @@ Zero tests, no CI. The riskiest logic is pure and cheap to test: split-balance m
 
 ## P2 — Quality of Life
 
-### ODY-038 · Mobile UX for adding events and cross-tab navigation — L, sonnet
+### ODY-038 · Mobile UX for adding events and cross-tab navigation — L, sonnet — ✅ DONE (PR #23)
 > **In plain terms:** Using the app on a phone is clunky — forms are cramped and switching tabs takes too much scrolling. This makes phone use feel as natural as desktop.
 On mobile (< 768px), adding itinerary items is cumbersome (modals/forms not touch-optimized),
 and navigating between trip tabs (itinerary, budget, schedule, map, members) requires
@@ -190,7 +190,7 @@ Support links are `href="#"`.
 - Keep layout rhythm and type scale identical — copy swap, not redesign.
 - Acceptance: no invented metrics/testimonials/pricing anywhere public.
 
-### ODY-021 · Mobile responsiveness sweep — L, sonnet
+### ODY-021 · Mobile responsiveness sweep — L, sonnet — ✅ DONE (PR #23)
 > **In plain terms:** Beyond the big items in ODY-038, lots of screens simply don't fit a phone. This is the sweep that makes every page work at phone width.
 Fixed paddings (`48px` gutters on landing), the workspace sidebar, availability grid,
 and budget split rows were designed desktop-first. Audit at 375px/768px.
