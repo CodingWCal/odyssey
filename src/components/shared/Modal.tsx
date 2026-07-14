@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface ModalProps {
   open: boolean;
@@ -10,13 +12,16 @@ interface ModalProps {
 }
 
 /**
- * Centered modal shell (`.modal-backdrop` / `.modal`) matching the design.
- * Handles Escape-to-close, body scroll-lock, and backdrop-click-to-close.
- * Callers compose `.modal-head` / `.modal-body` / `.modal-foot` inside.
+ * Modal shell. Desktop renders the centered `.modal-backdrop` / `.modal`
+ * shell; below 768px it renders as a bottom sheet (`.sheet-panel`) via the
+ * shadcn Sheet primitive for easier one-thumb reach on mobile.
+ * Callers compose `.modal-head` / `.modal-body` / `.modal-foot` inside either way.
  */
 export function Modal({ open, onClose, ariaLabel, children }: ModalProps) {
+  const isMobile = useIsMobile();
+
   useEffect(() => {
-    if (!open) return;
+    if (!open || isMobile) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
@@ -26,7 +31,17 @@ export function Modal({ open, onClose, ariaLabel, children }: ModalProps) {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [open, onClose]);
+  }, [open, onClose, isMobile]);
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+        <SheetContent side="bottom" showCloseButton={false} className="sheet-panel" aria-label={ariaLabel}>
+          {children}
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   if (!open) return null;
 

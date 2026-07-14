@@ -802,6 +802,29 @@
   margin-top: 6px;
 }
 
+/* ─── Mobile bottom sheet (Modal on <768px) ──────────────────────── */
+
+.sheet-panel {
+  background: var(--paper-2) !important;
+  border-radius: 20px 20px 0 0 !important;
+  max-height: 90vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.sheet-panel .modal-head { padding: 18px 20px 14px; }
+.sheet-panel .modal-body { padding: 4px 20px; overflow-y: auto; gap: 20px; }
+.sheet-panel .modal-foot {
+  padding: 14px 20px calc(16px + env(safe-area-inset-bottom));
+  position: sticky; bottom: 0;
+  background: var(--paper-2);
+  border-top: 1px solid var(--rule);
+  justify-content: stretch;
+}
+.sheet-panel .modal-foot .btn { flex: 1; height: 46px; }
+.sheet-panel .modal-foot .btn.mr-auto { flex: none; }
+.sheet-panel .icon-btn { width: 40px; height: 40px; }
+.sheet-panel .type-chip { padding: 14px 8px; }
+.sheet-panel .field { gap: 10px; }
+
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field > label {
   font-size: 11.5px;
@@ -925,12 +948,70 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-family: var(--font-body) !important;
 }
 
-/* Hide nav-mobile (we're desktop-focused) */
-@media (max-width: 900px) {
+/* ─── Mobile trip nav (bottom tab bar replaces the sidebar) ───────── */
+
+.mobile-tab-bar { display: none; }
+.mobile-trip-header { display: none; }
+
+@media (max-width: 768px) {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .canvas { padding: 20px; }
+  .canvas {
+    padding: 20px;
+    padding-top: calc(20px + 52px + env(safe-area-inset-top));
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
   .hero-title { font-size: 32px; }
+
+  .mobile-trip-header {
+    display: flex; align-items: center; gap: 10px;
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 1200;
+    height: calc(52px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 8px 0 4px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--rule);
+  }
+  .mobile-trip-header .back {
+    flex: none;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2);
+    border-radius: 8px;
+  }
+  .mobile-trip-header .title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .map-layout { padding-top: calc(52px + env(safe-area-inset-top)); }
+
+  .mobile-tab-bar {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 1200;
+    background: var(--paper-2);
+    border-top: 1px solid var(--rule);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .mobile-tab-bar a {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px;
+    min-height: 44px;
+    padding: 4px 2px;
+    color: var(--ink-3);
+    font-size: 10.5px;
+    text-decoration: none;
+    border-radius: 8px;
+  }
+  .mobile-tab-bar a.active { color: var(--peri); }
+
+  /* Keep Leaflet's zoom controls clear of the fixed tab bar on the map page. */
+  .leaflet-bottom { margin-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
 }
 
 
@@ -1340,6 +1421,24 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .split-row .balance.neg { color: var(--coral); }
 .split-row .balance.even { color: var(--ink-3); }
 .split-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+@media (max-width: 768px) {
+  .split-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "who weight" "metrics metrics";
+    row-gap: 10px;
+  }
+  .split-row .who { grid-area: who; }
+  .split-row .weight { grid-area: weight; }
+  .split-row .weight .input { height: 40px; }
+  .split-metrics {
+    grid-area: metrics;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .split-row .share, .split-row .paid, .split-row .balance { align-items: flex-start; }
+}
 
 /* Page action bar */
 .page-bar {
@@ -1880,6 +1979,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .search-wrap input::placeholder { color: var(--ink-3); }
 .search-wrap .icon { color: var(--ink-3); }
+.search-toggle { width: 40px; height: 40px; flex: none; }
 .kbd {
   font-family: var(--font-mono); font-size: 10.5px;
   color: var(--ink-3);
@@ -2230,6 +2330,38 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   line-height: 1.5;
 }
 
+/* Compact "plan a trip" entry point pinned to the top of the dashboard,
+   in addition to the full new-trip-card in the grid below. */
+.new-trip-banner {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  background: var(--peri-soft);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  margin-bottom: 28px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.new-trip-banner:hover { border-color: var(--peri); }
+.new-trip-banner .plus-sm {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  color: var(--peri);
+  display: flex; align-items: center; justify-content: center;
+}
+.new-trip-banner .label {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--ink);
+}
+.new-trip-banner .chev-right { color: var(--ink-3); display: inline-flex; transform: rotate(-90deg); }
+
 @media (max-width: 980px) {
   .trip-grid { grid-template-columns: repeat(2, 1fr); }
   .live-card { grid-template-columns: 1fr; }
@@ -2240,6 +2372,13 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 @media (max-width: 680px) {
   .trip-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .dash-top { padding: 14px 20px; gap: 10px; }
+  .dash-top .top-actions { gap: 8px; }
+  .search-wrap-mobile-active { width: 100%; }
+  .dash-top .btn-cta { width: 40px; height: 40px; padding: 0; border-radius: 50%; }
+  .dash-top .btn-cta .btn-label { display: none; }
 }
 
 
@@ -3342,6 +3481,21 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-footer-tag { margin-left: 8px; }
 .ld-footer-links { display: flex; gap: 20px; }
 .ld-footer-links a { color: var(--ink-3); }
+
+@media (max-width: 768px) {
+  .ld-nav, .ld-hero, .ld-features, .ld-quote, .ld-foot-cta, .ld-footer {
+    padding-left: 20px; padding-right: 20px;
+  }
+  .ld-nav { padding-top: 14px; padding-bottom: 14px; }
+  .ld-hero { padding-top: 40px; padding-bottom: 44px; }
+  .ld-nav-links { gap: 10px; }
+  .ld-nav-signin { display: none; }
+  .ld-footer {
+    flex-direction: column; align-items: flex-start; gap: 12px;
+  }
+  .ld-footer-tag { display: block; margin-left: 0; margin-top: 2px; }
+  .ld-footer-links { gap: 16px; flex-wrap: wrap; }
+}
 
 /* ── Availability grid + heatmap (ODY-011b — migrated from inline styles) ── */
 .av-block { padding: 0; }

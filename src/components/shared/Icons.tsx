@@ -108,6 +108,11 @@ export const Icons = {
       <path d="m6 9 6 6 6-6" />
     </Base>
   ),
+  arrowLeft: ({ size = 18 }: IconProps) => (
+    <Base size={size}>
+      <path d="M19 12H5M11 18l-6-6 6-6" />
+    </Base>
+  ),
   plus: ({ size = 14 }: IconProps) => (
     <Base size={size}>
       <path d="M12 5v14M5 12h14" />

@@ -201,12 +201,14 @@ function SplitSection({
                 />
                 <span className="pct">{(pct * 100).toFixed(0)}%</span>
               </div>
-              <span className="share">{fmtMoney(share)}<span className="lbl">share</span></span>
-              <span className="paid">{fmtMoney(m.paid)}<span className="lbl">paid</span></span>
-              <span className={`balance ${rounded > 0 ? "pos" : rounded < 0 ? "neg" : "even"}`}>
-                {rounded > 0 ? `+${fmtMoney(rounded)}` : rounded < 0 ? `−${fmtMoney(Math.abs(rounded))}` : "settled"}
-                <span className="lbl">{rounded > 0 ? "owed" : rounded < 0 ? "owes" : ""}</span>
-              </span>
+              <div className="split-metrics">
+                <span className="share">{fmtMoney(share)}<span className="lbl">share</span></span>
+                <span className="paid">{fmtMoney(m.paid)}<span className="lbl">paid</span></span>
+                <span className={`balance ${rounded > 0 ? "pos" : rounded < 0 ? "neg" : "even"}`}>
+                  {rounded > 0 ? `+${fmtMoney(rounded)}` : rounded < 0 ? `−${fmtMoney(Math.abs(rounded))}` : "settled"}
+                  <span className="lbl">{rounded > 0 ? "owed" : rounded < 0 ? "owes" : ""}</span>
+                </span>
+              </div>
             </div>
           );
         })}

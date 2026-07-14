@@ -7,6 +7,7 @@ import { Icons } from "@/components/shared/Icons";
 import { AvatarStack } from "@/components/shared/AvatarStack";
 import { TripCard, type DashTrip } from "./TripCard";
 import { NewTripWizard } from "./NewTripWizard";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
 function fmtMoney(n: number) {
   return "$" + Math.round(Number(n) || 0).toLocaleString("en-US");
@@ -27,6 +28,16 @@ function NewTripCard({ onClick }: { onClick: () => void }) {
       <div className="plus-large"><Icons.plus size={20} /></div>
       <h3>Plan a new trip</h3>
       <p>Sketch out dates, destinations, and bring your people in.</p>
+    </button>
+  );
+}
+
+function NewTripBanner({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="new-trip-banner">
+      <span className="plus-sm"><Icons.plus size={16} /></span>
+      <span className="label">Plan a new trip</span>
+      <span className="chev-right"><Icons.chevron size={16} /></span>
     </button>
   );
 }
@@ -75,6 +86,8 @@ function LiveCard({ trip }: { trip: DashTrip }) {
 export function DashboardClient({ firstName, trips }: { firstName: string; trips: DashTrip[] }) {
   const [query, setQuery] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const isMobile = useIsMobile();
   const openWizard = () => setWizardOpen(true);
 
   const match = (t: DashTrip) =>
@@ -96,12 +109,8 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
   return (
     <div className="dash-shell">
       <header className="dash-top">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          <span className="brand-name">Odyssey</span>
-        </div>
-        <div className="top-actions">
-          <div className="search-wrap">
+        {isMobile && searchOpen ? (
+          <div className="search-wrap search-wrap-mobile-active">
             <span className="icon"><Icons.search size={14} /></span>
             <input
               type="search"
@@ -109,12 +118,43 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search trips"
+              autoFocus
             />
-            <span className="kbd">⌘K</span>
+            <button type="button" className="icon-btn" onClick={() => { setSearchOpen(false); setQuery(""); }} aria-label="Close search">
+              <Icons.close size={14} />
+            </button>
           </div>
-          <button type="button" onClick={openWizard} className="btn-cta"><Icons.plus size={14} /> New trip</button>
-          <UserButton />
-        </div>
+        ) : (
+          <>
+            <div className="brand">
+              <span className="brand-mark" aria-hidden="true" />
+              <span className="brand-name">Odyssey</span>
+            </div>
+            <div className="top-actions">
+              {isMobile ? (
+                <button type="button" className="icon-btn search-toggle" onClick={() => setSearchOpen(true)} aria-label="Search trips">
+                  <Icons.search size={16} />
+                </button>
+              ) : (
+                <div className="search-wrap">
+                  <span className="icon"><Icons.search size={14} /></span>
+                  <input
+                    type="search"
+                    placeholder="Search trips, destinations…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    aria-label="Search trips"
+                  />
+                  <span className="kbd">⌘K</span>
+                </div>
+              )}
+              <button type="button" onClick={openWizard} className="btn-cta" aria-label="New trip">
+                <Icons.plus size={14} /> <span className="btn-label">New trip</span>
+              </button>
+              <UserButton />
+            </div>
+          </>
+        )}
       </header>
 
       <main className="dash-canvas">
@@ -132,6 +172,8 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
           </div>
         </section>
 
+        {isMobile && <NewTripBanner onClick={openWizard} />}
+
         {showLive && live && <LiveCard trip={live} />}
 
         {upcoming.length > 0 && (
@@ -141,7 +183,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
             </div>
             <div className="trip-grid">
               {upcoming.map((t) => <TripCard key={t.id} trip={t} />)}
-              <NewTripCard onClick={openWizard} />
+              {!isMobile && <NewTripCard onClick={openWizard} />}
             </div>
           </>
         )}
@@ -157,7 +199,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
           </>
         )}
 
-        {trips.length === 0 && (
+        {trips.length === 0 && !isMobile && (
           <div className="trip-grid">
             <NewTripCard onClick={openWizard} />
           </div>
