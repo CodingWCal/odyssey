@@ -120,6 +120,12 @@ export const applyWindowSchema = z.object({
   endDate: dateString,
 });
 
+/** Post-signup display name (ODY-044). */
+export const updateDisplayNameSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required").max(50),
+  lastName: z.string().trim().max(50).optional().or(z.literal("")),
+});
+
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
@@ -131,3 +137,4 @@ export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;
 export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;
+export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;

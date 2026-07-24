@@ -1,9 +1,11 @@
 import { getTripsByUser } from "@/app/trips/actions";
 import { db } from "@/lib/prisma/db";
 import { currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/trips/DashboardClient";
 import type { DashTrip } from "@/components/trips/TripCard";
 import { resolveCover } from "@/components/trips/cover";
+import { clerkUserNeedsName } from "@/lib/auth";
 
 function fmtDate(d: Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -14,8 +16,11 @@ function daysBetween(a: Date, b: Date) {
 }
 
 export default async function DashboardPage() {
-  const trips = await getTripsByUser();
   const user = await currentUser();
+  // ODY-044: email sign-ups without a Clerk name land here as "Traveler".
+  if (user && clerkUserNeedsName(user)) redirect("/onboarding/name");
+
+  const trips = await getTripsByUser();
   const firstName = user?.firstName ?? "traveler";
 
   const ids = trips.map((t: (typeof trips)[number]) => t.id);
