@@ -7,6 +7,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Icons } from "@/components/shared/Icons";
 import { TripEditModal } from "./TripEditModal";
 import { NAV_ITEMS } from "./navItems";
+import { resolveCoverIndex } from "./cover";
 
 function formatRange(start: Date, end: Date): string {
   const s = new Date(start);
@@ -18,7 +19,15 @@ function formatRange(start: Date, end: Date): string {
 }
 
 interface WorkspaceSidebarProps {
-  trip: { id: string; title: string; destination: string; startDate: Date; endDate: Date; timeFormat?: string };
+  trip: {
+    id: string;
+    title: string;
+    destination: string;
+    startDate: Date;
+    endDate: Date;
+    timeFormat?: string;
+    coverImageUrl?: string | null;
+  };
   /** Viewers can't edit trip details (ODY-001). */
   canEdit?: boolean;
 }
@@ -26,6 +35,7 @@ interface WorkspaceSidebarProps {
 export function WorkspaceSidebar({ trip, canEdit = true }: WorkspaceSidebarProps) {
   const pathname = usePathname();
   const [editOpen, setEditOpen] = useState(false);
+  const coverIndex = resolveCoverIndex(trip.coverImageUrl ?? null, trip.id);
 
   return (
     <aside className="sidebar">
@@ -65,6 +75,7 @@ export function WorkspaceSidebar({ trip, canEdit = true }: WorkspaceSidebarProps
         initialStartDate={trip.startDate}
         initialEndDate={trip.endDate}
         initialTimeFormat={trip.timeFormat as "12h" | "24h" | undefined}
+        initialCoverIndex={coverIndex}
         onClose={() => setEditOpen(false)}
       />
 

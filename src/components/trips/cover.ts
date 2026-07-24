@@ -24,9 +24,16 @@ export function coverGradient(seed: string): string {
  * in coverImageUrl) wins; otherwise fall back to the deterministic gradient.
  */
 export function resolveCover(coverImageUrl: string | null, seed: string): string {
+  return COVER_GRADIENTS[resolveCoverIndex(coverImageUrl, seed)];
+}
+
+/** Explicit mood index, or the same deterministic fallback `resolveCover` uses. */
+export function resolveCoverIndex(coverImageUrl: string | null, seed: string): number {
   if (coverImageUrl && coverImageUrl.startsWith("grad:")) {
     const i = parseInt(coverImageUrl.slice(5), 10);
-    if (!Number.isNaN(i) && i >= 0 && i < COVER_GRADIENTS.length) return COVER_GRADIENTS[i];
+    if (!Number.isNaN(i) && i >= 0 && i < COVER_GRADIENTS.length) return i;
   }
-  return coverGradient(seed);
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = ((h << 5) - h + seed.charCodeAt(i)) & 0xffffffff;
+  return Math.abs(h) % COVER_GRADIENTS.length;
 }

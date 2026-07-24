@@ -308,6 +308,12 @@
   isolation: isolate;
   border: 1px solid rgba(255,255,255,.08);
 }
+.hero.cover-art {
+  background-color: transparent;
+  background-image: var(--cover-img);
+  background-size: cover;
+  background-position: center;
+}
 .hero::after {
   content: "";
   position: absolute; inset: 0;
@@ -524,8 +530,30 @@
   font-family: var(--font-mono);
   letter-spacing: .02em;
 }
-.day-count {
+.day-sort {
+  display: flex;
+  gap: 4px;
   margin-left: auto;
+  align-items: center;
+}
+.day-sort-btn {
+  padding: 4px 10px;
+  font-size: 11.5px;
+  letter-spacing: .02em;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.day-sort-btn:hover { color: var(--ink-2); border-color: var(--rule); }
+.day-sort-btn.on {
+  background: var(--peri-soft);
+  border-color: var(--peri);
+  color: var(--peri);
+}
+.day-count {
   font-size: 11.5px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
@@ -2804,6 +2832,24 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   background: var(--paper); padding: 24px 16px;
 }
 .auth-shell .brand { margin-bottom: 28px; }
+
+/* Post-signup name step (ODY-044) */
+.onboard-card {
+  width: 100%; max-width: 400px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-xl);
+  padding: 28px 26px 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.onboard-title {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 400; color: var(--ink);
+  margin: 0; line-height: 1.15;
+}
+.onboard-sub { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.45; }
+.field-optional { color: var(--ink-3); font-weight: 400; font-size: 12px; }
+.onboard-submit { width: 100%; margin-top: 8px; justify-content: center; }
 
 /* Itinerary bits (011d) */
 .hero-title-row { display: flex; align-items: center; gap: 8px; }

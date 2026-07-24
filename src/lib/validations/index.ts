@@ -26,6 +26,8 @@ export const createTripSchema = z.object({
 export const updateTripSchema = createTripSchema.partial().extend({
   // Display-only 12h/24h preference (ODY-041).
   timeFormat: z.enum(["12h", "24h"]).optional(),
+  // Cover mood index stored as "grad:<n>" (ODY-047).
+  coverIndex: z.coerce.number().int().min(0).max(7).optional(),
 });
 
 export const createTripWizardSchema = z.object({
@@ -118,6 +120,12 @@ export const applyWindowSchema = z.object({
   endDate: dateString,
 });
 
+/** Post-signup display name (ODY-044). */
+export const updateDisplayNameSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required").max(50),
+  lastName: z.string().trim().max(50).optional().or(z.literal("")),
+});
+
 /** Candidate place in a trip collection (ODY-045). */
 export const createPlaceSchema = z.object({
   tripId: z.string().min(1),
@@ -144,5 +152,6 @@ export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;
 export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;
+export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
 export type UpdatePlaceInput = z.infer<typeof updatePlaceSchema>;

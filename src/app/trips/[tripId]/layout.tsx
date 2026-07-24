@@ -2,7 +2,9 @@ import { getTripById } from "@/app/trips/actions";
 import { WorkspaceSidebar } from "@/components/trips/WorkspaceSidebar";
 import { MobileTabBar } from "@/components/trips/MobileTabBar";
 import { MobileTripHeader } from "@/components/trips/MobileTripHeader";
-import { notFound } from "next/navigation";
+import { clerkUserNeedsName } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
+import { notFound, redirect } from "next/navigation";
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -10,6 +12,9 @@ interface WorkspaceLayoutProps {
 }
 
 export default async function WorkspaceLayout({ children, params }: WorkspaceLayoutProps) {
+  const user = await currentUser();
+  if (user && clerkUserNeedsName(user)) redirect("/onboarding/name");
+
   const { tripId } = await params;
   const trip = await getTripById(tripId);
   if (!trip) notFound();
