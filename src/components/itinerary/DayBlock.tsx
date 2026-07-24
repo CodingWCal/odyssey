@@ -26,9 +26,28 @@ import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import type { TripDay } from "@/types";
 import { formatDate, type TimeFormat } from "@/lib/utils";
+import { sortEventsByTime } from "@/lib/sortEvents";
 
-function SortableEvent({ event, tripId, readOnly, timeFormat }: { event: TripDay["events"][number]; tripId: string; readOnly?: boolean; timeFormat?: TimeFormat }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: event.id, disabled: readOnly });
+type SortMode = "time" | "manual";
+
+function SortableEvent({
+  event,
+  tripId,
+  readOnly,
+  timeFormat,
+  dragDisabled,
+}: {
+  event: TripDay["events"][number];
+  tripId: string;
+  readOnly?: boolean;
+  timeFormat?: TimeFormat;
+  dragDisabled?: boolean;
+}) {
+  const disabled = Boolean(readOnly || dragDisabled);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: event.id,
+    disabled,
+  });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
@@ -40,7 +59,7 @@ function SortableEvent({ event, tripId, readOnly, timeFormat }: { event: TripDay
         readOnly={readOnly}
         timeFormat={timeFormat}
         dragHandle={
-          readOnly ? undefined : (
+          disabled ? undefined : (
             <span {...listeners} className="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
               <Icons.drag size={14} />
             </span>
@@ -65,6 +84,8 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  // Per-day local preference (ODY-042) — default chronological; Manual keeps dnd order.
+  const [sortMode, setSortMode] = useState<SortMode>("time");
   const bodyRef = useRef<HTMLDivElement>(null);
 
   // Keep local state in sync with server data after revalidation ("adjust
@@ -75,6 +96,9 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
     setPrevSig(eventsSig);
     setEvents(day.events);
   }
+
+  const displayedEvents = sortMode === "time" ? sortEventsByTime(events) : events;
+  const dragDisabled = sortMode === "time";
 
   // Collapse animation: write max-height straight to the DOM node (external
   // system) instead of routing measured pixels through state.
@@ -90,7 +114,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
       }, 360);
       return () => clearTimeout(t);
     }
-  }, [collapsed, events.length]);
+  }, [collapsed, events.length, sortMode]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -98,6 +122,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   );
 
   async function handleDragEnd(e: DragEndEvent) {
+    if (dragDisabled) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const oldIndex = events.findIndex((ev) => ev.id === active.id);
@@ -126,6 +151,29 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
           <h2 className="day-title">{weekday}</h2>
         </div>
         <span className="day-date">{formatDate(day.date)}</span>
+        <div
+          className="day-sort"
+          role="group"
+          aria-label="Event order"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className={`day-sort-btn${sortMode === "time" ? " on" : ""}`}
+            aria-pressed={sortMode === "time"}
+            onClick={() => setSortMode("time")}
+          >
+            By time
+          </button>
+          <button
+            type="button"
+            className={`day-sort-btn${sortMode === "manual" ? " on" : ""}`}
+            aria-pressed={sortMode === "manual"}
+            onClick={() => setSortMode("manual")}
+          >
+            Manual
+          </button>
+        </div>
         <span className="day-count">
           {events.length} event{events.length === 1 ? "" : "s"}
         </span>
@@ -135,15 +183,22 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
         <DayNotes dayId={day.id} tripId={tripId} initialNotes={day.notes} readOnly={readOnly} />
 
         <DndContext id={`dnd-day-${day.id}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={displayedEvents.map((e) => e.id)} strategy={verticalListSortingStrategy}>
             <div className="timeline">
-              {events.length === 0 && (
+              {displayedEvents.length === 0 && (
                 <p className="day-empty-note">
                   {readOnly ? "No events planned for this day yet." : "No events yet — add your first one below."}
                 </p>
               )}
-              {events.map((event) => (
-                <SortableEvent key={event.id} event={event} tripId={tripId} readOnly={readOnly} timeFormat={timeFormat} />
+              {displayedEvents.map((event) => (
+                <SortableEvent
+                  key={event.id}
+                  event={event}
+                  tripId={tripId}
+                  readOnly={readOnly}
+                  timeFormat={timeFormat}
+                  dragDisabled={dragDisabled}
+                />
               ))}
             </div>
           </SortableContext>
