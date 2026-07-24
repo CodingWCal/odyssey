@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { createEvent, updateEvent, deleteEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import { Modal } from "@/components/shared/Modal";
+import { toast } from "@/components/shared/Toast";
 import { Icons, EVENT_TYPES } from "@/components/shared/Icons";
 import { LocationAutocomplete } from "./LocationAutocomplete";
 import type { TripEvent, EventType } from "@/types";
@@ -20,6 +21,7 @@ interface AddEventModalProps {
 export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose, onSuccess }: AddEventModalProps) {
   const isEdit = !!existing;
   const [isPending, startTransition] = useTransition();
+  const [titleError, setTitleError] = useState(false);
 
   const initialForm = () => ({
     type: (existing?.type ?? "activity") as EventType,
@@ -42,7 +44,10 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
-    if (open) setForm(initialForm());
+    if (open) {
+      setForm(initialForm());
+      setTitleError(false);
+    }
   }
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -55,7 +60,11 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
   const hasRoute = form.type === "flight" || form.type === "transport";
 
   function handleSave() {
-    if (!form.title.trim()) return;
+    if (!form.title.trim()) {
+      setTitleError(true);
+      toast("Give this event a title first.");
+      return;
+    }
     startTransition(async () => {
       const payload = {
         type: form.type,
@@ -73,22 +82,30 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
         destLat: hasRoute ? form.destLat : undefined,
         destLng: hasRoute ? form.destLng : undefined,
       };
-      if (isEdit && existing) {
-        await updateEvent(existing.id, payload);
-      } else {
-        await createEvent({ tripId, dayId, ...payload } as Parameters<typeof createEvent>[0]);
+      try {
+        if (isEdit && existing) {
+          await updateEvent(existing.id, payload);
+        } else {
+          await createEvent({ tripId, dayId, ...payload } as Parameters<typeof createEvent>[0]);
+        }
+        onSuccess?.();
+        onClose();
+      } catch {
+        toast(isEdit ? "Couldn't save those changes — try again." : "Couldn't add this event — try again.");
       }
-      onSuccess?.();
-      onClose();
     });
   }
 
   function handleDelete() {
     if (!existing) return;
     startTransition(async () => {
-      await deleteEvent(existing.id);
-      onSuccess?.();
-      onClose();
+      try {
+        await deleteEvent(existing.id);
+        onSuccess?.();
+        onClose();
+      } catch {
+        toast(`Couldn't delete "${existing.title}" — try again.`);
+      }
     });
   }
 
@@ -129,12 +146,22 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
           <label htmlFor="ev-title">Title</label>
           <input
             id="ev-title"
-            className="input"
+            className={`input${titleError ? " invalid" : ""}`}
             value={form.title}
-            onChange={(e) => set("title", e.target.value)}
+            onChange={(e) => {
+              set("title", e.target.value);
+              if (titleError) setTitleError(false);
+            }}
             placeholder="Flight to Tokyo"
             autoFocus
+            aria-invalid={titleError}
+            aria-describedby={titleError ? "ev-title-error" : undefined}
           />
+          {titleError && (
+            <p id="ev-title-error" className="form-error">
+              Give this event a title first.
+            </p>
+          )}
         </div>
 
         <div className="field">
@@ -208,7 +235,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
           </button>
         )}
         <button className="btn btn-ghost" onClick={onClose} disabled={isPending}>Cancel</button>
-        <button className="btn btn-primary" onClick={handleSave} disabled={!form.title.trim() || isPending}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={isPending}>
           {isPending ? "Saving…" : isEdit ? "Save changes" : "Add to itinerary"}
         </button>
       </div>
