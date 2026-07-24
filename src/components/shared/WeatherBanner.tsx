@@ -1,54 +1,12 @@
 import { getConditionFromCode } from "@/lib/weather";
 
+// The old <WeatherBanner> component (last consumer of the legacy odyssey-*
+// Tailwind aliases) was dead code — nothing imported it. Weather rendering
+// lives in ItineraryHero; this module only fetches (ODY-012).
 interface WeatherData {
   temperature: number;
   condition: string;
   forecast: { date: string; high: number; low: number; condition: string }[];
-}
-
-const CONDITION_ICONS: Record<string, string> = {
-  clear: "☀️",
-  cloudy: "☁️",
-  rain: "🌧️",
-  snow: "❄️",
-  storm: "⛈️",
-  fog: "🌫️",
-  wind: "💨",
-  default: "🌤️",
-};
-
-function getIcon(condition: string) {
-  return CONDITION_ICONS[condition] ?? CONDITION_ICONS.default;
-}
-
-interface WeatherBannerProps {
-  weather: WeatherData | null;
-  destination: string;
-}
-
-export function WeatherBanner({ weather, destination }: WeatherBannerProps) {
-  if (!weather) return null;
-
-  return (
-    <div className="bg-gradient-to-r from-odyssey-slate/10 to-odyssey-teal/10 border border-odyssey-slate/20 rounded-xl px-4 py-3 mb-4 flex items-center gap-6 flex-wrap">
-      <div className="flex items-center gap-2">
-        <span className="text-2xl" aria-hidden="true">{getIcon(weather.condition)}</span>
-        <div>
-          <p className="text-sm font-semibold text-odyssey-ink">{destination}</p>
-          <p className="text-xs text-odyssey-slate">{Math.round(weather.temperature)}°F · {weather.condition}</p>
-        </div>
-      </div>
-      <div className="flex gap-3">
-        {weather.forecast.map((f) => (
-          <div key={f.date} className="text-center">
-            <p className="text-xs text-odyssey-slate">{f.date}</p>
-            <p className="text-sm" aria-hidden="true">{getIcon(f.condition)}</p>
-            <p className="text-xs font-mono text-odyssey-ink">{Math.round(f.high)}°/{Math.round(f.low)}°</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export async function fetchWeather(destination: string, startDate: Date): Promise<WeatherData | null> {
