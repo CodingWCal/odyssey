@@ -24,6 +24,17 @@ export interface MapEvent {
   globalIdx: number;
 }
 
+/** Candidate place pin (ODY-045) — distinct from itinerary MapEvent markers. */
+export interface MapPlace {
+  id: string;
+  category: EventType;
+  title: string;
+  location: string | null;
+  notes: string | null;
+  lat: number;
+  lng: number;
+}
+
 export interface MapDay {
   id: string;
   label: string;
@@ -40,3 +51,12 @@ export const TYPE_HEX: Record<EventType, string> = {
   transport: "#6F66B7",
   misc: "#4A6B8C",
 };
+
+export const PLACE_CATEGORIES: EventType[] = [
+  "restaurant",
+  "activity",
+  "hotel",
+  "flight",
+  "transport",
+  "misc",
+];

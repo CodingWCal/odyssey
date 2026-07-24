@@ -155,6 +155,13 @@ export const Icons = {
       <path d="m20 20-4-4" />
     </Base>
   ),
+  collections: ({ size = 16 }: IconProps) => (
+    <Base size={size}>
+      <path d="M8 4h11a2 2 0 0 1 2 2v11" />
+      <rect x="3" y="8" width="13" height="12" rx="2" />
+      <path d="M7 13h5M7 17h3" />
+    </Base>
+  ),
 } as const;
 
 export type EventTypeKey = "flight" | "hotel" | "restaurant" | "activity" | "transport" | "misc";

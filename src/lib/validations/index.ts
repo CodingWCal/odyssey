@@ -126,6 +126,21 @@ export const updateDisplayNameSchema = z.object({
   lastName: z.string().trim().max(50).optional().or(z.literal("")),
 });
 
+/** Candidate place in a trip collection (ODY-045). */
+export const createPlaceSchema = z.object({
+  tripId: z.string().min(1),
+  category: z.enum(["flight", "hotel", "restaurant", "activity", "transport", "misc"]),
+  title: z.string().min(1, "Title is required").max(200),
+  location: z.string().max(300).optional().or(z.literal("")),
+  notes: z.string().max(2000).optional().or(z.literal("")),
+  lat: z.coerce.number().finite().optional(),
+  lng: z.coerce.number().finite().optional(),
+});
+
+export const updatePlaceSchema = createPlaceSchema.omit({ tripId: true }).partial().extend({
+  id: z.string().min(1),
+});
+
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
@@ -138,3 +153,5 @@ export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;
 export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;
 export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
+export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
+export type UpdatePlaceInput = z.infer<typeof updatePlaceSchema>;

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
-import { TYPE_HEX, type MapDay, type MapEvent } from "./mapTypes";
+import { PLACE_CATEGORIES, TYPE_HEX, type MapDay, type MapEvent, type MapPlace } from "./mapTypes";
 import { formatTime, type TimeFormat } from "@/lib/utils";
+import type { EventType } from "@/types";
 
 const LeafletMap = dynamic(() => import("./LeafletMap").then((m) => m.LeafletMap), {
   ssr: false,
@@ -15,21 +16,53 @@ const LeafletMap = dynamic(() => import("./LeafletMap").then((m) => m.LeafletMap
 interface MapClientProps {
   days: MapDay[];
   events: MapEvent[];
+  places?: MapPlace[];
   eyebrow: string;
   dayCount: number;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
 }
 
-export function MapClient({ days, events, eyebrow, dayCount, timeFormat = "12h" }: MapClientProps) {
+export function MapClient({
+  days,
+  events,
+  places = [],
+  eyebrow,
+  dayCount,
+  timeFormat = "12h",
+}: MapClientProps) {
   const [activeDay, setActiveDay] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showRoute, setShowRoute] = useState(true);
+  const [placeCats, setPlaceCats] = useState<Set<EventType> | "all">("all");
 
-  const selected = events.find((e) => e.id === selectedId) ?? null;
+  const selectedEvent = events.find((e) => e.id === selectedId) ?? null;
+  const selectedPlace = places.find((p) => p.id === selectedId) ?? null;
   const visibleDays = days.filter((d) => activeDay === "all" || d.id === activeDay);
 
-  if (events.length === 0) {
+  const categoriesPresent = useMemo(() => {
+    const set = new Set<EventType>();
+    places.forEach((p) => set.add(p.category));
+    return PLACE_CATEGORIES.filter((c) => set.has(c));
+  }, [places]);
+
+  function toggleCategory(cat: EventType) {
+    setSelectedId(null);
+    setPlaceCats((prev) => {
+      if (prev === "all") {
+        const next = new Set(categoriesPresent);
+        next.delete(cat);
+        return next.size === 0 ? new Set() : next;
+      }
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      if (next.size === categoriesPresent.length) return "all";
+      return next;
+    });
+  }
+
+  if (events.length === 0 && places.length === 0) {
     return (
       <div className="map-empty">
         <p className="map-empty-icon" aria-hidden="true">🗺️</p>
@@ -37,7 +70,7 @@ export function MapClient({ days, events, eyebrow, dayCount, timeFormat = "12h" 
           No pins <em>yet</em>
         </h3>
         <p className="map-empty-sub">
-          Add a location to events in the itinerary — they&apos;ll appear here on the map.
+          Add a location to itinerary events, or save places in Collections — they&apos;ll appear here.
         </p>
       </div>
     );
@@ -49,7 +82,11 @@ export function MapClient({ days, events, eyebrow, dayCount, timeFormat = "12h" 
         <div className="map-panel-head">
           <div className="eyebrow">{eyebrow}</div>
           <h2>The <em>route</em></h2>
-          <div className="sub">{events.length} pins across {dayCount} days</div>
+          <div className="sub">
+            {events.length} itinerary pin{events.length === 1 ? "" : "s"}
+            {places.length > 0 ? ` · ${places.length} collected` : ""}
+            {" "}across {dayCount} days
+          </div>
         </div>
 
         <div className="filter-chips">
@@ -62,6 +99,39 @@ export function MapClient({ days, events, eyebrow, dayCount, timeFormat = "12h" 
             </button>
           ))}
         </div>
+
+        {categoriesPresent.length > 0 && (
+          <div className="map-legend" role="group" aria-label="Collection categories">
+            <div className="map-legend-label">Collections</div>
+            <div className="filter-chips">
+              <button
+                type="button"
+                className={`chip ${placeCats === "all" ? "active" : ""}`}
+                onClick={() => { setPlaceCats("all"); setSelectedId(null); }}
+              >
+                All places
+              </button>
+              {categoriesPresent.map((cat) => {
+                const on = placeCats === "all" || placeCats.has(cat);
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`chip legend-chip ${on ? "active" : ""}`}
+                    onClick={() => toggleCategory(cat)}
+                  >
+                    <span
+                      className="legend-dot"
+                      style={{ "--swatch": TYPE_HEX[cat] } as React.CSSProperties}
+                      aria-hidden="true"
+                    />
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="map-pin-list">
           {visibleDays.map((d) => (
@@ -87,13 +157,40 @@ export function MapClient({ days, events, eyebrow, dayCount, timeFormat = "12h" 
               ))}
             </div>
           ))}
+
+          {places.length > 0 && (
+            <div className="map-day">
+              <div className="day-label">Collections</div>
+              {places
+                .filter((p) => placeCats === "all" || placeCats.has(p.category))
+                .map((p) => (
+                  <div
+                    key={p.id}
+                    className={`map-pin collection ${selectedId === p.id ? "active" : ""}`}
+                    onClick={() => setSelectedId(p.id)}
+                  >
+                    <span
+                      className="num diamond"
+                      style={{ "--pin-color": TYPE_HEX[p.category] } as React.CSSProperties}
+                      aria-hidden="true"
+                    />
+                    <div className="body">
+                      <div className="title">{p.title}</div>
+                      <div className="meta">{p.location ?? p.category}</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       </aside>
 
       <div className="map-canvas">
         <LeafletMap
           events={events}
+          places={places}
           activeDay={activeDay}
+          activeCategories={placeCats}
           selectedId={selectedId}
           showRoute={showRoute}
           onSelect={setSelectedId}
@@ -111,39 +208,64 @@ export function MapClient({ days, events, eyebrow, dayCount, timeFormat = "12h" 
           </button>
         </div>
 
-        {selected && (
+        {selectedEvent && (
           <div className="map-card">
             <div className="card-head">
               <div className="main">
-                <div className="badge-row"><TypeBadge type={selected.type} /></div>
-                <h3>{selected.title}</h3>
+                <div className="badge-row"><TypeBadge type={selectedEvent.type} /></div>
+                <h3>{selectedEvent.title}</h3>
               </div>
               <button className="icon-btn" onClick={() => setSelectedId(null)} aria-label="Close">
                 <Icons.close size={16} />
               </button>
             </div>
             <div className="card-meta">
-              {selected.location && (
+              {selectedEvent.location && (
                 <span className="row">
                   <Icons.pin size={13} />{" "}
-                  {(selected.type === "flight" || selected.type === "transport") && selected.destLocation
-                    ? `${selected.location} → ${selected.destLocation}`
-                    : selected.location}
+                  {(selectedEvent.type === "flight" || selectedEvent.type === "transport") && selectedEvent.destLocation
+                    ? `${selectedEvent.location} → ${selectedEvent.destLocation}`
+                    : selectedEvent.location}
                 </span>
               )}
-              {selected.startTime && (
+              {selectedEvent.startTime && (
                 <span className="row mono">
-                  <Icons.clock size={13} /> {formatTime(selected.startTime, timeFormat)}{selected.endTime ? ` → ${formatTime(selected.endTime, timeFormat)}` : ""}
+                  <Icons.clock size={13} /> {formatTime(selectedEvent.startTime, timeFormat)}{selectedEvent.endTime ? ` → ${formatTime(selectedEvent.endTime, timeFormat)}` : ""}
                 </span>
               )}
               <span className="row day">
-                {selected.dayLabel} · {selected.dayDate}
+                {selectedEvent.dayLabel} · {selectedEvent.dayDate}
               </span>
-              {selected.cost != null && (
-                <span className="row"><span className="cost">${Number(selected.cost).toLocaleString("en-US")}</span></span>
+              {selectedEvent.cost != null && (
+                <span className="row"><span className="cost">${Number(selectedEvent.cost).toLocaleString("en-US")}</span></span>
               )}
             </div>
-            {selected.notes && <div className="note">&ldquo;{selected.notes}&rdquo;</div>}
+            {selectedEvent.notes && <div className="note">&ldquo;{selectedEvent.notes}&rdquo;</div>}
+          </div>
+        )}
+
+        {selectedPlace && !selectedEvent && (
+          <div className="map-card">
+            <div className="card-head">
+              <div className="main">
+                <div className="badge-row">
+                  <TypeBadge type={selectedPlace.category} />
+                  <span className="collection-tag">Collection</span>
+                </div>
+                <h3>{selectedPlace.title}</h3>
+              </div>
+              <button className="icon-btn" onClick={() => setSelectedId(null)} aria-label="Close">
+                <Icons.close size={16} />
+              </button>
+            </div>
+            <div className="card-meta">
+              {selectedPlace.location && (
+                <span className="row">
+                  <Icons.pin size={13} /> {selectedPlace.location}
+                </span>
+              )}
+            </div>
+            {selectedPlace.notes && <div className="note">&ldquo;{selectedPlace.notes}&rdquo;</div>}
           </div>
         )}
       </div>

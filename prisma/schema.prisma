@@ -20,6 +20,7 @@ model User {
   events   Event[]
   expenses Expense[]
   notes    Note[]
+  places   Place[]
 
   availabilitySlots AvailabilitySlot[]
 }
@@ -44,6 +45,7 @@ model Trip {
 
   availabilityPoll  AvailabilityPoll?
   availabilitySlots AvailabilitySlot[]
+  places            Place[]
 }
 
 model TripMember {
@@ -153,5 +155,24 @@ model AvailabilitySlot {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tripId, userId, date, block])
+  @@index([tripId])
+}
+
+/// Candidate places outside the day-by-day itinerary (ODY-045).
+model Place {
+  id        String   @id @default(uuid())
+  tripId    String
+  category  String   // same vocabulary as Event.type for color language
+  title     String
+  location  String?
+  lat       Float?
+  lng       Float?
+  notes     String?
+  createdBy String
+  createdAt DateTime @default(now())
+
+  trip    Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [createdBy], references: [id])
+
   @@index([tripId])
 }

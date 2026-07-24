@@ -1565,6 +1565,22 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   transform: rotate(-45deg) scale(1.2);
 }
 
+/* Collection pins (ODY-045): round ring, distinct from itinerary teardrops. */
+.od-marker.collection {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  transform: none;
+  background: var(--paper-2);
+  border: 3px solid var(--pin-color, var(--peri));
+  box-shadow: 0 2px 8px rgba(0,0,0,.22);
+}
+.od-marker.collection span { display: none; }
+.od-marker.collection.active {
+  transform: scale(1.25);
+  background: var(--pin-color, var(--peri));
+  box-shadow: 0 4px 14px rgba(0,0,0,.3), 0 0 0 3px rgba(255,255,255,.9);
+}
+
 /* Floating event detail card */
 .map-card {
   position: absolute;
@@ -2862,3 +2878,72 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   cursor: pointer; background: var(--paper); color: var(--ink-2);
 }
 .opt-chip.on { background: var(--ink); color: var(--paper); }
+
+/* Collections (ODY-045) */
+.collections-page { max-width: 720px; }
+.collections-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; margin-bottom: 28px;
+}
+.collections-title {
+  font-family: var(--font-display); font-size: 36px; font-weight: 400;
+  color: var(--ink); margin: 4px 0 8px; line-height: 1.1;
+}
+.collections-title em { font-style: italic; color: var(--peri); }
+.collections-sub { margin: 0; font-size: 14px; color: var(--ink-2); max-width: 42ch; line-height: 1.45; }
+.collections-form {
+  background: var(--paper-2); border: 1px solid var(--rule);
+  border-radius: var(--radius-xl); padding: 22px 22px 18px;
+  display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px;
+}
+.collections-form-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.collections-groups { display: flex; flex-direction: column; gap: 28px; }
+.collections-group-head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.collections-swatch {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--swatch, var(--peri));
+}
+.collections-count {
+  font-family: var(--font-mono); font-size: 12px; color: var(--ink-3);
+}
+.collections-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.collections-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; background: var(--paper-2);
+  border: 1px solid var(--rule); border-radius: var(--radius-lg);
+}
+.collections-item-body { flex: 1; min-width: 0; }
+.collections-item h3 {
+  margin: 0 0 4px; font-size: 16px; font-weight: 500; color: var(--ink);
+}
+.collections-loc {
+  margin: 0; font-size: 13px; color: var(--ink-3);
+  display: flex; align-items: flex-start; gap: 6px;
+}
+.collections-notes {
+  margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.45;
+}
+.collections-warn {
+  margin: 8px 0 0; font-size: 12.5px; color: var(--peach);
+}
+.map-legend { margin: 0 0 12px; padding: 0 4px; }
+.map-legend-label {
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 8px;
+}
+.legend-chip { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--swatch, var(--peri));
+}
+.map-pin .num.diamond {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: transparent; border: 2.5px solid var(--pin-color, var(--peri));
+  box-shadow: none; font-size: 0;
+}
+.collection-tag {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-3); margin-left: 8px;
+}
