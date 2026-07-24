@@ -1,0 +1,37 @@
+---
+description: Odyssey project conventions — always follow CLAUDE.md
+globs:
+alwaysApply: true
+---
+
+# Odyssey — always follow CLAUDE.md
+
+Before doing any work in this repo, read and follow **`CLAUDE.md`** at the repo
+root. It is the source of truth for this project's conventions and overrides any
+default behavior. Key points (see CLAUDE.md for the full list):
+
+- **Stack:** Next.js 16 App Router, TypeScript strict, Supabase + Prisma (via
+  `src/lib/prisma/db.ts` only — never raw SQL), Clerk auth, Tailwind v4
+  (no `tailwind.config.ts`), Leaflet (dynamic import, `ssr: false`).
+- **Design tokens (ODY-012):** one system — CSS custom properties in the
+  `:root` of `src/app/globals.css`, used via `var(--…)`. The legacy `odyssey-*`
+  Tailwind aliases were removed — do not reintroduce them.
+- **No inline styles** (Tailwind utilities or globals.css classes only). The
+  only exception: truly dynamic per-element values passed as CSS custom
+  properties, e.g. `style={{ "--f-color": color }}`, consumed by a class.
+- **No hardcoded hex** outside globals.css.
+- **No `localStorage` / `sessionStorage`.**
+- **Server actions** live in `app/[route]/actions.ts`; **forms validate with
+  Zod** (`src/lib/validations`) before the action; user sync via
+  `getOrCreateUser()`.
+- **DB schema changes:** use `prisma db push` (no migrations dir; Supabase
+  free-tier auto-pauses).
+
+## Working discipline
+
+- Implement only what the current task asks; don't refactor unrelated code.
+- When work is done, run the QA gate before considering it complete:
+  `npm run lint`, `npm test`, `npx tsc --noEmit`. Don't commit a failing gate.
+- Never force-push, amend, skip hooks, merge, or open PRs unless explicitly told.
+- If a task needs a decision or an action you can't safely perform, stop and ask
+  rather than guessing.

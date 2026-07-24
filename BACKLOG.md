@@ -167,6 +167,38 @@ Zero tests, no CI. The riskiest logic is pure and cheap to test: split-balance m
 - Add Vitest (unit only, no E2E yet), extract split math into `src/lib/budget.ts` so it's testable, cover the listed units. GitHub Actions workflow: install → prisma generate → lint → typecheck (`tsc --noEmit`) → test → build.
 - Acceptance: `npm test` green locally and in CI on PRs.
 
+### ODY-043 · Event form gives no feedback on invalid/failed submit — S, haiku
+> **In plain terms:** If you try to add an event without a title, nothing happens and there's no explanation. This shows a clear reason, and warns you when a save actually fails.
+`handleSave` in `src/components/itinerary/AddEventModal.tsx` early-returns on
+`!form.title.trim()` with zero feedback (the submit button is merely disabled), and
+the `createEvent`/`updateEvent` awaits aren't wrapped — a server throw closes the
+modal as if it succeeded.
+- Use the existing toast + error infrastructure (ODY-013) — **no new toast library**. Import `toast` from `src/components/shared/Toast`.
+- Add field-level error state on Title (invalid on attempted submit, clears on input) using `--coral` tokens; optionally toast on blocked submit. On-brand copy ("Give this event a title first.").
+- Wrap the create/update await in try/catch and toast a branded failure message so a failed save never looks like a success.
+- Guardrails: no inline styles except dynamic CSS custom properties; editorial voice.
+- Acceptance: submitting without a title shows a visible on-brand error; server failures show a toast instead of silently closing the modal.
+
+### ODY-044 · Collect name on email sign-up (defaults to "Traveler") — S, sonnet — relates to ODY-036
+> **In plain terms:** People who sign up with email instead of Google are never asked their name, so the whole app calls them "Traveler." This captures a real name.
+Email/password sign-ups don't collect a name, so `src/lib/auth.ts:19` falls back to
+"Traveler" everywhere (dashboard, members, budget, itinerary).
+- Primary fix is Clerk config: enable Name (first/last) as required fields on the sign-up form for the instance in use — document this dashboard step in the ticket.
+- Verify the `<SignUp>` component in `src/app/(auth)/sign-up/[[...sign-up]]/page.tsx` renders name fields once configured. If Clerk config can't be relied on, add a lightweight post-signup "What should we call you?" step that updates the Clerk user and resyncs via `getOrCreateDbUser`.
+- Ensure `getOrCreateDbUser` (`src/lib/auth.ts`) picks up the provided name on first sync (it already reads firstName/lastName). Keep dev-instance behavior working (overlaps ODY-036).
+- Acceptance: a new email/password signup shows their real name (not "Traveler") on the dashboard and members list after first login.
+
+### ODY-046 · Full user-journey QA audit — new & returning users — M, sonnet
+> **In plain terms:** Walk through the whole app as a brand-new person and as a returning user, writing down everything that's broken, confusing, or silently fails.
+Audit-only deliverable (a prioritized markdown findings report + candidate tickets),
+**not** code changes. Two personas: (A) brand-new no-account user, (B) returning user
+with existing trips.
+- Trace both: landing → sign-up/sign-in (email AND Google) → dashboard (empty state for new) → NewTripWizard (all 3 steps, vibes, cover mood, invites) → itinerary → add/edit/delete events, day notes, budget + splits, schedule/availability, map, members/invites.
+- Returning user: re-auth, existing trips load, viewer/editor role behavior (ODY-001), invite flow (note ODY-037 is a placeholder).
+- Per screen check: broken/empty states, silent failures (ODY-043), mobile at 375px (ODY-038/021), auth redirects (dev Clerk instance — preview pane can't complete the accounts.dev handshake, use a real browser for authed flows).
+- Deliverable: prioritized P0–P3 list with repro steps + suspected files; cross-reference existing tickets to avoid duplicates.
+- Acceptance: a findings report exists; each concrete defect is filed as a candidate ticket with a file path and repro.
+
 ---
 
 ## P2 — Quality of Life
@@ -180,6 +212,27 @@ scrolling back to the sidebar or menu. Forms are cramped; workflows interrupt fo
 - **Navigation:** add a mobile-optimized bottom tab bar or persistent top navigation on mobile showing current section + quick jump to other tabs; keep sidebar hidden/collapsed by default on < 768px.
 - **Forms:** stacked layout on mobile (full-width inputs), adjust modal widths/padding for 375px viewport.
 - Acceptance: adding an event on mobile is as easy as desktop (no hand strain, no excessive scrolling); switching between tabs feels native and intuitive.
+
+### ODY-042 · Auto-sort itinerary events by start time — M, sonnet
+> **In plain terms:** Events should line up in time order on their own instead of making you drag every one into place.
+Events currently render only by `orderIndex` (manual dnd-kit order via
+`reorderEvents`). Add time-aware ordering without breaking drag-to-reorder.
+- Add a per-day sort mode: "By time" (default) vs "Manual" — a small toggle in the day header (`src/components/itinerary/DayBlock.tsx`). Persist per-trip only if trivial (Trip field via `prisma db push`, no migrations dir); otherwise per-card local state defaulting to "By time".
+- "By time": sort by `startTime` ("HH:MM" ascending); events with no start time sort last, keeping their `orderIndex` among themselves. Disable the drag handle in this mode. "Manual": current dnd-kit behavior untouched.
+- Put the sort in a pure helper in `src/lib` (e.g. `sortEventsByTime`) and unit-test it (Vitest, matching `src/lib/__tests__` patterns): empty-times-last, stable tie-break, 12h/24h-agnostic.
+- Guardrails: no new deps, no inline styles, editorial aesthetic intact.
+- Acceptance: events with start times appear chronologically by default; drag reorder still works in Manual mode; helper is unit-tested.
+
+### ODY-047 · Cover "skin" doesn't carry to the itinerary page — S, sonnet
+> **In plain terms:** The cover look you pick when creating a trip shows on the dashboard card but the itinerary page ignores it and always goes purple. This makes the itinerary match your pick.
+`coverIndex` is stored as `"grad:<index>"` in `Trip.coverImageUrl` (`createTripWizard`
+in `src/app/trips/actions.ts`) and resolved via `resolveCover`
+(`src/components/trips/cover.ts`), but only `DashboardClient`/`TripCard` consume it —
+`ItineraryHero` never reads the cover, so it falls back to the default `.hero` styling.
+- Pass `coverImageUrl` (+ trip id as seed) into `src/components/itinerary/ItineraryHero.tsx` from `src/app/trips/[tripId]/itinerary/page.tsx`; call `resolveCover(coverImageUrl, tripId)` and apply it via the existing `cover-art` pattern (`style={{ "--cover-img": ... }}` consumed by a globals.css class — the sanctioned dynamic-value exception). Reuse `COVER_ACCENT` like the wizard preview.
+- If `TripEditModal` (`src/components/trips/TripEditModal.tsx`) can't already change the cover mood, add the same `COVER_GRADIENTS` picker used in `NewTripWizard` and persist via the update action.
+- Guardrails: no hardcoded hex outside globals.css; keep text contrast readable over the gradient.
+- Acceptance: the cover mood chosen at creation (and edited later) appears on the itinerary page, matching the dashboard card — no purple default.
 
 ### ODY-020 · Landing page honesty pass — S, haiku
 > **In plain terms:** The landing page currently invents things — fake user counts, a fake testimonial, fake pricing. This replaces them with honest copy in the same voice.
@@ -265,6 +318,17 @@ are displayed raw, so everything reads as military time.
 ---
 
 ## P3 — New Features
+
+### ODY-045 · Place Collections shown on the map by category — L, sonnet
+> **In plain terms:** A place to save candidate spots — restaurants, attractions, maybes — that aren't on the day-by-day plan yet, labeled and shown on the map by label. Good while the itinerary is still a work in progress.
+A "possibilities" bucket separate from the itinerary, filterable on the Leaflet map by
+category label.
+- New Prisma model (e.g. `Collection`/`Place`: tripId, category/label, title, location, lat, lng, notes, createdBy) via `prisma db push` (no migrations dir; free-tier auto-pauses — see Supabase workflow). Access only via `src/lib/prisma/db.ts`.
+- Server actions in a new route `actions.ts` (follow `app/trips/[tripId]/.../actions.ts` convention), Zod-validated (`src/lib/validations`), `assertTripRole` checks (editor+ to write). Geocode via `src/lib/geocode.ts` + `/api/geocode` — **never** hit Nominatim directly (ODY-010).
+- Map: extend `src/components/map/MapClient.tsx` + `mapTypes.ts` to render collection pins distinctly from itinerary events, with a category filter/legend. Reuse `TYPE_HEX`/`TYPE_VAR` color language and globals.css tokens; no hardcoded hex outside globals.css.
+- UI: a "Collections" surface (tab or section) to add/label/remove places. "Promote to itinerary" is a nice-to-have — note as follow-up.
+- Guardrails: editorial aesthetic; no new deps; Leaflet stays dynamic import `ssr:false`.
+- Acceptance: a user can save labeled places outside the itinerary and toggle them on the map by category.
 
 ### ODY-030 · Settle-up suggestions — M, sonnet
 > **In plain terms:** The budget shows who's over or under, but not what to do about it. This adds concrete suggestions: "Alex pays Maya $120" — the fewest transfers that settle everyone up.
