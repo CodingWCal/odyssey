@@ -1,7 +1,8 @@
 import { getTripById } from "@/app/trips/actions";
+import { listPlaces } from "@/app/trips/[tripId]/collections/actions";
 import { MapClient } from "@/components/map/MapClient";
 import { notFound } from "next/navigation";
-import type { MapDay, MapEvent } from "@/components/map/mapTypes";
+import type { MapDay, MapEvent, MapPlace } from "@/components/map/mapTypes";
 import type { EventType } from "@/types";
 
 interface Props {
@@ -12,6 +13,8 @@ export default async function MapPage({ params }: Props) {
   const { tripId } = await params;
   const trip = await getTripById(tripId);
   if (!trip) notFound();
+
+  const savedPlaces = await listPlaces(tripId);
 
   const dateRange = `${new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 
@@ -75,10 +78,23 @@ export default async function MapPage({ params }: Props) {
     }
   });
 
+  const places: MapPlace[] = savedPlaces
+    .filter((p) => p.lat != null && p.lng != null)
+    .map((p) => ({
+      id: p.id,
+      category: p.category as EventType,
+      title: p.title,
+      location: p.location,
+      notes: p.notes,
+      lat: p.lat as number,
+      lng: p.lng as number,
+    }));
+
   return (
     <MapClient
       days={days}
       events={allEvents}
+      places={places}
       eyebrow={`${trip.destination} · ${dateRange}`}
       dayCount={trip.days.length}
       timeFormat={trip.timeFormat as "12h" | "24h"}

@@ -2,13 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMapInstance, Marker, Polyline, Layer } from "leaflet";
-import { TYPE_HEX, type MapEvent } from "./mapTypes";
+import { TYPE_HEX, type MapEvent, type MapPlace } from "./mapTypes";
+import type { EventType } from "@/types";
 
 type LeafletNS = typeof import("leaflet");
 
 interface LeafletMapProps {
   events: MapEvent[];
+  places?: MapPlace[];
   activeDay: string;
+  /** Category filter for collection pins; empty set hides all places. */
+  activeCategories: Set<EventType> | "all";
   selectedId: string | null;
   showRoute: boolean;
   onSelect: (id: string) => void;
@@ -19,42 +23,49 @@ function markerHtml(ev: MapEvent, active: boolean): string {
   return `<div class="od-marker ${active ? "active" : ""}" style="background:${color}"><span>${ev.globalIdx}</span></div>`;
 }
 
-/** Smaller ringed marker for a route's arrival endpoint (no number). */
+function placeMarkerHtml(place: MapPlace, active: boolean): string {
+  const color = TYPE_HEX[place.category] ?? TYPE_HEX.misc;
+  return `<div class="od-marker collection ${active ? "active" : ""}" style="--pin-color:${color}"><span></span></div>`;
+}
+
 function destMarkerHtml(ev: MapEvent, active: boolean): string {
   const color = TYPE_HEX[ev.type] ?? TYPE_HEX.misc;
   return `<div class="od-marker dest ${active ? "active" : ""}" style="border-color:${color};color:${color}"><span>↓</span></div>`;
 }
 
-/** True when the event has an explicit arrival pin to render. */
 function hasDest(ev: MapEvent): boolean {
   return ev.destLat != null && ev.destLng != null;
 }
 
-export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect }: LeafletMapProps) {
+export function LeafletMap({
+  events,
+  places = [],
+  activeDay,
+  activeCategories,
+  selectedId,
+  showRoute,
+  onSelect,
+}: LeafletMapProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMapInstance | null>(null);
   const LRef = useRef<LeafletNS | null>(null);
   const markersRef = useRef<Record<string, Marker>>({});
+  const placeMarkersRef = useRef<Record<string, Marker>>({});
   const destMarkersRef = useRef<Record<string, Marker>>({});
   const polylineRef = useRef<Polyline | null>(null);
   const flightLayersRef = useRef<Layer[]>([]);
   const [ready, setReady] = useState(false);
 
-  // Keep latest onSelect without re-running the init effect.
   const onSelectRef = useRef(onSelect);
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
 
-  // The marker-render effect reads the selection for initial styling but must
-  // not redraw every marker on each selection change (the lighter effect below
-  // handles that) — so it reads through a ref instead of depending on it.
   const selectedIdRef = useRef(selectedId);
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
 
-  // Init map once.
   useEffect(() => {
     let cancelled = false;
     const el = elRef.current;
@@ -62,7 +73,6 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       const mod = await import("leaflet");
       const L = (mod.default ?? mod) as LeafletNS;
       if (cancelled || !el) return;
-      // Leaflet tags containers it has claimed; clear a stale tag from HMR.
       const claimed = el as HTMLDivElement & { _leaflet_id?: number };
       if (claimed._leaflet_id) delete claimed._leaflet_id;
 
@@ -82,7 +92,9 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
     };
   }, []);
 
-  // Render markers + polyline + fit bounds when the data or filters change.
+  const catKey =
+    activeCategories === "all" ? "all" : [...activeCategories].sort().join(",");
+
   useEffect(() => {
     const L = LRef.current;
     const map = mapRef.current;
@@ -90,12 +102,17 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
 
     Object.values(markersRef.current).forEach((m) => map.removeLayer(m));
     markersRef.current = {};
+    Object.values(placeMarkersRef.current).forEach((m) => map.removeLayer(m));
+    placeMarkersRef.current = {};
     if (polylineRef.current) { map.removeLayer(polylineRef.current); polylineRef.current = null; }
     flightLayersRef.current.forEach((l) => map.removeLayer(l));
     flightLayersRef.current = [];
     destMarkersRef.current = {};
 
     const filtered = events.filter((e) => activeDay === "all" || e.dayId === activeDay);
+    const filteredPlaces = places.filter((p) =>
+      activeCategories === "all" ? true : activeCategories.has(p.category)
+    );
 
     filtered.forEach((ev) => {
       const active = selectedIdRef.current === ev.id;
@@ -106,9 +123,6 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       m.addTo(map);
       markersRef.current[ev.id] = m;
 
-      // Point-to-point events (flight/transport): draw the path line, plus an
-      // arrival pin when the destination is explicit. Inferred transport lines
-      // are fainter and have no second pin.
       if (ev.routePath) {
         const color = TYPE_HEX[ev.type] ?? TYPE_HEX.misc;
         const path = L.polyline(ev.routePath, ev.routeInferred
@@ -130,18 +144,28 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       }
     });
 
+    filteredPlaces.forEach((place) => {
+      const active = selectedIdRef.current === place.id;
+      const icon = L.divIcon({ className: "", html: placeMarkerHtml(place, active), iconSize: [22, 22], iconAnchor: [11, 11] });
+      const m = L.marker([place.lat, place.lng], { icon, zIndexOffset: active ? 900 : 50 });
+      m.bindTooltip(`◇ ${place.title}`, { className: "od-tip", direction: "top", offset: [0, -14] });
+      m.on("click", () => onSelectRef.current(place.id));
+      m.addTo(map);
+      placeMarkersRef.current[place.id] = m;
+    });
+
     if (showRoute && filtered.length >= 2) {
       polylineRef.current = L.polyline(filtered.map((e) => [e.lat, e.lng]), {
         color: "#6F66B7", weight: 2.5, opacity: 0.6, dashArray: "6 8",
       }).addTo(map);
     }
 
-    // Bounds include flight arrival endpoints so both ends stay in view.
     const points: [number, number][] = [];
     filtered.forEach((e) => {
       points.push([e.lat, e.lng]);
       if (hasDest(e)) points.push([e.destLat as number, e.destLng as number]);
     });
+    filteredPlaces.forEach((p) => points.push([p.lat, p.lng]));
 
     if (points.length === 1) {
       map.setView(points[0], 13);
@@ -149,9 +173,8 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [80, 80], maxZoom: activeDay === "all" ? 9 : 13 });
     }
-  }, [ready, activeDay, showRoute, events]);
+  }, [ready, activeDay, catKey, showRoute, events, places, activeCategories]);
 
-  // Update marker styling + pan when the selection changes.
   useEffect(() => {
     const L = LRef.current;
     const map = mapRef.current;
@@ -165,7 +188,6 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       if (active) map.panTo([ev.lat, ev.lng], { animate: true, duration: 0.5 });
     });
 
-    // Mirror active styling onto flight arrival markers.
     Object.entries(destMarkersRef.current).forEach(([id, m]) => {
       const ev = events.find((e) => e.id === id);
       if (!ev) return;
@@ -173,7 +195,16 @@ export function LeafletMap({ events, activeDay, selectedId, showRoute, onSelect 
       m.setIcon(L.divIcon({ className: "", html: destMarkerHtml(ev, active), iconSize: [28, 28], iconAnchor: [14, 28] }));
       m.setZIndexOffset(active ? 1000 : 0);
     });
-  }, [ready, selectedId, events]);
+
+    Object.entries(placeMarkersRef.current).forEach(([id, m]) => {
+      const place = places.find((p) => p.id === id);
+      if (!place) return;
+      const active = selectedId === id;
+      m.setIcon(L.divIcon({ className: "", html: placeMarkerHtml(place, active), iconSize: [22, 22], iconAnchor: [11, 11] }));
+      m.setZIndexOffset(active ? 900 : 50);
+      if (active) map.panTo([place.lat, place.lng], { animate: true, duration: 0.5 });
+    });
+  }, [ready, selectedId, events, places]);
 
   return <div id="leaflet-map" ref={elRef} />;
 }
