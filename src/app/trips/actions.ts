@@ -159,9 +159,11 @@ export async function updateTrip(tripId: string, formData: FormData) {
     endDate: formData.get("endDate") || undefined,
     totalBudget: formData.get("totalBudget") || undefined,
     timeFormat: formData.get("timeFormat") || undefined,
+    coverIndex: formData.get("coverIndex") || undefined,
   };
 
   const validated = updateTripSchema.parse(raw);
+  const { coverIndex, ...tripFields } = validated;
 
   // Parse dates in local timezone (date string like "2026-07-17" should be July 17 local)
   const startDate = validated.startDate ? parseDateString(validated.startDate) : undefined;
@@ -170,9 +172,10 @@ export async function updateTrip(tripId: string, formData: FormData) {
   await db.trip.update({
     where: { id: tripId },
     data: {
-      ...validated,
+      ...tripFields,
       startDate,
       endDate,
+      ...(coverIndex != null ? { coverImageUrl: `grad:${coverIndex}` } : {}),
     },
   });
 

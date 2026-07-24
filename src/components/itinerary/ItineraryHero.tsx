@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Icons } from "@/components/shared/Icons";
 import { AvatarStack } from "@/components/shared/AvatarStack";
 import { TripEditModal } from "@/components/trips/TripEditModal";
+import { COVER_ACCENT, resolveCover, resolveCoverIndex } from "@/components/trips/cover";
 
 interface ItineraryHeroProps {
   tripId: string;
@@ -15,7 +16,12 @@ interface ItineraryHeroProps {
   weather: { condition: string; temperature: number } | null;
   totalDays: number;
   totalEvents: number;
-  trip: { startDate: Date; endDate: Date; timeFormat?: string };
+  trip: {
+    startDate: Date;
+    endDate: Date;
+    timeFormat?: string;
+    coverImageUrl?: string | null;
+  };
   /** Viewers can't edit trip details (ODY-001). */
   canEdit?: boolean;
 }
@@ -39,10 +45,16 @@ export function ItineraryHero({
   canEdit = true,
 }: ItineraryHeroProps) {
   const [editOpen, setEditOpen] = useState(false);
+  const cover = resolveCover(trip.coverImageUrl ?? null, tripId);
+  const coverIndex = resolveCoverIndex(trip.coverImageUrl ?? null, tripId);
 
   return (
     <>
-      <section className="hero" aria-label="Trip overview">
+      <section
+        className="hero cover-art"
+        aria-label="Trip overview"
+        style={{ "--cover-img": `${COVER_ACCENT}, ${cover}` } as React.CSSProperties}
+      >
         <div className="hero-top">
           <div className="left">
             <div className="hero-eyebrow">{destination} · {dateRange}</div>
@@ -94,6 +106,7 @@ export function ItineraryHero({
         initialStartDate={trip.startDate}
         initialEndDate={trip.endDate}
         initialTimeFormat={trip.timeFormat as "12h" | "24h" | undefined}
+        initialCoverIndex={coverIndex}
         onClose={() => setEditOpen(false)}
       />
     </>

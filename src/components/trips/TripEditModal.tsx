@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/shared/Modal";
 import { Icons } from "@/components/shared/Icons";
 import { updateTrip } from "@/app/trips/actions";
+import { COVER_GRADIENTS } from "@/components/trips/cover";
 
 function formatDateForInput(date: Date): string {
   const year = date.getFullYear();
@@ -21,18 +22,30 @@ interface TripEditModalProps {
   initialEndDate?: Date;
   /** Trip-level 12h/24h time display preference (ODY-041). */
   initialTimeFormat?: "12h" | "24h";
+  /** Cover mood index (ODY-047). */
+  initialCoverIndex?: number;
   onClose: () => void;
 }
 
 // Inner form is mounted only while the modal is open, so its initial state is
 // always seeded fresh from the current trip values (no reset effect needed).
-function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDate, initialEndDate, initialTimeFormat = "12h", onClose }: Omit<TripEditModalProps, "open">) {
+function TripEditForm({
+  tripId,
+  initialTitle,
+  initialDestination,
+  initialStartDate,
+  initialEndDate,
+  initialTimeFormat = "12h",
+  initialCoverIndex = 0,
+  onClose,
+}: Omit<TripEditModalProps, "open">) {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(initialTitle);
   const [destination, setDestination] = useState(initialDestination);
   const [startDate, setStartDate] = useState(initialStartDate ? formatDateForInput(initialStartDate) : "");
   const [endDate, setEndDate] = useState(initialEndDate ? formatDateForInput(initialEndDate) : "");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">(initialTimeFormat);
+  const [coverIndex, setCoverIndex] = useState(initialCoverIndex);
 
   function handleSave() {
     if (!title.trim()) return;
@@ -46,6 +59,7 @@ function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDa
     if (startDate) fd.set("startDate", startDate);
     if (endDate) fd.set("endDate", endDate);
     fd.set("timeFormat", timeFormat);
+    fd.set("coverIndex", String(coverIndex));
     startTransition(async () => {
       await updateTrip(tripId, fd);
       onClose();
@@ -131,6 +145,23 @@ function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDa
             </button>
           </div>
         </div>
+
+        <div className="field">
+          <label>Cover mood</label>
+          <div className="wz-moods">
+            {COVER_GRADIENTS.map((g, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Cover mood ${i + 1}`}
+                aria-pressed={coverIndex === i}
+                className={`wz-mood cover-art ${coverIndex === i ? "on" : ""}`}
+                style={{ "--cover-img": g } as React.CSSProperties}
+                onClick={() => setCoverIndex(i)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="modal-foot">
@@ -143,7 +174,17 @@ function TripEditForm({ tripId, initialTitle, initialDestination, initialStartDa
   );
 }
 
-export function TripEditModal({ open, tripId, initialTitle, initialDestination, initialStartDate, initialEndDate, initialTimeFormat, onClose }: TripEditModalProps) {
+export function TripEditModal({
+  open,
+  tripId,
+  initialTitle,
+  initialDestination,
+  initialStartDate,
+  initialEndDate,
+  initialTimeFormat,
+  initialCoverIndex,
+  onClose,
+}: TripEditModalProps) {
   return (
     <Modal open={open} onClose={onClose} ariaLabel="Edit trip">
       <TripEditForm
@@ -153,6 +194,7 @@ export function TripEditModal({ open, tripId, initialTitle, initialDestination, 
         initialStartDate={initialStartDate}
         initialEndDate={initialEndDate}
         initialTimeFormat={initialTimeFormat}
+        initialCoverIndex={initialCoverIndex}
         onClose={onClose}
       />
     </Modal>
