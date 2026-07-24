@@ -26,6 +26,8 @@ export const createTripSchema = z.object({
 export const updateTripSchema = createTripSchema.partial().extend({
   // Display-only 12h/24h preference (ODY-041).
   timeFormat: z.enum(["12h", "24h"]).optional(),
+  // Cover mood index stored as "grad:<n>" (ODY-047).
+  coverIndex: z.coerce.number().int().min(0).max(7).optional(),
 });
 
 export const createTripWizardSchema = z.object({

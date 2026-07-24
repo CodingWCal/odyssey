@@ -44,7 +44,12 @@ export default async function ItineraryPage({ params }: Props) {
         weather={weather}
         totalDays={trip.days.length}
         totalEvents={totalEvents}
-        trip={{ startDate: trip.startDate, endDate: trip.endDate, timeFormat: trip.timeFormat }}
+        trip={{
+          startDate: trip.startDate,
+          endDate: trip.endDate,
+          timeFormat: trip.timeFormat,
+          coverImageUrl: trip.coverImageUrl,
+        }}
         canEdit={!readOnly}
       />
 
