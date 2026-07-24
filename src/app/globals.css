@@ -841,6 +841,14 @@
   background: var(--paper-2);
 }
 .input.mono { font-family: var(--font-mono); font-size: 13px; letter-spacing: -.01em; }
+.input.invalid {
+  border-color: var(--coral);
+  background: var(--coral-soft);
+}
+.input.invalid:focus {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px var(--coral-soft);
+}
 textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: vertical; line-height: 1.5; font-size: 13.5px; }
 
 .input-with-prefix {
