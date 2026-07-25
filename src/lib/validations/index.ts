@@ -67,6 +67,14 @@ export const createExpenseSchema = z.object({
   category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
 });
 
+/** Partial expense edit (ODY-054) — same money/category rules as create. */
+export const updateExpenseSchema = z.object({
+  label: z.string().min(1, "Label is required").max(200),
+  amount: z.coerce.number().finite().min(0.01, "Amount must be greater than 0").max(10_000_000),
+  category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
+  eventId: z.string().optional().or(z.literal("")),
+});
+
 export const inviteCollaboratorSchema = z.object({
   email: z.string().email("Invalid email address"),
   tripId: z.string().min(1),
@@ -152,6 +160,7 @@ export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
 export type InviteCollaboratorInput = z.infer<typeof inviteCollaboratorSchema>;
 export type UpdateSplitInput = z.infer<typeof updateSplitSchema>;
 export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
