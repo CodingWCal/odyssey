@@ -2,6 +2,7 @@
 
 import { useMemo, useTransition } from "react";
 import { applyWindow } from "@/app/trips/[tripId]/schedule/actions";
+import { toast } from "@/components/shared/Toast";
 import type { GetScheduleResult } from "@/app/trips/[tripId]/schedule/actions";
 import type { AvailabilityBlock } from "@/types";
 import { Icons } from "@/components/shared/Icons";
@@ -83,7 +84,7 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
           endDate: bestWindow.endDate,
         });
       } catch {
-        // revalidation / errors surface on refresh.
+        toast("Couldn't apply those dates — try again.");
       }
     });
   }
