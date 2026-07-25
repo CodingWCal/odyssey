@@ -6,6 +6,7 @@ import { fetchWeather } from "@/components/shared/WeatherBanner";
 import { notFound } from "next/navigation";
 import type { TripDay } from "@/types";
 import { formatShortDate } from "@/lib/utils";
+import { normalizeTripNoteContent } from "@/lib/tripNotes";
 
 interface Props {
   params: Promise<{ tripId: string }>;
@@ -28,8 +29,7 @@ export default async function ItineraryPage({ params }: Props) {
   const dateRange = `${formatShortDate(trip.startDate)} – ${formatShortDate(trip.endDate)}`;
   const members = trip.members.map((m: (typeof trip.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" }));
   const { head, tail } = titleParts(trip.title);
-  const noteContent = trip.note?.content as { text?: string } | null;
-  const noteText = typeof noteContent?.text === "string" ? noteContent.text : "";
+  const noteText = normalizeTripNoteContent(trip.note?.content).text;
   const readOnly = trip.myRole === "viewer"; // ODY-001
 
   return (

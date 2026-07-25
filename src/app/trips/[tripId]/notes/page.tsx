@@ -1,6 +1,7 @@
 import { getTripById } from "@/app/trips/actions";
 import { db } from "@/lib/prisma/db";
 import { TiptapEditor } from "@/components/notes/TiptapEditor";
+import { normalizeTripNoteContent } from "@/lib/tripNotes";
 import { notFound } from "next/navigation";
 
 interface Props {
@@ -16,6 +17,7 @@ export default async function NotesPage({ params }: Props) {
     where: { tripId },
     include: { user: { select: { name: true } } },
   });
+  const normalized = normalizeTripNoteContent(note?.content);
 
   return (
     <div className="canvas canvas-narrow">
@@ -33,7 +35,7 @@ export default async function NotesPage({ params }: Props) {
       <div className="notes-shell">
         <TiptapEditor
           tripId={tripId}
-          initialContent={note?.content as object | null}
+          initialContent={normalized.doc}
           lastUpdated={note?.updatedAt ?? null}
           lastUpdatedBy={note?.user?.name ?? null}
           readOnly={trip.myRole === "viewer"}
