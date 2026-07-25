@@ -424,6 +424,107 @@ Desktop shows `NewTripCard`; mobile only a thin banner. Search shows `⌘K` with
 
 ---
 
+## P2 — User Journey (2026-07-25 UX audit)
+
+> Batch focused purely on the traveler's journey: first-run orientation, honest
+> states, and returning-user flow. No new external dependencies. Keep the calm,
+> editorial "boarding pass + printed map" tone; palette + type from globals.css.
+
+### ODY-074 · Empty-trip guided first steps — M, sonnet
+> **In plain terms:** Right after the wizard, a brand-new trip is a blank timeline that feels like a chore, not the start of an adventure. Give first-time planners a calm, dismissible checklist ("Add your arrival", "Pin where you're staying", "Invite one person") so the trip feels *started*.
+The itinerary empty state is a single generic card; there's no momentum for a new trip.
+- On a trip with zero events, render an editorial "first steps" checklist above/inside the empty state: suggested actions link to the real controls (open Add Event, Members, Explore). Derive completion from live data (has events? has ≥2 members? has a cover?) — no new persistence needed.
+- Dismissible for the session via component state (no localStorage — CLAUDE.md). Reappears only while the trip is genuinely empty.
+- Editor+ only sees actionable CTAs; viewers see a calm "nothing planned yet" line.
+- Files: `src/app/trips/[tripId]/itinerary/page.tsx`, a new `src/components/itinerary/FirstSteps.tsx`, `globals.css`.
+- Acceptance: a new empty trip shows warm, actionable next steps that disappear as they're completed; no layout shift for populated trips.
+
+### ODY-075 · Progressive tab reveal for new trips — M, sonnet
+> **In plain terms:** Day one, a trip shows seven tabs (Schedule, Explore, Collections…) which is overwhelming before there's anything in them. Start simple and reveal advanced tabs as they become relevant.
+`NAV_ITEMS` always renders all 7 destinations regardless of trip state (pairs with ODY-059/060).
+- Show a core set first (Itinerary, Map, Members); reveal Schedule when a poll exists or trip has no fixed dates, Explore/Collections once a destination is set or the traveler opts in via a subtle "More" affordance.
+- Keep every tab reachable (don't hard-hide) — this is ordering/emphasis, not permission. Reuse the ODY-059 overflow pattern rather than inventing a second one.
+- Files: `src/components/trips/navItems.ts`, `WorkspaceSidebar.tsx`, `MobileTabBar.tsx`.
+- Acceptance: a fresh trip presents a calm, minimal nav; advanced tabs appear as they gain purpose; nothing becomes unreachable.
+
+### ODY-076 · Jump to today / in-progress day on itinerary — S, haiku
+> **In plain terms:** When a trip is happening *now*, the itinerary opens at Day 1 and you have to scroll to find today. Auto-focus today's day and mark it.
+The dashboard already computes `live`/`upcoming`/`past`; the itinerary doesn't lean into "today."
+- For a live trip (today within start–end, UTC-safe via ODY-048 helpers), scroll the matching `DayBlock` into view on load and give it a quiet "Today" marker/accent. Non-live trips unchanged.
+- No auto-scroll for viewers mid-read beyond initial focus; respect reduced-motion.
+- Files: `src/components/itinerary/DayBlock.tsx`, `src/app/trips/[tripId]/itinerary/page.tsx`, `globals.css`.
+- Acceptance: opening a live trip lands on today's day with a subtle badge; past/upcoming trips open at the top as before.
+
+### ODY-077 · Event time-overlap warnings — S, sonnet
+> **In plain terms:** Nothing stops you from booking dinner at 7 and a museum at 7 on the same day. A soft, non-blocking hint ("overlaps Sunset kayak") helps catch double-bookings.
+Events store `startTime`/`endTime` but nothing surfaces conflicts.
+- Pure display: within a day, detect overlapping time ranges (ignore events without times) and show a quiet `--peach`/`--coral` inline hint on the overlapping blocks. No blocking, no schema change.
+- Add a small unit-tested helper in `src/lib` for overlap detection.
+- Files: `src/lib/` (new helper + test), `src/components/itinerary/DayBlock.tsx`/`EventBlock.tsx`.
+- Acceptance: two timed events that overlap on a day show a soft conflict hint; untimed events and non-overlaps show nothing.
+
+### ODY-078 · Collections → add to a day in one tap — S, sonnet
+> **In plain terms:** Explore can drop a place onto the itinerary, but saved Collections places are a dead end — you can't easily say "put this on Thursday." Add that.
+Collections are savable but can't be promoted to the plan (Explore already has `saveExploreToItinerary`).
+- Add an "Add to itinerary" action on a Collection card → day picker → reuse `createEvent` (with the ODY-052 day-scope guard and shared geocode path). Editor+ only.
+- Files: `src/app/trips/[tripId]/collections/actions.ts` (or reuse itinerary action), `src/components/` collections card + a small day-picker (reuse Explore's pattern).
+- Acceptance: a saved place becomes a real itinerary event on the chosen day; viewers can't; pins/costs behave like hand-entered events.
+
+### ODY-079 · Map honesty for saved-but-unpinned locations — S, sonnet
+> **In plain terms:** If a location can't be geocoded (typed freehand, lookup failed), the event still saves but the map just says "No pins yet" with no explanation — it looks broken. Tell the truth.
+QA findings F18/F19: events/places without coordinates silently vanish from the map; autocomplete errors are invisible.
+- Map: when there are events/places but some lack `lat`/`lng`, show a small branded note ("N stops aren't pinned yet — add a location we can find"). Distinguish "no stops" from "stops but none mappable."
+- Autocomplete: surface a quiet "couldn't search right now" state instead of an empty dropdown on geocode error (reuse toast/inline pattern; no new lib).
+- Files: `src/app/trips/[tripId]/map/page.tsx`, `MapClient.tsx`, `src/components/itinerary/LocationAutocomplete.tsx`.
+- Acceptance: a trip with unpinned stops explains why on the map; failed lookups show a clear, calm message.
+
+### ODY-080 · Honest schedule apply-window copy + out-of-range day flag — S, sonnet
+> **In plain terms:** The "Apply best window" confirm warns that events outside the new dates are "permanently removed," but the server actually keeps days that have events. The scary copy is a lie — fix it, and gently flag any kept-but-out-of-range days.
+QA finding F10: `applyWindow` only deletes *empty* out-of-range days (ODY-002 safety), but the confirm dialog claims event days are deleted.
+- Rewrite the confirm copy to match reality: empty days outside the new range are removed; days that hold events are kept and may now sit outside your dates.
+- Optional (same PR if cheap): flag kept out-of-range days in the itinerary with a quiet "outside trip dates" marker so they're not lost.
+- Files: `src/components/trips/AvailabilityHeatmap.tsx`, `src/components/itinerary/DayBlock.tsx`, `src/app/trips/[tripId]/itinerary/page.tsx`.
+- Acceptance: confirm copy accurately describes what happens; no event data is implied to be destroyed when it isn't.
+
+### ODY-081 · Editors can open schedule polls (role parity) — S, haiku
+> **In plain terms:** Any editor can plan the whole trip, but only the owner can open a scheduling poll — editors just hit a dead-end empty state. Let editors open/edit polls too.
+QA finding F21: `upsertPoll` requires `role: "owner"`; the rest of planning is editor+ (ODY-001).
+- Change `upsertPoll` to allow editor+ (reuse `assertTripRole(..., "editor")`). Keep `applyWindow` owner-only for now, since it overwrites trip dates for everyone (document this split in the ticket/comment).
+- Update the schedule empty state so editors see a "Start a poll" CTA, not an owner-only message.
+- Files: `src/app/trips/[tripId]/schedule/actions.ts`, `src/app/trips/[tripId]/schedule/page.tsx`.
+- Acceptance: an editor can create/edit a poll; viewers still can't; applying a window stays owner-only (or is a deliberate follow-up decision).
+
+### ODY-082 · Trip archive / soft hide on dashboard — M, sonnet
+> **In plain terms:** Past trips ("Wrapped") pile up forever. Let people archive a trip so the dashboard stays calm, without deleting the memories.
+Dashboard shows all upcoming/past; no way to tidy.
+- Add `archivedAt DateTime?` on Trip via `prisma db push` (Supabase free-tier may be paused — coordinate the push). Owner archives/unarchives; archived trips move to a collapsed "Archived" section, excluded from the main grid and counts.
+- Server action + Zod; membership/owner check; revalidate dashboard.
+- Files: `prisma/schema.prisma`, `src/app/trips/actions.ts`, `src/components/trips/DashboardClient.tsx`, `TripCard.tsx`.
+- Acceptance: owner can archive/restore a trip; archived trips are hidden from the primary grid but recoverable; no data deleted.
+
+### ODY-083 · In-trip search (events, places, notes) — M, sonnet
+> **In plain terms:** Once a trip is dense, finding "that ramen place" means scrolling every day. Add a simple search within a trip.
+No way to search inside a trip.
+- Lightweight client-side filter over already-loaded events + collections (title/location/notes), surfaced from the workspace header or a small command box; jump-to on select. No new backend if data is already on the page; otherwise a scoped server action.
+- Files: `src/components/trips/` (search box), itinerary/collections client components.
+- Acceptance: typing a query highlights/filters matching stops and places within the current trip; clearing restores the full view.
+
+### ODY-084 · Leave trip (self-remove) — S, sonnet
+> **In plain terms:** A collaborator can be removed by the owner, but can't leave on their own. Add a clear "Leave trip" for non-owners.
+`removeMember` exists (owner-driven); there's no self-exit.
+- Add a `leaveTrip` server action: a non-owner member removes their own membership (block the owner from leaving unless ownership is transferred — out of scope here, so owner sees no leave button). Confirm dialog; revalidate; redirect to dashboard.
+- Files: `src/app/trips/[tripId]/members/actions.ts`, `src/app/trips/[tripId]/members/page.tsx`, `MemberActions.tsx`.
+- Acceptance: an editor/viewer can leave a trip and lands on the dashboard without it; owner cannot orphan the trip.
+
+### ODY-085 · Post-invite "you're in" welcome on the joined trip — S, sonnet
+> **In plain terms:** After accepting an invite you get dropped on a generic screen. A short welcome on *that trip* (your role, who's hosting, "start on the itinerary") makes joining feel warm and oriented. Pairs with ODY-037.
+Invite deep-links land on the trip, but there's no first-visit context for a joiner.
+- On a member's first visit to a trip they just joined (detect via `joinedAt` recency or a one-time session flag — no localStorage), show a dismissible welcome banner: role, owner name, one primary CTA.
+- Files: `src/app/trips/[tripId]/` layout or itinerary page, a small `JoinWelcome` component, `globals.css`.
+- Acceptance: a freshly joined collaborator sees a warm, dismissible orientation on the trip; returning members don't.
+
+---
+
 ## P3 — New Features
 
 ### ODY-045 · Place Collections shown on the map by category — L, sonnet
@@ -566,6 +667,39 @@ Depends on: ODY-036 (prod auth), ODY-037 (share/invites), ODY-058/059 (mobile ch
 
 ---
 
+## P3 — User Journey delight (2026-07-25 UX audit)
+
+### ODY-086 · Booking details on events (confirmation #, link, check-in) — M, sonnet
+> **In plain terms:** For flights and hotels you want the confirmation number, a booking link, and check-in time right on the event — the "boarding pass" moment. Keep it a couple of optional fields, not a CRM.
+Events have `type`/`location`/`notes` but no structured booking info.
+- Add optional `confirmationCode String?`, `bookingUrl String?`, `checkIn`/`checkOut` (reuse `startTime`/`endTime` where possible) via `prisma db push` (coordinate Supabase pause). Zod-validate URL + length caps.
+- Surface fields in the event modal for flight/hotel types primarily; render as quiet mono chips on the block and map card. No new deps.
+- Files: `prisma/schema.prisma`, `src/lib/validations/index.ts`, `AddEventModal.tsx`, `EventBlock.tsx`, `MapClient.tsx`.
+- Acceptance: a flight/hotel event can hold a confirmation code + link that render on the timeline and map; other types unaffected.
+
+### ODY-087 · Day agenda / "today" compact view — M, sonnet
+> **In plain terms:** While you're actually traveling, you want a clean morning→evening strip for the day you're in, not the whole trip. A compact day view bridges toward the print/share view (ODY-032/072).
+No focused single-day reading mode.
+- A compact agenda for one day (default: today for live trips, per ODY-076): ordered timed list, minimal chrome, big touch targets, quick access to that day's map pins. Reuse existing event data; print-friendly CSS ties into ODY-032/072.
+- Files: `src/app/trips/[tripId]/` (day view surface or itinerary mode toggle), `globals.css`.
+- Acceptance: a traveler can open a clean single-day agenda and read the plan at a glance on a phone.
+
+### ODY-088 · Destination timezone labels on times — M, sonnet
+> **In plain terms:** "3:00 PM" is ambiguous when you're planning from home for a trip abroad. Label times as destination-local so logistics don't silently break.
+Times render without timezone context (relates to ODY-041 display + ODY-003 UTC storage).
+- Resolve a trip timezone (from destination geocode or a per-trip tz field via db push) and label displayed times as destination-local (e.g. "3:00 PM local"). Storage unchanged (HH:MM). No new paid deps — prefer Intl APIs.
+- Files: `prisma/schema.prisma` (optional tz field), `src/lib/utils.ts` (time helpers + tests), `EventBlock.tsx`, map card.
+- Acceptance: displayed event times are clearly destination-local; stored values unchanged; helper unit-tested.
+
+### ODY-089 · "What changed since your last visit" digest — M, sonnet
+> **In plain terms:** On a shared trip you want to know what happened while you were away — lighter than full realtime. A quiet "3 new events, Maya updated the budget since you last looked" summary. Pairs with ODY-035 and is a stepping stone to ODY-070.
+Collaboration feels static without realtime (ODY-070).
+- Track a per-member last-viewed timestamp (db push) and, on trip open, summarize changes since then using `updatedAt`/`createdAt` on events/expenses (or the ODY-035 activity feed if built). Quiet, dismissible, editorial copy.
+- Files: `prisma/schema.prisma` (last-viewed), trip layout/overview, a small `SinceLastVisit` component.
+- Acceptance: returning to a trip shows a calm summary of what changed since your last visit; first visit shows nothing.
+
+---
+
 ## Deferred / external (tracked, not ticketed)
 - Supabase advisor: 2 warnings on `rls_auto_enable()` (accepted risk — Prisma bypasses RLS by design; see security memo).
 - Clerk production instance + `pk_live` keys before real-domain launch (see deploy notes).
@@ -573,10 +707,12 @@ Depends on: ODY-036 (prod auth), ODY-037 (share/invites), ODY-058/059 (mobile ch
 - Full LLM Explore ranking — optional once a provider key exists (ODY-049 MVP already ships Nominatim).
 
 ## Suggested session order
-1. **P0 security/correctness:** ODY-052 (IDOR) → ODY-051 (notes clobber)
-2. **P1 hardening:** ODY-053 → ODY-054 → ODY-055 → ODY-056 → ODY-057 → ODY-058
-3. **Launch blockers (human + eng):** ODY-036 → ODY-037
-4. **P2 UX:** ODY-059 → ODY-060 → ODY-061 → ODY-062 → ODY-063 → ODY-020/022/023/024/026
-5. **P3 delight:** ODY-030 · ODY-032/072 · ODY-065 · ODY-067
-6. **Competitive / later:** ODY-066 · ODY-068–071
-7. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
+1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅
+2. **P1 hardening:** ODY-053 ✅ → ODY-054 ✅ → ODY-055 ✅ → ODY-056 ✅ → ODY-057 ✅ → ODY-058 ✅
+3. **UX quick wins (safe, no schema):** ODY-081 → ODY-080 → ODY-079 → ODY-076 → ODY-062 → ODY-063
+4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082
+5. **Launch blockers (human + eng):** ODY-036 → ODY-037
+6. **P2 residual polish:** ODY-061 → ODY-020/022/023/024/026
+7. **P3 delight:** ODY-030 · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067
+8. **Competitive / later:** ODY-066 · ODY-068–071
+9. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
