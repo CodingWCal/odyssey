@@ -36,6 +36,7 @@ export function LocationAutocomplete({
   const [results, setResults] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [active, setActive] = useState(-1);
   const justPicked = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -49,6 +50,7 @@ export function LocationAutocomplete({
     if (q.length < 3) {
       if (results.length > 0) setResults([]);
       if (open) setOpen(false);
+      if (searchError) setSearchError(false);
     }
   }
 
@@ -63,6 +65,7 @@ export function LocationAutocomplete({
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
+      setSearchError(false);
       try {
         const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`, {
           signal: controller.signal,
@@ -76,10 +79,17 @@ export function LocationAutocomplete({
         setResults(next);
         setOpen(true);
         setActive(-1);
-      } catch {
-        /* aborted or network error — ignore */
+      } catch (err) {
+        // Aborts from cleanup are expected; real failures get a calm message
+        // so the empty dropdown doesn't look like "nothing found" (ODY-079).
+        if (controller.signal.aborted) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setResults([]);
+        setSearchError(true);
+        setOpen(true);
+        setActive(-1);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }, 350);
     return () => {
@@ -134,9 +144,16 @@ export function LocationAutocomplete({
         onFocus={() => results.length > 0 && setOpen(true)}
         onKeyDown={onKeyDown}
       />
-      {open && (results.length > 0 || loading) && (
+      {open && (results.length > 0 || loading || searchError) && (
         <div className="ac-menu" role="listbox">
-          {loading && results.length === 0 && <div className="ac-hint">Searching…</div>}
+          {loading && results.length === 0 && !searchError && (
+            <div className="ac-hint">Searching…</div>
+          )}
+          {searchError && !loading && (
+            <div className="ac-hint" role="status">
+              Couldn&apos;t search right now — try again in a moment.
+            </div>
+          )}
           {results.map((s, i) => (
             <button
               key={`${s.lat},${s.lng},${i}`}
