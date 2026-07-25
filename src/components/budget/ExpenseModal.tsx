@@ -5,6 +5,7 @@ import { Modal } from "@/components/shared/Modal";
 import { Icons } from "@/components/shared/Icons";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { createExpense, updateExpense, deleteExpense } from "@/app/trips/[tripId]/budget/actions";
+import { toast } from "@/components/shared/Toast";
 
 export interface ExpenseInitial {
   id?: string;
@@ -50,23 +51,31 @@ export function ExpenseModal({ open, tripId, mode, initial, onClose, onSuccess }
   function handleSave() {
     if (!valid) return;
     startTransition(async () => {
-      const payload = { label: form.label.trim(), amount: Number(form.amount), category: form.category };
-      if (isEdit && initial?.id) {
-        await updateExpense(initial.id, tripId, payload);
-      } else {
-        await createExpense({ tripId, ...payload });
+      try {
+        const payload = { label: form.label.trim(), amount: Number(form.amount), category: form.category };
+        if (isEdit && initial?.id) {
+          await updateExpense(initial.id, tripId, payload);
+        } else {
+          await createExpense({ tripId, ...payload });
+        }
+        onSuccess?.();
+        onClose();
+      } catch {
+        toast(isEdit ? "Couldn't update expense — try again." : "Couldn't add expense — try again.");
       }
-      onSuccess?.();
-      onClose();
     });
   }
 
   function handleDelete() {
     if (!initial?.id) return;
     startTransition(async () => {
-      await deleteExpense(initial.id!, tripId);
-      onSuccess?.();
-      onClose();
+      try {
+        await deleteExpense(initial.id!, tripId);
+        onSuccess?.();
+        onClose();
+      } catch {
+        toast("Couldn't delete expense — try again.");
+      }
     });
   }
 

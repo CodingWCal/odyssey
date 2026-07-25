@@ -6,6 +6,7 @@ import { Modal } from "@/components/shared/Modal";
 import { Icons } from "@/components/shared/Icons";
 import { COVER_GRADIENTS, COVER_ACCENT } from "./cover";
 import { createTripWizard } from "@/app/trips/actions";
+import { toast } from "@/components/shared/Toast";
 import { inviteCollaborator } from "@/app/trips/[tripId]/members/actions";
 
 const DESTINATIONS = [
@@ -124,11 +125,12 @@ function WizardBody({ onClose }: { onClose: () => void }) {
         try {
           await inviteCollaborator({ email, tripId, role: "editor" });
         } catch {
-          /* skip a failed invite, keep going */
+          toast(`Invite to ${email} didn't send — you can retry from Members.`);
         }
       }
       router.push(`/trips/${tripId}/itinerary`);
     } catch {
+      toast("Couldn't create the trip — try again.");
       setBusy(false);
     }
   }
