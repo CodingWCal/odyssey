@@ -46,6 +46,14 @@ export async function createEvent(data: {
 
   const validated = createEventSchema.parse(data);
 
+  // ODY-052: day must belong to the asserted trip (blocks cross-trip dayId IDOR).
+  // Explore → itinerary save goes through this same path.
+  const day = await db.day.findFirst({
+    where: { id: validated.dayId, tripId: validated.tripId },
+    select: { id: true },
+  });
+  if (!day) throw new Error("Not found");
+
   const lastEvent = await db.event.findFirst({
     where: { dayId: validated.dayId },
     orderBy: { orderIndex: "desc" },
