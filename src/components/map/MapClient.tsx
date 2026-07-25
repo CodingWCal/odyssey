@@ -21,6 +21,8 @@ interface MapClientProps {
   dayCount: number;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
+  /** Stops with a written location that couldn't be geocoded (ODY-079). */
+  unpinnedCount?: number;
 }
 
 export function MapClient({
@@ -30,6 +32,7 @@ export function MapClient({
   eyebrow,
   dayCount,
   timeFormat = "12h",
+  unpinnedCount = 0,
 }: MapClientProps) {
   const [activeDay, setActiveDay] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,6 +66,21 @@ export function MapClient({
   }
 
   if (events.length === 0 && places.length === 0) {
+    // Distinguish "nothing added" from "stops exist but none could be pinned"
+    // so the map never looks broken when a location just failed to geocode.
+    if (unpinnedCount > 0) {
+      return (
+        <div className="map-empty">
+          <p className="map-empty-icon" aria-hidden="true">🧭</p>
+          <h3>
+            Nothing to pin <em>yet</em>
+          </h3>
+          <p className="map-empty-sub">
+            {unpinnedCount} stop{unpinnedCount === 1 ? "" : "s"} {unpinnedCount === 1 ? "has" : "have"} a location we couldn&apos;t place on the map. Edit the stop and pick a suggestion from the location search so it lands here.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="map-empty">
         <p className="map-empty-icon" aria-hidden="true">🗺️</p>
@@ -87,6 +105,11 @@ export function MapClient({
             {places.length > 0 ? ` · ${places.length} collected` : ""}
             {" "}across {dayCount} days
           </div>
+          {unpinnedCount > 0 && (
+            <p className="map-unpinned-note">
+              {unpinnedCount} stop{unpinnedCount === 1 ? "" : "s"} {unpinnedCount === 1 ? "isn't" : "aren't"} pinned yet — pick a location suggestion when editing so we can place {unpinnedCount === 1 ? "it" : "them"}.
+            </p>
+          )}
         </div>
 
         <div className="filter-chips">

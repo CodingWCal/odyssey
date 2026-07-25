@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useMemo } from "react";
+import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -78,15 +78,29 @@ interface DayBlockProps {
   readOnly?: boolean;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
+  /** This day is the current calendar day of a live trip (ODY-076). */
+  isToday?: boolean;
 }
 
-export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h" }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", isToday = false }: DayBlockProps) {
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   // Per-day local preference (ODY-042) — default chronological; Manual keeps dnd order.
   const [sortMode, setSortMode] = useState<SortMode>("time");
   const bodyRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // On a live trip, bring today's day into view once on mount (ODY-076).
+  // Respect reduced-motion and only scroll for the single "today" block.
+  useEffect(() => {
+    if (!isToday) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keep local state in sync with server data after revalidation ("adjust
   // state during render" — replaces the old sync-in-effect + lint disable).
@@ -141,13 +155,16 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   const weekday = new Date(day.date).toLocaleDateString("en-US", { weekday: "long" });
 
   return (
-    <section className={`day-block${collapsed ? " collapsed" : ""}`}>
+    <section ref={sectionRef} className={`day-block${collapsed ? " collapsed" : ""}${isToday ? " is-today" : ""}`}>
       <header className="day-head" onClick={() => setCollapsed((c) => !c)}>
         <svg className="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />
         </svg>
         <div>
-          <div className="day-num">Day {String(dayNumber).padStart(2, "0")}</div>
+          <div className="day-num">
+            Day {String(dayNumber).padStart(2, "0")}
+            {isToday && <span className="day-today-badge">Today</span>}
+          </div>
           <h2 className="day-title">{weekday}</h2>
         </div>
         <span className="day-date">{formatDate(day.date)}</span>

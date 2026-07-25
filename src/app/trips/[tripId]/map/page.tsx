@@ -90,6 +90,19 @@ export default async function MapPage({ params }: Props) {
       lng: p.lng as number,
     }));
 
+  // Honesty (ODY-079): a stop with a written location but no resolved
+  // coordinates never renders on the map. Count these so the client can
+  // explain the gap instead of silently dropping the pin.
+  let unpinnedCount = 0;
+  trip.days.forEach((d: (typeof trip.days)[number]) => {
+    d.events.forEach((e: (typeof d.events)[number]) => {
+      if (e.location && (e.lat == null || e.lng == null)) unpinnedCount += 1;
+    });
+  });
+  savedPlaces.forEach((p) => {
+    if (p.location && (p.lat == null || p.lng == null)) unpinnedCount += 1;
+  });
+
   return (
     <MapClient
       days={days}
@@ -98,6 +111,7 @@ export default async function MapPage({ params }: Props) {
       eyebrow={`${trip.destination} · ${dateRange}`}
       dayCount={trip.days.length}
       timeFormat={trip.timeFormat as "12h" | "24h"}
+      unpinnedCount={unpinnedCount}
     />
   );
 }

@@ -516,6 +516,24 @@
   color: var(--peri);
   text-transform: uppercase;
 }
+/* Live-trip "today" marker (ODY-076). */
+.day-today-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--peri);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: .06em;
+  vertical-align: middle;
+}
+.day-block.is-today > .day-head {
+  border-left: 2px solid var(--peri);
+  padding-left: 12px;
+  margin-left: -14px;
+}
 .day-title {
   font-family: var(--font-display);
   font-size: 28px;
@@ -1465,6 +1483,17 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .map-panel-head .sub {
   font-size: 12.5px; color: var(--ink-2);
   font-family: var(--font-mono);
+}
+/* Honesty note when stops couldn't be geocoded (ODY-079). */
+.map-unpinned-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  padding: 8px 10px;
+  background: var(--peach-soft);
+  border-left: 2px solid var(--peach);
+  border-radius: var(--radius-md);
 }
 
 .filter-chips {
