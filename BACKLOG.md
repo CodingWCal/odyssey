@@ -111,6 +111,23 @@ Editing trip dates via `TripEditModal` appears to save then revert or shift by o
 - Ensure `updateTrip` writes via `parseDateString` only (don't let string fields from Zod overwrite Date fields). Revalidate layout after save (already does).
 - Acceptance: set Jul 30–Aug 3 in any US TZ → save → reopen edit modal and sidebar still show Jul 30–Aug 3; itinerary day headers match; no off-by-one.
 
+### ODY-051 · TipTap Notes vs TripNotes clobber the same Note row — M, sonnet
+> **In plain terms:** Rich notes and the itinerary's pinned notes fight over the same storage — saving one can wipe the other. This makes one shared notes system that doesn't erase itself.
+Two editors write incompatible shapes into `Note.content`: itinerary `TripNotes` saves `{ text }`; TipTap at `/trips/[id]/notes` saves ProseMirror JSON. Last write wins and can blank the other surface.
+- Pick one canonical format (prefer TipTap JSON with a plain-text projection, or separate fields).
+- Migrate `upsertNote` to Zod-validated schema + max size; update both UIs to read/write that shape.
+- Pair with ODY-060 (nav IA) so travelers have one place for trip notes.
+- Files: `src/components/itinerary/TripNotes.tsx`, `src/components/notes/TiptapEditor.tsx`, `src/app/trips/[tripId]/notes/actions.ts`, itinerary page note read path.
+- Acceptance: saving TipTap never blanks itinerary pinned notes (and vice versa); oversized payloads rejected.
+
+### ODY-052 · createEvent dayId/tripId IDOR — S, sonnet
+> **In plain terms:** A sneaky request could attach an event to someone else's trip day. The server must confirm the day belongs to the trip you're editing.
+`createEvent` asserts membership on `tripId` only; it never checks that `dayId` belongs to that trip. An editor who knows another trip's day UUID can inject events onto it. Same risk via Explore → itinerary save.
+- Before create: `db.day.findFirst({ where: { id: dayId, tripId } })` or reject.
+- Apply to `saveExploreToItinerary` path as well.
+- Files: `src/app/trips/[tripId]/itinerary/actions.ts`, `src/app/trips/[tripId]/explore/actions.ts`.
+- Acceptance: mismatched `dayId`/`tripId` is rejected; honest same-trip creates still work.
+
 ---
 
 ## P1 — Refactors & Robustness
@@ -207,6 +224,48 @@ with existing trips.
 - Per screen check: broken/empty states, silent failures (ODY-043), mobile at 375px (ODY-038/021), auth redirects (dev Clerk instance — preview pane can't complete the accounts.dev handshake, use a real browser for authed flows).
 - Deliverable: prioritized P0–P3 list with repro steps + suspected files; cross-reference existing tickets to avoid duplicates.
 - Acceptance: a findings report exists; each concrete defect is filed as a candidate ticket with a file path and repro.
+
+### ODY-053 · Pin invite email origin to allowlisted app URL — S, sonnet
+> **In plain terms:** Invite emails should always send people to *our* sign-up page, never a fake one. Right now the link can follow a spoofed request host.
+`getAppOrigin()` in members actions builds Clerk invite `redirectUrl` from the request `Host` / `x-forwarded-*` headers. A crafted invite request can point victims at an attacker-controlled "sign-up."
+- Prefer `NEXT_PUBLIC_APP_URL` (or a fixed production origin allowlist) for invite redirects; fall back to request host only in local dev.
+- Files: `src/app/trips/[tripId]/members/actions.ts`.
+- Acceptance: invite emails always use the configured app origin in staging/prod.
+
+### ODY-054 · Zod + trip-scope for updateExpense / eventId — S, haiku
+> **In plain terms:** Editing an expense still accepts nonsense numbers, and linking an expense to an event doesn't prove that event is on this trip.
+`createExpense` uses Zod; `updateExpense` does not (negative/non-finite amounts, arbitrary category). `eventId` is stored without verifying `event.tripId === expense.tripId`.
+- Reuse/extend expense schemas for update; verify event belongs to trip before link.
+- Files: `src/app/trips/[tripId]/budget/actions.ts`, `src/lib/validations/index.ts`.
+- Acceptance: invalid updates rejected; cross-trip `eventId` rejected.
+
+### ODY-055 · Rate-limit server-side geocode and Explore — M, sonnet
+> **In plain terms:** Only the browser search box is throttled. Server Explore and event saves can still hammer the free map service and get the whole app banned.
+`/api/geocode` soft-limits per user; `exploreByVibe`, `createEvent`/`updateEvent`/`createPlace` call `searchPlaces`/`geocode` with no shared limiter.
+- Share the rate-limit helper from the geocode route into `src/lib/geocode.ts` (or a tiny limiter module) for all server Nominatim callers.
+- Files: `src/lib/geocode.ts`, `src/app/api/geocode/route.ts`, `explore/actions.ts`, itinerary/collections actions.
+- Acceptance: sustained Explore/event geocode abuse is soft-limited; normal UX unchanged.
+
+### ODY-056 · Place RLS + note payload size limit — S, sonnet
+> **In plain terms:** Lock down the new Places table the same way as other tables, and stop notes from accepting huge unbounded JSON.
+`Place` (ODY-045) is missing from `prisma/rls.sql`. `upsertNote` accepts arbitrary `object` with no max size (storage DoS / integrity).
+- Add `Place` to RLS script (defense-in-depth; Prisma still primary). Zod-validate note content + reasonable byte/char cap.
+- Files: `prisma/rls.sql`, `src/app/trips/[tripId]/notes/actions.ts`.
+- Acceptance: Place listed in RLS script; oversized notes rejected.
+
+### ODY-057 · Toast remaining silent form failures — S, haiku
+> **In plain terms:** Some saves still fail quietly — trip create, expenses, schedule "apply window." Show the same clear toasts events already get.
+Residual of ODY-013 / sibling of ODY-043.
+- Wrap try/catch + `toast` in `NewTripWizard` create (and surface invite skip), `ExpenseModal`, `AvailabilityHeatmap` apply.
+- Files: those three components; reuse `src/components/shared/Toast`.
+- Acceptance: induced failures show branded toasts; success paths unchanged.
+
+### ODY-058 · Toast / sheet / map-card z-index above modals and mobile chrome — S, haiku
+> **In plain terms:** Error messages and some mobile sheets hide under the bottom tab bar or behind modals — you never see them.
+`.toast-stack` is `z-index: 200`; desktop modal ~1000; mobile tab bar ~1200; Sheet often `z-50`. Map selected-event card sits at `bottom: 24px` under the tab bar.
+- Raise toast (and sheet) above modal + tab bar; pad map-card / toast bottom on mobile for safe-area + tab height.
+- Files: `src/app/globals.css`, optionally `Toast.tsx` / `MapClient.tsx`.
+- Acceptance: toasts visible during open modals and on trip pages at 375px; map card clear of tab bar.
 
 ---
 
@@ -324,6 +383,45 @@ are displayed raw, so everything reads as military time.
 - Time *inputs* may stay native (`<input type="time">` renders per browser locale) — this ticket is about display.
 - Acceptance: toggling the trip preference flips every displayed time between 2:30 PM and 14:30; stored values unchanged; new util unit-tested.
 
+### ODY-059 · Mobile nav for 7+ trip tabs — M, sonnet
+> **In plain terms:** The phone bottom bar now has too many tabs (Explore, Collections, …) so labels crush. Make switching sections usable at 375px.
+After Explore/Collections shipped, `NAV_ITEMS` has 7 destinations; `.mobile-tab-bar` squeezes labels (~50px each).
+- Overflow pattern: primary 4–5 tabs + "More" sheet, or scrollable tab strip with ≥40px targets; keep editorial look.
+- Files: `src/components/trips/navItems.ts`, `MobileTabBar.tsx`, `globals.css`.
+- Acceptance: no crushed/illegible labels at 375px; all sections still reachable in ≤2 taps.
+
+### ODY-060 · One Notes information architecture — S, sonnet
+> **In plain terms:** There's a rich Notes page that never appears in the menu, while the itinerary has a separate notes box. Pick one home for trip notes.
+`/trips/[id]/notes` is orphaned from `NAV_ITEMS`; itinerary uses `TripNotes`. Confuses IA and worsens ODY-051.
+- Either add Notes to nav (and deprecate/merge itinerary pinned notes) or remove the orphan route and keep one surface.
+- Depends on / pairs with ODY-051.
+- Acceptance: a traveler can find trip notes without guessing a URL; only one write path remains.
+
+### ODY-061 · loading.tsx for Explore + Collections — S, haiku
+> **In plain terms:** Switching to Explore or Collections still flashes blank while other tabs show calm skeletons.
+Residual of ODY-014.
+- Add branded `loading.tsx` under `explore/` and `collections/` matching other trip tabs.
+- Acceptance: tab navigation shows skeletons instantly on those routes.
+
+### ODY-062 · Sign-in `after` redirect parity with sign-up — S, haiku
+> **In plain terms:** Invite links send people to sign-up with a return path; if they click "sign in" instead, they may not land back on the trip.
+Sign-up reads `?after=` and `forceRedirectUrl`; sign-in ignores it (ODY-046 finding).
+- Mirror allowlisted `after` handling on `src/app/(auth)/sign-in/[[...sign-in]]/page.tsx`.
+- Acceptance: `/sign-in?after=/trips/...` returns to that trip after auth (same rules as sign-up; no open redirect).
+
+### ODY-063 · Dashboard mobile empty state + ⌘K honesty — S, haiku
+> **In plain terms:** New users on a phone don't get a clear "no trips yet" card, and the search box pretends ⌘K works when it doesn't.
+Desktop shows `NewTripCard`; mobile only a thin banner. Search shows `⌘K` with no handler.
+- Add empty copy/CTA on mobile; wire Cmd/Ctrl+K to focus search or remove the affordance.
+- Files: `src/components/trips/DashboardClient.tsx`.
+- Acceptance: zero-trip mobile state is clear; ⌘K either works or is gone.
+
+### ODY-064 · Dead code and utils dedupe — S, haiku
+> **In plain terms:** Leftover unused trip form code and two copies of the same date/money helpers make the house harder to keep tidy.
+- Delete or wire unused `TripForm.tsx`; clarify `/trips/new` (redirect-only) in comments or remove if obsolete.
+- Deduplicate `@/lib/utils` vs `@/lib/utils/index` (one export path); prefer UTC-aware date helpers from ODY-048.
+- Acceptance: no unused TripForm; single utils entry; `tsc`/lint clean.
+
 ---
 
 ## P3 — New Features
@@ -398,15 +496,87 @@ New Explore surface on a trip: travelers pick or type a vibe; the app suggests l
 - Secondary: "Save to collections" → `createPlace` (ODY-045) so it can sit as a maybe without a day.
 - Acceptance: saved items appear on itinerary/map/collections like hand-entered ones; viewers cannot save.
 
+### ODY-065 · Distance / time between stops + light route optimize — L, sonnet
+> **In plain terms:** See how long it takes to get from lunch to the museum, and optionally reorder the day to waste less travel time.
+Competitive gap vs Wanderlog map planning.
+- For a day's geocoded events, show estimated walk/drive duration between consecutive pins (provider TBD — OSRM/Google; prefer no new paid dep if a free path exists).
+- Optional "optimize order" that suggests a permutation (does not auto-save without confirm).
+- Guardrails: Leaflet stays dynamic `ssr:false`; editor+ only for apply; toast on failure.
+- Acceptance: day with ≥2 pins shows inter-stop times; optimize preview is reversible.
+
+### ODY-066 · Booking / email reservation import — L, sonnet
+> **In plain terms:** Forward a flight or hotel confirmation and have it show up on the trip timeline — like TripIt.
+High-effort differentiator; explicitly product-gated.
+- Spike: parse forwarded email (Clerk/inbound webhook or dedicated mailbox) → draft Event (flight/hotel) for owner confirm.
+- Out of scope until ODY-036 production auth is stable; do not build without go-ahead.
+- Acceptance: documented spike or MVP: one confirmation type (e.g. flight) → editable draft event on a trip.
+
+### ODY-067 · Packing checklist per trip — M, sonnet
+> **In plain terms:** A shared packing list on the trip so the group knows who brings the charger.
+- Lightweight `ChecklistItem` model (tripId, label, done, assignee optional) via db push; editor+ write; any member toggle done.
+- UI: section on itinerary or dedicated small tab; editorial checklist, not a dense task app.
+- Acceptance: add/check/uncheck items; viewers read-only.
+
+### ODY-068 · Offline read of itinerary / map — L, sonnet
+> **In plain terms:** Open the trip on a plane or abroad without signal and still see the plan (read-only first).
+Competitive gap vs Wanderlog Pro offline.
+- PWA cache or service-worker strategy for last-viewed trip itinerary + static map tiles policy (respect tile ToS).
+- Mutations queue or clearly disabled offline; no localStorage for secrets (CLAUDE.md).
+- Acceptance: after one online visit, airplane-mode reload shows last itinerary; writes blocked with clear copy.
+
+### ODY-069 · Calendar sync (read-only export) — M, sonnet
+> **In plain terms:** Add the trip's days (or key events) to Google/Apple Calendar so they show up next to life.
+Related to deferred Google Calendar on Schedule — this ticket is **export/subscribe**, not two-way sync.
+- ICS download and/or "Add to Google Calendar" links for trip range / per-day events; members only.
+- Acceptance: downloading ICS imports correct dates in a major calendar app.
+
+### ODY-070 · Realtime collab presence — L, sonnet
+> **In plain terms:** See who's on the trip right now and that the plan updates without a hard refresh — Google-Docs-like group planning.
+- Presence avatars + soft live refresh (Supabase Realtime or polling) for itinerary/members; no full CRDT required for v1.
+- Guardrails: stay on existing stack; viewers included in presence as read-only.
+- Acceptance: second browser shows member presence; new events appear within a few seconds without manual reload.
+
+### ODY-071 · Browser extension: save place while browsing — L, sonnet
+> **In plain terms:** Clip a restaurant from a blog or Maps into Odyssey Collections without copy-paste.
+Competitive gap vs Wanderlog Chrome extension.
+- Extension MVP: capture page title/URL/selection → `createPlace` via authenticated API; trip picker.
+- Depends on stable prod auth (ODY-036) and Collections (ODY-045 ✅).
+- Acceptance: from a travel article, save one place into a trip collection in ≤3 clicks.
+
+### ODY-072 · Export PDF / Google Maps — M, sonnet
+> **In plain terms:** Hand someone a printable itinerary or open the day's pins in Google Maps.
+Adjacent to ODY-032 print view; can share implementation.
+- PDF or print-CSS export; "Open in Google Maps" for a day's ordered pins (URL scheme / directions).
+- Acceptance: member can export/print a readable day list; Maps opens with pins in order when possible.
+
+---
+
+## Post-MVP / long-term
+
+### ODY-073 · Native mobile apps (iOS / Android) — L+, multi-sprint
+> **In plain terms:** Ship real phone apps so travelers use Odyssey on the road without fighting a mobile browser — App Store and Play Store when ready.
+**Post-MVP.** Choose via a short spike (document decision in this ticket):
+1. **Expo + React Native** — best store UX; rebuild trip workspace screens against existing APIs/actions.
+2. **Capacitor** shell around the Next app — fastest path; limited offline/native feel.
+3. **PWA** installable web — interim milestone before stores.
+
+Depends on: ODY-036 (prod auth), ODY-037 (share/invites), ODY-058/059 (mobile chrome), ideally ODY-068 (offline read).
+- Guardrails: reuse Prisma/Clerk backend; no parallel business logic forks; deep links into `/trips/[id]/…`.
+- Acceptance: signed-in users can open trips, view itinerary + map, and make basic edits on iOS and Android (or a shipped PWA milestone explicitly accepted as phase 1).
+
 ---
 
 ## Deferred / external (tracked, not ticketed)
 - Supabase advisor: 2 warnings on `rls_auto_enable()` (accepted risk — Prisma bypasses RLS by design; see security memo).
 - Clerk production instance + `pk_live` keys before real-domain launch (see deploy notes).
-- Google Calendar sync for Schedule tab — explicitly deferred by product decision.
+- Google Calendar **two-way** sync for Schedule tab — explicitly deferred by product decision (see ODY-069 for export-only).
+- Full LLM Explore ranking — optional once a provider key exists (ODY-049 MVP already ships Nominatim).
 
 ## Suggested session order
-1. **ODY-048** (trip date edit persistence — P0 bug) before more date-touching work.
-2. ODY-036 (manual: Clerk dashboard + Google Cloud) → unblocks ODY-037
-3. P2 by user impact: ODY-023 (weather) · ODY-020 (honest landing) · ODY-024 (money)
-4. P3: ODY-049/050 (Explore) · ODY-030 (settle-up)
+1. **P0 security/correctness:** ODY-052 (IDOR) → ODY-051 (notes clobber)
+2. **P1 hardening:** ODY-053 → ODY-054 → ODY-055 → ODY-056 → ODY-057 → ODY-058
+3. **Launch blockers (human + eng):** ODY-036 → ODY-037
+4. **P2 UX:** ODY-059 → ODY-060 → ODY-061 → ODY-062 → ODY-063 → ODY-020/022/023/024/026
+5. **P3 delight:** ODY-030 · ODY-032/072 · ODY-065 · ODY-067
+6. **Competitive / later:** ODY-066 · ODY-068–071
+7. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
