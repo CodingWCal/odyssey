@@ -46,6 +46,14 @@ export async function createEvent(data: {
 
   const validated = createEventSchema.parse(data);
 
+  // ODY-052: day must belong to the asserted trip (blocks cross-trip dayId IDOR).
+  // Explore → itinerary save goes through this same path.
+  const day = await db.day.findFirst({
+    where: { id: validated.dayId, tripId: validated.tripId },
+    select: { id: true },
+  });
+  if (!day) throw new Error("Not found");
+
   const lastEvent = await db.event.findFirst({
     where: { dayId: validated.dayId },
     orderBy: { orderIndex: "desc" },
@@ -57,7 +65,7 @@ export async function createEvent(data: {
   let lat = validated.lat ?? null;
   let lng = validated.lng ?? null;
   if (validated.location && (lat == null || lng == null)) {
-    const coords = await geocode(validated.location);
+    const coords = await geocode(validated.location, { userKey: dbUser.clerkId });
     if (coords) {
       lat = coords.lat;
       lng = coords.lng;
@@ -68,7 +76,7 @@ export async function createEvent(data: {
   let destLat = validated.destLat ?? null;
   let destLng = validated.destLng ?? null;
   if (validated.destLocation && (destLat == null || destLng == null)) {
-    const coords = await geocode(validated.destLocation);
+    const coords = await geocode(validated.destLocation, { userKey: dbUser.clerkId });
     if (coords) {
       destLat = coords.lat;
       destLng = coords.lng;
@@ -141,7 +149,7 @@ export async function updateEvent(eventId: string, data: Partial<{
       lat = null;
       lng = null;
     } else {
-      const coords = await geocode(newLocation);
+      const coords = await geocode(newLocation, { userKey: dbUser.clerkId });
       lat = coords ? coords.lat : null;
       lng = coords ? coords.lng : null;
     }
@@ -157,7 +165,7 @@ export async function updateEvent(eventId: string, data: Partial<{
       destLat = null;
       destLng = null;
     } else {
-      const coords = await geocode(newDestLocation);
+      const coords = await geocode(newDestLocation, { userKey: dbUser.clerkId });
       destLat = coords ? coords.lat : null;
       destLng = coords ? coords.lng : null;
     }

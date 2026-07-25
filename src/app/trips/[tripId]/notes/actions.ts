@@ -3,23 +3,40 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
+import { upsertNotePatchSchema } from "@/lib/validations";
+import {
+  applyPlainPatch,
+  applyRichPatch,
+  assertNotePayloadSize,
+  type TripNoteDoc,
+} from "@/lib/tripNotes";
 
 const getDbUser = getOrCreateDbUser;
 
-/** Soft cap on Note.content JSON size (ODY-056). */
-const NOTE_JSON_MAX = 100_000;
-
-export async function upsertNote(tripId: string, content: object) {
+/**
+ * Upsert trip-level notes (ODY-051 / ODY-056).
+ * Plain `{ text }` and TipTap `{ doc }` patches write one v1 shape so
+ * neither surface blanks the other. Payload size is capped (ODY-056).
+ */
+export async function upsertNote(
+  tripId: string,
+  patch: { text: string } | { doc: object }
+) {
   const dbUser = await getDbUser();
 
   await assertTripRole(tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
 
-  if (!content || typeof content !== "object" || Array.isArray(content)) {
-    throw new Error("Invalid notes");
-  }
-  if (JSON.stringify(content).length > NOTE_JSON_MAX) {
-    throw new Error("Notes are too long");
-  }
+  const validated = upsertNotePatchSchema.parse(patch);
+
+  const next =
+    "text" in validated
+      ? applyPlainPatch(validated.text)
+      : applyRichPatch(validated.doc as TripNoteDoc);
+
+  assertNotePayloadSize(next);
+
+  // Prisma Json needs a plain object graph (not our branded TS types).
+  const content = JSON.parse(JSON.stringify(next)) as object;
 
   await db.note.upsert({
     where: { tripId },
@@ -28,4 +45,5 @@ export async function upsertNote(tripId: string, content: object) {
   });
 
   revalidatePath(`/trips/${tripId}/notes`);
+  revalidatePath(`/trips/${tripId}/itinerary`);
 }

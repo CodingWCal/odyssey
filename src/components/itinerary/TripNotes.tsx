@@ -13,8 +13,8 @@ interface TripNotesProps {
 }
 
 /**
- * Pinned trip-level notes card (`.notes-card`). Autosaves on blur to the Note
- * model as plain text (`{ text }`).
+ * Pinned trip-level notes card (`.notes-card`). Autosaves on blur.
+ * Stores canonical v1 Note.content (`{ v:1, text, doc }`) via plain patch (ODY-051).
  */
 export function TripNotes({ tripId, initialText, readOnly = false }: TripNotesProps) {
   const [value, setValue] = useState(initialText);

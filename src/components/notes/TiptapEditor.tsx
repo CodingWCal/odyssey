@@ -32,7 +32,7 @@ export function TiptapEditor({ tripId, initialContent, lastUpdated, lastUpdatedB
   const handleBlur = useCallback(async () => {
     if (!editor || readOnly) return;
     try {
-      await upsertNote(tripId, editor.getJSON());
+      await upsertNote(tripId, { doc: editor.getJSON() });
     } catch {
       toast("Notes didn't save — try again.");
     }

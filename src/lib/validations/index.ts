@@ -67,6 +67,14 @@ export const createExpenseSchema = z.object({
   category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
 });
 
+/** Partial expense edit (ODY-054) — same money/category rules as create. */
+export const updateExpenseSchema = z.object({
+  label: z.string().min(1, "Label is required").max(200),
+  amount: z.coerce.number().finite().min(0.01, "Amount must be greater than 0").max(10_000_000),
+  category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
+  eventId: z.string().optional().or(z.literal("")),
+});
+
 export const inviteCollaboratorSchema = z.object({
   email: z.string().email("Invalid email address"),
   tripId: z.string().min(1),
@@ -147,11 +155,26 @@ export const exploreVibeSchema = z.object({
   vibe: z.string().trim().min(2, "Pick or type a vibe").max(80),
 });
 
+/** Trip notes upsert patch (ODY-051) — plain OR TipTap doc, not both required. */
+const NOTE_TEXT_MAX = 20_000;
+export const upsertNotePatchSchema = z.union([
+  z.object({
+    text: z.string().max(NOTE_TEXT_MAX),
+  }),
+  z.object({
+    doc: z
+      .object({ type: z.literal("doc") })
+      .passthrough()
+      .refine((d) => JSON.stringify(d).length <= 100_000, "Notes are too long"),
+  }),
+]);
+
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
 export type InviteCollaboratorInput = z.infer<typeof inviteCollaboratorSchema>;
 export type UpdateSplitInput = z.infer<typeof updateSplitSchema>;
 export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
@@ -162,3 +185,4 @@ export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
 export type UpdatePlaceInput = z.infer<typeof updatePlaceSchema>;
 export type ExploreVibeInput = z.infer<typeof exploreVibeSchema>;
+export type UpsertNotePatchInput = z.infer<typeof upsertNotePatchSchema>;

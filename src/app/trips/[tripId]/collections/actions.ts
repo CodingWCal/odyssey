@@ -27,7 +27,7 @@ export async function createPlace(input: unknown) {
   let lat = validated.lat ?? null;
   let lng = validated.lng ?? null;
   if ((lat == null || lng == null) && validated.location?.trim()) {
-    const coords = await geocode(validated.location);
+    const coords = await geocode(validated.location, { userKey: dbUser.clerkId });
     if (coords) {
       lat = coords.lat;
       lng = coords.lng;
@@ -68,7 +68,7 @@ export async function updatePlace(input: unknown) {
 
   if (validated.location !== undefined && validated.lat === undefined && validated.lng === undefined) {
     if (nextLocation) {
-      const coords = await geocode(nextLocation);
+      const coords = await geocode(nextLocation, { userKey: dbUser.clerkId });
       lat = coords?.lat ?? null;
       lng = coords?.lng ?? null;
     } else {

@@ -6,27 +6,30 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma/db";
 import { inviteCollaboratorSchema } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
+import { resolveAppOrigin } from "@/lib/appOrigin";
 
 const getDbUser = getOrCreateDbUser;
 
 /**
- * Resolve the app's base URL from the incoming request so invite links point at
- * whatever host the app is actually served from (any port, preview, or prod
- * domain) instead of a static env value that can drift. Falls back to
- * NEXT_PUBLIC_APP_URL, then localhost.
+ * Invite redirects must use a trusted origin (ODY-053).
+ * Prefer NEXT_PUBLIC_APP_URL in staging/prod; only derive from request Host
+ * when that host is localhost / 127.0.0.1.
  */
 async function getAppOrigin(): Promise<string> {
+  let host: string | null = null;
+  let proto: string | null = null;
   try {
     const h = await headers();
-    const host = h.get("host");
-    if (host) {
-      const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-      return `${proto}://${host}`;
-    }
+    host = h.get("host");
+    proto = h.get("x-forwarded-proto");
   } catch {
     /* headers() unavailable — fall through */
   }
-  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  return resolveAppOrigin({
+    envUrl: process.env.NEXT_PUBLIC_APP_URL,
+    host,
+    proto,
+  });
 }
 
 /**
