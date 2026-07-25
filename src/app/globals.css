@@ -1466,6 +1466,17 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-size: 12.5px; color: var(--ink-2);
   font-family: var(--font-mono);
 }
+/* Honesty note when stops couldn't be geocoded (ODY-079). */
+.map-unpinned-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  padding: 8px 10px;
+  background: var(--peach-soft);
+  border-left: 2px solid var(--peach);
+  border-radius: var(--radius-md);
+}
 
 .filter-chips {
   display: flex; gap: 6px; flex-wrap: wrap;
