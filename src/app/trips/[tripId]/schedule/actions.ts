@@ -10,7 +10,7 @@ import {
   type CreatePollInput,
   type SetSlotsInput,
 } from "@/lib/validations";
-import { getOrCreateDbUser } from "@/lib/auth";
+import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 import type {
   AvailabilityBlock,
   AvailabilityStatus,
@@ -232,10 +232,10 @@ function computeBestWindow(
 
 export async function upsertPoll(data: CreatePollInput) {
   const dbUser = await getDbUser();
-  const member = await db.tripMember.findFirst({
-    where: { tripId: data.tripId, userId: dbUser.id, role: "owner" },
-  });
-  if (!member) throw new Error("Unauthorized");
+  // Editors can open/edit a scheduling poll — planning is editor+ (ODY-001/081).
+  // Applying a window (below) stays owner-only since it overwrites trip dates
+  // for everyone.
+  await assertTripRole(data.tripId, dbUser.id, "editor");
 
   const validated = createPollSchema.parse(data);
 

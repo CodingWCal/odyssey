@@ -20,6 +20,8 @@ export default async function SchedulePage({ params }: Props) {
   const isOwner = trip.members.some(
     (m: (typeof trip.members)[number]) => m.userId === currentUserId && m.role === "owner"
   );
+  // Editors can open/edit polls (ODY-081); only viewers are read-only.
+  const canEditPoll = trip.myRole !== "viewer";
 
   const { poll, slots, members, bestWindow } = await getSchedule(tripId);
 
@@ -39,16 +41,16 @@ export default async function SchedulePage({ params }: Props) {
         </div>
       </section>
 
-      {!poll && isOwner && <PollSetupForm tripId={tripId} />}
+      {!poll && canEditPoll && <PollSetupForm tripId={tripId} />}
 
-      {!poll && !isOwner && (
+      {!poll && !canEditPoll && (
         <div className="empty-card">
           <p className="glyph" aria-hidden="true">🗓️</p>
           <p className="headline">
             No scheduling poll yet.
           </p>
           <p className="sub">
-            The trip owner hasn&apos;t opened a scheduling poll yet.
+            No one has opened a scheduling poll for this trip yet.
           </p>
         </div>
       )}
