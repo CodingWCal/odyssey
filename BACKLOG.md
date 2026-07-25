@@ -102,6 +102,15 @@ page size) pending invites the stale one may not be revoked and no fresh email g
 - Filter server-side by email if the SDK supports `emailAddress` query; otherwise paginate until found. Keep best-effort try/catch semantics.
 - Acceptance: re-sending an invite always revokes the prior pending invite for that address.
 
+### ODY-048 · Trip start/end dates don't persist after edit — S, sonnet — ✅ DONE
+> **In plain terms:** You change a trip's dates and hit save, but when you look again the old (or a day-shifted) dates are still there. This makes edits stick to the calendar day you picked.
+Editing trip dates via `TripEditModal` appears to save then revert or shift by one day.
+**Root cause (investigate, don't bandage):** trip/day dates are stored as midnight timestamps, but the edit form formats them with **local** `getFullYear/getMonth/getDate`. On a US client reading a UTC-midnight value from the server, the `<input type="date">` shows the previous calendar day — so a re-open looks like the save failed, and a blind re-save writes the wrong day.
+- Add `toDateInputValue(date)` in `src/lib/dates.ts` that formats the **UTC calendar day** (`toISOString().slice(0, 10)` or UTC getters); unit-test it.
+- Use it in `TripEditModal` (and any other date `<input>` seeding). Align `formatDate` / `formatShortDate` for trip/day dates with `timeZone: "UTC"` so hero/sidebar match.
+- Ensure `updateTrip` writes via `parseDateString` only (don't let string fields from Zod overwrite Date fields). Revalidate layout after save (already does).
+- Acceptance: set Jul 30–Aug 3 in any US TZ → save → reopen edit modal and sidebar still show Jul 30–Aug 3; itinerary day headers match; no off-by-one.
+
 ---
 
 ## P1 — Refactors & Robustness
@@ -372,6 +381,23 @@ userId, verb, subject, createdAt — db push), written from existing actions (on
 each), rendered as a quiet timeline on the trip overview page. Cap at last 50, prune
 older. Editorial tone: "Maya added *Sunset kayak* to Day 3."
 
+### ODY-049 · AI Explore — vibe-based local recommendations — L, sonnet — ✅ DONE (Nominatim MVP)
+> **In plain terms:** Tell the trip what vibe you're after ("cozy cafés", "sunset views") and get place ideas near the destination you can peek at and save into the plan.
+New Explore surface on a trip: travelers pick or type a vibe; the app suggests local places for the trip destination.
+- Route: `src/app/trips/[tripId]/explore/` + nav item (reuse editorial tokens; Leaflet stays `ssr:false` if map preview used).
+- Server action (Zod + `assertTripRole` editor+ to save): call an LLM **only if** `OPENAI_API_KEY` (or agreed provider) is set; otherwise fall back to Nominatim via `src/lib/geocode.ts` / `/api/geocode` with vibe+destination queries — **never** hit Nominatim from the browser (ODY-010).
+- Each suggestion: title, category (reuse event types), short blurb, location, lat/lng when available.
+- Guardrails: no new deps without strong justification; rate-limit; no hardcoded hex; Prisma only via `db.ts`.
+- Acceptance: from Explore, a user sees vibe-based suggestions for the trip destination; empty/error states are branded, not silent.
+- **Shipped:** Nominatim vibe search MVP (no LLM key required). Optional LLM enhancement is a follow-up when a provider key is added.
+
+### ODY-050 · Save Explore suggestions into the itinerary — M, sonnet — ✅ DONE
+> **In plain terms:** Liked a recommendation? One click adds it as a normal itinerary event (or collection place) so it shows up on the day plan and map.
+**Depends on ODY-049.** From an Explore suggestion card:
+- Primary: "Add to itinerary" → pick a day → `createEvent` (reuse existing action + geocode path).
+- Secondary: "Save to collections" → `createPlace` (ODY-045) so it can sit as a maybe without a day.
+- Acceptance: saved items appear on itinerary/map/collections like hand-entered ones; viewers cannot save.
+
 ---
 
 ## Deferred / external (tracked, not ticketed)
@@ -380,9 +406,7 @@ older. Editorial tone: "Maya added *Sunset kayak* to Day 3."
 - Google Calendar sync for Schedule tab — explicitly deferred by product decision.
 
 ## Suggested session order
-All P0/P1 engineering tickets are ✅ done (see markers above) except the two that
-need human hands: ODY-036 (production login setup) and its dependent ODY-037.
-1. ODY-036 (manual: Clerk dashboard + Google Cloud) → unblocks ODY-037
-2. ODY-012 (prune the stylesheet — safe now that tests + CI exist)
-3. P2 by user impact: ODY-041 (time format) · ODY-023 (weather) · ODY-020 (honest landing) · ODY-024 (money) · ODY-038/021 (mobile pair)
-4. P3 by taste — ODY-030 (settle-up) is the highest-delight/lowest-effort.
+1. **ODY-048** (trip date edit persistence — P0 bug) before more date-touching work.
+2. ODY-036 (manual: Clerk dashboard + Google Cloud) → unblocks ODY-037
+3. P2 by user impact: ODY-023 (weather) · ODY-020 (honest landing) · ODY-024 (money)
+4. P3: ODY-049/050 (Explore) · ODY-030 (settle-up)

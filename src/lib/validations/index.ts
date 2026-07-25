@@ -141,6 +141,12 @@ export const updatePlaceSchema = createPlaceSchema.omit({ tripId: true }).partia
   id: z.string().min(1),
 });
 
+/** Vibe search for Explore (ODY-049). */
+export const exploreVibeSchema = z.object({
+  tripId: z.string().min(1),
+  vibe: z.string().trim().min(2, "Pick or type a vibe").max(80),
+});
+
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
@@ -155,3 +161,4 @@ export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;
 export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
 export type UpdatePlaceInput = z.infer<typeof updatePlaceSchema>;
+export type ExploreVibeInput = z.infer<typeof exploreVibeSchema>;
