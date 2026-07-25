@@ -3,6 +3,7 @@ import {
   createTripSchema,
   createEventSchema,
   createExpenseSchema,
+  updateExpenseSchema,
   updateBudgetSchema,
   updateSplitSchema,
   setSlotsSchema,
@@ -53,6 +54,14 @@ describe("money caps (ODY-004 / audit #6)", () => {
     expect(createExpenseSchema.safeParse({ ...base, amount: 12.5 }).success).toBe(true);
     expect(createExpenseSchema.safeParse({ ...base, amount: 0 }).success).toBe(false);
     expect(createExpenseSchema.safeParse({ ...base, amount: 10_000_001 }).success).toBe(false);
+  });
+
+  it("rejects invalid updateExpense payloads (ODY-054)", () => {
+    const ok = { label: "Taxi", amount: 20, category: "transport" };
+    expect(updateExpenseSchema.safeParse(ok).success).toBe(true);
+    expect(updateExpenseSchema.safeParse({ ...ok, amount: -1 }).success).toBe(false);
+    expect(updateExpenseSchema.safeParse({ ...ok, amount: Infinity }).success).toBe(false);
+    expect(updateExpenseSchema.safeParse({ ...ok, category: "not-real" }).success).toBe(false);
   });
 });
 
