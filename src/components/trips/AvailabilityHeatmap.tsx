@@ -73,7 +73,7 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
     if (!bestWindow) return;
     const ok = window.confirm(
       `Apply ${formatWindowDate(bestWindow.startDate)} – ${formatWindowDate(bestWindow.endDate)} as the trip dates?\n\n` +
-        "Any itinerary days (and the events on them) that fall outside this new range will be permanently removed."
+        "Empty days outside the new range are removed. Days that already have events are kept — they'll just sit outside your trip dates, so nothing you've planned is deleted."
     );
     if (!ok) return;
     startTransition(async () => {
