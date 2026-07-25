@@ -1,12 +1,11 @@
 import "server-only";
 
 /**
- * Shared server-side geocoding via Nominatim (ODY-010). All lookups — the
- * browser autocomplete (through /api/geocode) and the itinerary actions — go
- * through here so the app presents one well-behaved client to OpenStreetMap:
- * descriptive User-Agent, cached responses, and no direct browser→Nominatim
- * traffic. Nominatim's usage policy is ~1 req/s per app; the cache absorbs
- * repeats and the API route soft-limits per user.
+ * Shared server-side geocoding via Nominatim (ODY-010 / ODY-055). All lookups —
+ * browser autocomplete (through /api/geocode) and itinerary/Explore/collections
+ * actions — go through here so the app presents one well-behaved client to
+ * OpenStreetMap: descriptive User-Agent, cached responses, and a shared
+ * per-user soft rate limit.
  */
 
 export interface GeoSuggestion {
@@ -24,6 +23,44 @@ const TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_ENTRIES = 500;
 const cache = new Map<string, { expires: number; data: GeoSuggestion[] }>();
 
+// Soft per-user rate limit shared by /api/geocode and server actions (ODY-055).
+const WINDOW_MS = 60_000;
+const MAX_PER_WINDOW = 30;
+const usage = new Map<string, { windowStart: number; count: number }>();
+
+export class GeocodeRateLimitError extends Error {
+  constructor() {
+    super("Too many location lookups — try again in a minute.");
+    this.name = "GeocodeRateLimitError";
+  }
+}
+
+function pruneUsage() {
+  if (usage.size < 1000) return;
+  const cutoff = Date.now() - WINDOW_MS;
+  for (const [key, entry] of usage) {
+    if (entry.windowStart < cutoff) usage.delete(key);
+  }
+}
+
+/**
+ * Consume one Nominatim quota unit for `userKey`. Throws when over limit.
+ * Call only on cache-miss paths so repeats stay free.
+ */
+export function assertGeocodeAllowed(userKey: string) {
+  pruneUsage();
+  const now = Date.now();
+  const entry = usage.get(userKey);
+  if (!entry || now - entry.windowStart >= WINDOW_MS) {
+    usage.set(userKey, { windowStart: now, count: 1 });
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > MAX_PER_WINDOW) {
+    throw new GeocodeRateLimitError();
+  }
+}
+
 function cacheKey(q: string, limit: number) {
   return `${limit}|${q.trim().toLowerCase()}`;
 }
@@ -39,7 +76,6 @@ function readCache(key: string): GeoSuggestion[] | null {
 }
 
 function writeCache(key: string, data: GeoSuggestion[]) {
-  // Evict oldest entries once full (Map preserves insertion order).
   while (cache.size >= MAX_ENTRIES) {
     const oldest = cache.keys().next().value;
     if (oldest === undefined) break;
@@ -49,10 +85,15 @@ function writeCache(key: string, data: GeoSuggestion[]) {
 }
 
 /**
- * Search Nominatim for up to `limit` place suggestions. Returns [] on any
- * failure — geocoding is always best-effort in this app.
+ * Search Nominatim for up to `limit` place suggestions. Returns [] on soft
+ * network failure. Throws GeocodeRateLimitError when `userKey` is over quota
+ * on a cache miss.
  */
-export async function searchPlaces(query: string, limit = 5): Promise<GeoSuggestion[]> {
+export async function searchPlaces(
+  query: string,
+  limit = 5,
+  opts?: { userKey?: string }
+): Promise<GeoSuggestion[]> {
   const q = query.trim();
   if (q.length < 3) return [];
   const boundedLimit = Math.min(Math.max(limit, 1), 5);
@@ -61,13 +102,16 @@ export async function searchPlaces(query: string, limit = 5): Promise<GeoSuggest
   const cached = readCache(key);
   if (cached) return cached;
 
+  if (opts?.userKey) {
+    assertGeocodeAllowed(opts.userKey);
+  }
+
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=${boundedLimit}`,
       {
         headers: {
           "Accept-Language": "en",
-          // Nominatim usage policy requires a descriptive User-Agent.
           "User-Agent": USER_AGENT,
         },
         cache: "no-store",
@@ -84,13 +128,17 @@ export async function searchPlaces(query: string, limit = 5): Promise<GeoSuggest
       .filter((s) => s.display && !Number.isNaN(s.lat) && !Number.isNaN(s.lng));
     writeCache(key, results);
     return results;
-  } catch {
+  } catch (err) {
+    if (err instanceof GeocodeRateLimitError) throw err;
     return [];
   }
 }
 
 /** Resolve an address to its best-match coordinates, or null. */
-export async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
-  const results = await searchPlaces(address, 1);
+export async function geocode(
+  address: string,
+  opts?: { userKey?: string }
+): Promise<{ lat: number; lng: number } | null> {
+  const results = await searchPlaces(address, 1, opts);
   return results[0] ? { lat: results[0].lat, lng: results[0].lng } : null;
 }

@@ -64,7 +64,7 @@ export async function exploreByVibe(input: unknown): Promise<ExploreSuggestion[]
   if (!trip) throw new Error("Not found");
 
   const query = `${vibe} in ${trip.destination}`;
-  const results = await searchPlaces(query, 5);
+  const results = await searchPlaces(query, 5, { userKey: dbUser.clerkId });
   const category = guessCategory(vibe);
 
   return results.map((r, i) => ({
