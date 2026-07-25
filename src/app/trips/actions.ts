@@ -163,18 +163,19 @@ export async function updateTrip(tripId: string, formData: FormData) {
   };
 
   const validated = updateTripSchema.parse(raw);
-  const { coverIndex, ...tripFields } = validated;
+  // Omit date strings so they can't overwrite the Date fields below.
+  const { coverIndex, startDate: startStr, endDate: endStr, ...tripFields } = validated;
 
   // Parse dates in local timezone (date string like "2026-07-17" should be July 17 local)
-  const startDate = validated.startDate ? parseDateString(validated.startDate) : undefined;
-  const endDate = validated.endDate ? parseDateString(validated.endDate) : undefined;
+  const startDate = startStr ? parseDateString(startStr) : undefined;
+  const endDate = endStr ? parseDateString(endStr) : undefined;
 
   await db.trip.update({
     where: { id: tripId },
     data: {
       ...tripFields,
-      startDate,
-      endDate,
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
       ...(coverIndex != null ? { coverImageUrl: `grad:${coverIndex}` } : {}),
     },
   });

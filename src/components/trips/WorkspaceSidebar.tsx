@@ -10,12 +10,16 @@ import { NAV_ITEMS } from "./navItems";
 import { resolveCoverIndex } from "./cover";
 
 function formatRange(start: Date, end: Date): string {
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
+  const optsY: Intl.DateTimeFormatOptions = { ...opts, year: "numeric" };
   const s = new Date(start);
   const e = new Date(end);
-  const sameYear = s.getFullYear() === e.getFullYear();
-  const sMonthDay = s.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const eFull = e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  return sameYear ? `${sMonthDay} – ${eFull}` : `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${eFull}`;
+  const sameYear = s.getUTCFullYear() === e.getUTCFullYear();
+  const sMonthDay = s.toLocaleDateString("en-US", opts);
+  const eFull = e.toLocaleDateString("en-US", optsY);
+  return sameYear
+    ? `${sMonthDay} – ${eFull}`
+    : `${s.toLocaleDateString("en-US", optsY)} – ${eFull}`;
 }
 
 interface WorkspaceSidebarProps {

@@ -162,6 +162,12 @@ export const Icons = {
       <path d="M7 13h5M7 17h3" />
     </Base>
   ),
+  explore: ({ size = 16 }: IconProps) => (
+    <Base size={size}>
+      <circle cx="11" cy="11" r="6" />
+      <path d="m20 20-4-4M11 8v6M8 11h6" />
+    </Base>
+  ),
 } as const;
 
 export type EventTypeKey = "flight" | "hotel" | "restaurant" | "activity" | "transport" | "misc";

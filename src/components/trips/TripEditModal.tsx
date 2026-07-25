@@ -5,13 +5,8 @@ import { Modal } from "@/components/shared/Modal";
 import { Icons } from "@/components/shared/Icons";
 import { updateTrip } from "@/app/trips/actions";
 import { COVER_GRADIENTS } from "@/components/trips/cover";
-
-function formatDateForInput(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+import { toDateInputValue } from "@/lib/dates";
+import { toast } from "@/components/shared/Toast";
 
 interface TripEditModalProps {
   open: boolean;
@@ -42,15 +37,15 @@ function TripEditForm({
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(initialTitle);
   const [destination, setDestination] = useState(initialDestination);
-  const [startDate, setStartDate] = useState(initialStartDate ? formatDateForInput(initialStartDate) : "");
-  const [endDate, setEndDate] = useState(initialEndDate ? formatDateForInput(initialEndDate) : "");
+  const [startDate, setStartDate] = useState(initialStartDate ? toDateInputValue(initialStartDate) : "");
+  const [endDate, setEndDate] = useState(initialEndDate ? toDateInputValue(initialEndDate) : "");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">(initialTimeFormat);
   const [coverIndex, setCoverIndex] = useState(initialCoverIndex);
 
   function handleSave() {
     if (!title.trim()) return;
-    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-      alert("Start date must be before end date");
+    if (startDate && endDate && startDate > endDate) {
+      toast("Start date must be before end date.");
       return;
     }
     const fd = new FormData();
@@ -61,8 +56,12 @@ function TripEditForm({
     fd.set("timeFormat", timeFormat);
     fd.set("coverIndex", String(coverIndex));
     startTransition(async () => {
-      await updateTrip(tripId, fd);
-      onClose();
+      try {
+        await updateTrip(tripId, fd);
+        onClose();
+      } catch {
+        toast("Couldn't save trip details — try again.");
+      }
     });
   }
 

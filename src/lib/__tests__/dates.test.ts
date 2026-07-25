@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseDateString, enumerateDays, dayKey } from "@/lib/dates";
+import { parseDateString, enumerateDays, dayKey, toDateInputValue } from "@/lib/dates";
 
 describe("parseDateString", () => {
   it("parses YYYY-MM-DD as local midnight on the same calendar day", () => {
@@ -15,6 +15,22 @@ describe("parseDateString", () => {
     const d = parseDateString("2024-02-29");
     expect(d.getMonth()).toBe(1);
     expect(d.getDate()).toBe(29);
+  });
+});
+
+describe("toDateInputValue (ODY-048)", () => {
+  it("keeps the UTC calendar day for <input type=date>", () => {
+    // UTC midnight Jul 30 — local getDate() in US would be 29; input must stay 30.
+    const utcMidnight = new Date("2026-07-30T00:00:00.000Z");
+    expect(toDateInputValue(utcMidnight)).toBe("2026-07-30");
+  });
+
+  it("accepts ISO strings", () => {
+    expect(toDateInputValue("2026-08-03T00:00:00.000Z")).toBe("2026-08-03");
+  });
+
+  it("returns empty string for invalid dates", () => {
+    expect(toDateInputValue(new Date("nope"))).toBe("");
   });
 });
 
