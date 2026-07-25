@@ -14,9 +14,9 @@ import {
 const getDbUser = getOrCreateDbUser;
 
 /**
- * Upsert trip-level notes (ODY-051).
+ * Upsert trip-level notes (ODY-051 / ODY-056).
  * Plain `{ text }` and TipTap `{ doc }` patches write one v1 shape so
- * neither surface blanks the other (text + TipTap doc stay in sync).
+ * neither surface blanks the other. Payload size is capped (ODY-056).
  */
 export async function upsertNote(
   tripId: string,
