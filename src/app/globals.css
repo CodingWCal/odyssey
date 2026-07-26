@@ -1421,6 +1421,33 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .split-row .balance.neg { color: var(--coral); }
 .split-row .balance.even { color: var(--ink-3); }
 .split-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
+/* Settle-up suggestions (ODY-030) */
+.settle-list {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--teal-soft);
+  border-radius: var(--radius-md);
+  border-left: 2px solid var(--teal);
+}
+.settle-label {
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+}
+.settle-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.settle-list li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+  font-size: 13.5px; color: var(--ink);
+}
+.settle-amt {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--teal);
+}
 
 @media (max-width: 768px) {
   .split-row {
