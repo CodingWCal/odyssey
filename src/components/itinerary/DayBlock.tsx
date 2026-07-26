@@ -26,6 +26,7 @@ import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import type { TripDay } from "@/types";
 import { formatDate, type TimeFormat } from "@/lib/utils";
+import { localDateKey, toDateInputValue } from "@/lib/dates";
 import { sortEventsByTime } from "@/lib/sortEvents";
 
 type SortMode = "time" | "manual";
@@ -78,11 +79,9 @@ interface DayBlockProps {
   readOnly?: boolean;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
-  /** This day is the current calendar day of a live trip (ODY-076). */
-  isToday?: boolean;
 }
 
-export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", isToday = false }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h" }: DayBlockProps) {
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -90,6 +89,10 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   const [sortMode, setSortMode] = useState<SortMode>("time");
   const bodyRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+
+  // Client-side "today" (ODY-076): must run in the browser so the traveler's
+  // timezone is used — the server (Vercel) is UTC and would mis-label evenings.
+  const isToday = toDateInputValue(day.date) === localDateKey();
 
   // On a live trip, bring today's day into view once on mount (ODY-076).
   // Respect reduced-motion and only scroll for the single "today" block.

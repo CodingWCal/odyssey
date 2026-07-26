@@ -31,9 +31,6 @@ export default async function ItineraryPage({ params }: Props) {
   const { head, tail } = titleParts(trip.title);
   const noteText = normalizeTripNoteContent(trip.note?.content).text;
   const readOnly = trip.myRole === "viewer"; // ODY-001
-  // UTC calendar-day key for "today" — matches how day dates are stored/rendered
-  // (ODY-048). Lets a live trip focus the current day (ODY-076).
-  const todayKey = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="canvas">
@@ -73,7 +70,6 @@ export default async function ItineraryPage({ params }: Props) {
             dayNumber={index + 1}
             readOnly={readOnly}
             timeFormat={trip.timeFormat as "12h" | "24h"}
-            isToday={new Date(day.date).toISOString().slice(0, 10) === todayKey}
           />
         ))
       )}

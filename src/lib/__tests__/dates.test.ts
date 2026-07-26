@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { parseDateString, enumerateDays, dayKey, toDateInputValue } from "@/lib/dates";
+import {
+  parseDateString,
+  enumerateDays,
+  dayKey,
+  toDateInputValue,
+  localDateKey,
+} from "@/lib/dates";
 
 describe("parseDateString", () => {
   it("parses YYYY-MM-DD as local midnight on the same calendar day", () => {
@@ -70,5 +76,22 @@ describe("dayKey", () => {
   it("keys by local calendar day regardless of time", () => {
     expect(dayKey(new Date(2026, 6, 10, 0, 0))).toBe(dayKey(new Date(2026, 6, 10, 23, 59)));
     expect(dayKey(new Date(2026, 6, 10))).not.toBe(dayKey(new Date(2026, 6, 11)));
+  });
+});
+
+describe("localDateKey (ODY-076)", () => {
+  it("formats the local calendar day as YYYY-MM-DD", () => {
+    expect(localDateKey(new Date(2026, 6, 25, 20, 30))).toBe("2026-07-25");
+  });
+
+  it("pads single-digit month and day", () => {
+    expect(localDateKey(new Date(2026, 0, 5))).toBe("2026-01-05");
+  });
+
+  it("matches a UTC-midnight day key for the same calendar date", () => {
+    // Traveler on Jul 25 local should match Day stored as 2026-07-25T00:00:00Z.
+    expect(localDateKey(new Date(2026, 6, 25, 9, 0))).toBe(
+      toDateInputValue(new Date("2026-07-25T00:00:00.000Z"))
+    );
   });
 });

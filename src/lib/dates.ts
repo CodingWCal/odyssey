@@ -40,3 +40,16 @@ export function enumerateDays(start: Date, end: Date): Date[] {
 export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
+
+/**
+ * Local calendar day as YYYY-MM-DD (ODY-076).
+ * Use for "is today?" against a stored trip/day UTC key from `toDateInputValue`.
+ * Do not use `new Date().toISOString().slice(0, 10)` — that flips after ~8pm
+ * in US timezones and mis-labels the live day's "Today" badge.
+ */
+export function localDateKey(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
