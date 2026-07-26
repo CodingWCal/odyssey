@@ -8,6 +8,7 @@ import { AvatarStack } from "@/components/shared/AvatarStack";
 import { TripCard, type DashTrip } from "./TripCard";
 import { NewTripWizard } from "./NewTripWizard";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 function fmtMoney(n: number) {
   return "$" + Math.round(Number(n) || 0).toLocaleString("en-US");
@@ -88,6 +89,9 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
   const [wizardOpen, setWizardOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const isMobile = useIsMobile();
+  // Icon-search kicks in well before the pill can collide with "New trip"
+  // (ODY-092 follow-up — the 768px-only flip left a wide collision band).
+  const useIconSearch = useMediaQuery("(max-width: 1100px)");
   const openWizard = () => setWizardOpen(true);
 
   const match = (t: DashTrip) =>
@@ -109,12 +113,12 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
   return (
     <div className="dash-shell">
       <header className="dash-top">
-        {isMobile && searchOpen ? (
-          <div className="search-wrap search-wrap-mobile-active">
+        {useIconSearch && searchOpen ? (
+          <div className="search-wrap search-wrap-expanded">
             <span className="icon"><Icons.search size={14} /></span>
             <input
               type="search"
-              placeholder="Search trips, destinations…"
+              placeholder="Search trips…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search trips"
@@ -131,7 +135,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
               <span className="brand-name">Odyssey</span>
             </div>
             <div className="top-actions">
-              {isMobile ? (
+              {useIconSearch ? (
                 <button type="button" className="icon-btn search-toggle" onClick={() => setSearchOpen(true)} aria-label="Search trips">
                   <Icons.search size={16} />
                 </button>
@@ -140,12 +144,11 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
                   <span className="icon"><Icons.search size={14} /></span>
                   <input
                     type="search"
-                    placeholder="Search trips, destinations…"
+                    placeholder="Search trips…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     aria-label="Search trips"
                   />
-                  <span className="kbd">⌘K</span>
                 </div>
               )}
               <button type="button" onClick={openWizard} className="btn-cta" aria-label="New trip">
