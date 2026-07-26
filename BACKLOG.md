@@ -397,11 +397,9 @@ After Explore/Collections shipped, `NAV_ITEMS` has 7 destinations; `.mobile-tab-
 - Depends on / pairs with ODY-051.
 - Acceptance: a traveler can find trip notes without guessing a URL; only one write path remains.
 
-### ODY-061 · loading.tsx for Explore + Collections — S, haiku
+### ODY-061 · loading.tsx for Explore + Collections — S, haiku — ✅ DONE
 > **In plain terms:** Switching to Explore or Collections still flashes blank while other tabs show calm skeletons.
-Residual of ODY-014.
-- Add branded `loading.tsx` under `explore/` and `collections/` matching other trip tabs.
-- Acceptance: tab navigation shows skeletons instantly on those routes.
+- Added branded `loading.tsx` under `explore/` and `collections/` matching other trip tabs.
 
 ### ODY-062 · Sign-in `after` redirect parity with sign-up — S, haiku — ✅ DONE
 > **In plain terms:** Invite links send people to sign-up with a return path; if they click "sign in" instead, they may not land back on the trip.
