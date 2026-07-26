@@ -177,7 +177,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
           </div>
         </section>
 
-        {isMobile && <NewTripBanner onClick={openWizard} />}
+        {isMobile && trips.length > 0 && <NewTripBanner onClick={openWizard} />}
 
         {showLive && live && <LiveCard trip={live} />}
 
@@ -207,6 +207,21 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
         {trips.length === 0 && !isMobile && (
           <div className="trip-grid">
             <NewTripCard onClick={openWizard} />
+          </div>
+        )}
+
+        {/* Mobile zero-trip empty (ODY-063) — banner alone was too thin. */}
+        {trips.length === 0 && isMobile && (
+          <div className="dash-empty">
+            <p className="headline">
+              No trips <em>yet</em>
+            </p>
+            <p className="sub">
+              Plan your first adventure — itinerary, map, and crew all start here.
+            </p>
+            <button type="button" className="btn btn-primary" onClick={openWizard}>
+              Plan a new trip
+            </button>
           </div>
         )}
 

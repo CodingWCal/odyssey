@@ -403,18 +403,15 @@ Residual of ODY-014.
 - Add branded `loading.tsx` under `explore/` and `collections/` matching other trip tabs.
 - Acceptance: tab navigation shows skeletons instantly on those routes.
 
-### ODY-062 · Sign-in `after` redirect parity with sign-up — S, haiku
+### ODY-062 · Sign-in `after` redirect parity with sign-up — S, haiku — ✅ DONE
 > **In plain terms:** Invite links send people to sign-up with a return path; if they click "sign in" instead, they may not land back on the trip.
-Sign-up reads `?after=` and `forceRedirectUrl`; sign-in ignores it (ODY-046 finding).
-- Mirror allowlisted `after` handling on `src/app/(auth)/sign-in/[[...sign-in]]/page.tsx`.
+- Mirror allowlisted `after` handling on sign-in (`forceRedirectUrl` + `signUpForceRedirectUrl`).
 - Acceptance: `/sign-in?after=/trips/...` returns to that trip after auth (same rules as sign-up; no open redirect).
 
-### ODY-063 · Dashboard mobile empty state + ⌘K honesty — S, haiku
+### ODY-063 · Dashboard mobile empty state + ⌘K honesty — S, haiku — ✅ DONE
 > **In plain terms:** New users on a phone don't get a clear "no trips yet" card, and the search box used to pretend ⌘K works when it doesn't.
-Desktop shows `NewTripCard`; mobile only a thin banner. Search showed `⌘K` with no handler.
-- **Partial (ODY-092 follow-up):** the decorative `⌘K` chip was removed so the header no longer lies. Remaining: add empty copy/CTA on mobile; optionally wire Cmd/Ctrl+K to focus search if you want the shortcut back for real.
-- Files: `src/components/trips/DashboardClient.tsx`.
-- Acceptance: zero-trip mobile state is clear; ⌘K is either wired or absent (absent ✅).
+- ⌘K chip removed (ODY-092). Mobile zero-trip empty state + CTA added.
+- Acceptance: zero-trip mobile state is clear; ⌘K absent.
 
 ### ODY-064 · Dead code and utils dedupe — S, haiku
 > **In plain terms:** Leftover unused trip form code and two copies of the same date/money helpers make the house harder to keep tidy.
