@@ -7,7 +7,7 @@ import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
-import { computeSplit } from "@/lib/budget";
+import { computeSplit, suggestSettlements } from "@/lib/budget";
 
 export interface BudgetExpense {
   id: string;
@@ -147,6 +147,8 @@ function SplitSection({
     members.map((m) => ({ id: m.id, weight: Number(weights[m.id]) || 0, paid: m.paid })),
     totalSpent
   );
+  const nameById = Object.fromEntries(members.map((m) => [m.id, m.name]));
+  const settlements = suggestSettlements(rows);
 
   const dirty = members.some((m) => (Number(weights[m.id]) || 0) !== m.weight);
 
@@ -187,7 +189,7 @@ function SplitSection({
       <div className="split-rows">
         {members.map((m, i) => {
           const { pct, share, balance } = rows[i];
-          const rounded = Math.round(balance);
+          const rounded = Math.round(balance * 100) / 100;
           return (
             <div className="split-row" key={m.id}>
               <span className="who">{m.name}</span>
@@ -213,6 +215,22 @@ function SplitSection({
           );
         })}
       </div>
+
+      {settlements.length > 0 && (
+        <div className="settle-list" aria-label="Settle up">
+          <div className="settle-label">Settle up</div>
+          <ul>
+            {settlements.map((t) => (
+              <li key={`${t.fromId}-${t.toId}-${t.amount}`}>
+                <strong>{nameById[t.fromId] ?? "Traveler"}</strong>
+                {" pays "}
+                <strong>{nameById[t.toId] ?? "Traveler"}</strong>
+                <span className="settle-amt">{fmtMoney(t.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="split-foot">
         <button className="btn-cta" onClick={save} disabled={!dirty || isPending} type="button">

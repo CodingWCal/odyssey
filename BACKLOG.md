@@ -557,12 +557,43 @@ category label.
 - Guardrails: editorial aesthetic; no new deps; Leaflet stays dynamic import `ssr:false`.
 - Acceptance: a user can save labeled places outside the itinerary and toggle them on the map by category.
 
-### ODY-030 · Settle-up suggestions — M, sonnet
+### ODY-030 · Settle-up suggestions — M, sonnet — ✅ DONE
 > **In plain terms:** The budget shows who's over or under, but not what to do about it. This adds concrete suggestions: "Alex pays Maya $120" — the fewest transfers that settle everyone up.
-The split card shows who's over/under but not how to settle. Compute the minimal
-transfer set ("Alex pays Maya $120") from existing balances in `SplitSection` — pure
-client math, no schema change. Present as a quiet list under the balances, mono
-figures, teal accent for "settled".
+- Shipped: `suggestSettlements` in `src/lib/budget.ts` + unit tests; quiet list under the split card (teal accent). Cent-reconciled shares via largest-remainder.
+
+### ODY-094 · Expense splitting audit → Splitwise-grade gaps — L, sonnet (P1)
+> **In plain terms:** Odyssey can track trip spend and a trip-level weighted split, but it is not yet a full Splitwise replacement (no per-bill payer, selected participants, itemized restaurant math, tax/tip).
+**Audit (2026-07-26) — what exists today:**
+- Works: expense CRUD (label/amount/category), event-linked costs, trip-level weights + equal reset, balances (paid − share), persistence of weights + expenses, settle-up suggestions (ODY-030), cent-reconciled shares.
+- Partial: “paid” = sum of expenses `addedBy` the member (who *logged* it), not a chosen payer; balances are trip-wide only; weight UI is share ratios not exact $/%%/shares per expense.
+- Missing (needs schema + UX — do not bolt onto weights alone): per-expense `paidBy` + participant selection; exact / % / shares / quantities; itemized lines (meals, drinks, shared apps); tax/tip/fees/discounts; review step; over/under allocation guards; mobile-first advanced flow.
+
+**Required DB changes** (`prisma db push`; coordinate Supabase unpause; no migrations dir):
+1. **`Expense.paidBy String?`** — FK → `User.id` (who actually paid). Keep `addedBy` as “who logged it.” Backfill: `paidBy = addedBy` for existing rows.
+2. **`ExpenseShare`** (new) — `{ id, expenseId, userId, amountCents Int?, shares Float?, percent Float?, included Boolean @default(true) }` unique `(expenseId, userId)`. Rows define who is on the bill and how much they owe for that expense. Cascade delete with Expense.
+3. **`ExpenseLine`** (new, stage 2 — restaurant itemization) — `{ id, expenseId, label, amountCents, kind String? }` (e.g. food/drink/shared/fee/tax/tip/discount). Optional **`ExpenseLineShare`** `{ lineId, userId, shares/quantity }` for “shared appetizer among 3 people only.”
+4. Optional on Expense: `splitMode String @default("equal")` (`equal` | `exact` | `percent` | `shares`), `taxCents`/`tipCents`/`feeCents`/`discountCents` Int? if not modeled as lines.
+5. **Do not remove** `TripMember.splitWeight` yet — keep as trip-default / fallback until per-expense shares cover all expenses; then deprecate in a follow-up.
+6. **RLS:** add new tables to `prisma/rls.sql` (same posture as Expense).
+
+**Stages:** (A) `paidBy` + `ExpenseShare` + UI (equal / selected people / exact) · (B) settle math from shares not `addedBy` · (C) `ExpenseLine` + tax/tip · (D) event-scoped view (see ODY-097). Keep equal split one-tap.
+- Acceptance (full epic): equal split stays one-tap; advanced options progressive; restaurant scenarios reconcile to the cent; edit/delete recalculates; survives refresh; can open a restaurant event and see who owes what for that meal.
+
+### ODY-097 · Budget page UX refinement + per-event / restaurant split view — M, sonnet (P2)
+> **In plain terms:** The Budget tab feels clunky and hard to navigate, and you still can’t open a restaurant (or any) event and see how that meal’s cost splits among the people who ate — only a trip-wide weight card.
+Depends on / pairs with **ODY-094** (needs `paidBy` / `ExpenseShare` for real per-event numbers; until then, can only polish layout + link to linked expenses).
+- **IA / mobile:** simplify Budget hierarchy (summary → category list → expense → split); fewer competing cards; sticky add CTA; readable split rows at 375px (ties to older mobile budget audit).
+- **Per-event view:** from itinerary event (esp. restaurant) and from a linked expense, show “who paid / who owes / share breakdown” for that expense only — not just trip-level weights.
+- **Restaurant:** once ODY-094 stage C exists, show line items (meals/drinks/shared apps + tax/tip) and per-person totals for that bill.
+- Guardrails: editorial tokens; no new deps; progressive disclosure (equal default, advanced behind a reveal).
+- Acceptance: traveler can navigate Budget on a phone without hunting; can open a food event/expense and understand that meal’s split without doing mental math.
+
+### ODY-096 · Mobile commute detail overflow on event cards — S, sonnet (future only)
+> **In plain terms:** Long origin/destination addresses on transport events overflow or feel cramped on phones.
+- Responsive layout (not just smaller type): stack origin → destination vertically on narrow screens; default to concise street + city; full address via expand/details/map.
+- Prioritize title, time, type; keep edit/delete tappable; no clip/overlap/horizontal scroll; preserve desktop/tablet.
+- Files: `EventBlock.tsx`, `globals.css` (and map card if it mirrors the same meta).
+- Acceptance: long addresses at 375px stay inside the card; desktop unchanged.
 
 ### ODY-031 · Trip cover images via Supabase Storage — L, sonnet
 > **In plain terms:** Trips currently get pretty gradient covers, but you can't use your own photo. This adds photo upload, keeping the gradients as the default.
@@ -744,6 +775,6 @@ Collaboration feels static without realtime (ODY-070).
 4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082 · ODY-093 (named collection lists)
 5. **Launch blockers (human + eng):** ODY-036 → ODY-037
 6. **P2 residual polish:** ODY-061 → ODY-020/022/023/024/026
-7. **P3 delight:** ODY-030 · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 (packing: trip-level then per-event)
+7. **P3 delight:** ODY-094 (Splitwise schema+UX) · ODY-097 (budget UX / per-event split view) · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 · ODY-096 (mobile commute overflow)
 8. **Competitive / later:** ODY-066 · ODY-068–071
 9. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
