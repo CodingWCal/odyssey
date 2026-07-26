@@ -151,7 +151,9 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
               <button type="button" onClick={openWizard} className="btn-cta" aria-label="New trip">
                 <Icons.plus size={14} /> <span className="btn-label">New trip</span>
               </button>
-              <UserButton />
+              <span className="user-btn-slot">
+                <UserButton />
+              </span>
             </div>
           </>
         )}

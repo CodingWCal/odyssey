@@ -541,6 +541,17 @@ Invite deep-links land on the trip, but there's no first-visit context for a joi
 - Guardrails: still never hit Nominatim from the browser (ODY-010); keep rate limiting (ODY-055); no new deps; unit-test any new query-building/bias helper.
 - Acceptance: typing a common place name with a trip destination set surfaces relevant nearby suggestions; a true miss shows a clear "no matches" hint; errors still show the ODY-079 message; rate limiting and the proxy boundary are unchanged.
 
+### ODY-092 · Dashboard header responsive collision — S, sonnet — ✅ DONE
+> **In plain terms:** Shrinking the browser window made the dashboard search box run into the "New trip" button, and the header controls looked unevenly spaced because they weren't the same height. Fixed so the header stays tidy at every width.
+Reported from hands-on testing. Root causes:
+1. `.search-wrap` was a hard `width: 280px` with no `min-width: 0`, and `.top-actions` couldn't shrink — so between 768px (where `useIsMobile` flips to the desktop layout) and ~1080px the row overflowed and controls collided.
+2. `.dash-top` had no `gap` at desktop widths (only inside the ≤768px query), letting the brand touch the actions.
+3. Mismatched control heights (search pill ≈35px, `.btn-cta` 40px, Clerk `UserButton` ≈28px) made the spacing read as uneven.
+- Fix: `.search-wrap` becomes `flex: 0 1 280px` with `min-width: 0` and a 40px height; `.top-actions` gets `flex: 1 1 auto; min-width: 0`; brand is `flex: none`; added 1080px + 900px breakpoints that drop the (non-functional) `⌘K` chip and collapse the CTA to icon-only before anything can collide; Clerk's button gets a `.user-btn-slot` wrapper for consistent rhythm.
+- Note: the `⌘K` chip is now hidden below 1080px; **ODY-063** still owns wiring it up or removing it entirely.
+- Files: `src/app/globals.css`, `src/components/trips/DashboardClient.tsx`.
+- Acceptance: no overlap between search and "New trip" at any width from 320px to wide desktop; header controls share one even row.
+
 ---
 
 ## P3 — New Features

@@ -1924,6 +1924,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .dash-top {
   display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
   padding: 22px 48px;
   border-bottom: 1px solid var(--rule);
   background: var(--paper);
@@ -1933,32 +1934,54 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .dash-top .brand {
   display: flex; align-items: center; gap: 10px;
   margin: 0;
+  flex: none;
 }
 .dash-top .brand-name {
   font-family: var(--font-display);
   font-size: 22px;
 }
-.dash-top .top-actions { display: flex; align-items: center; gap: 14px; }
+/* Actions shrink before anything collides (ODY-092): the row owns the leftover
+   space and each control is allowed to give width back. */
+.dash-top .top-actions {
+  display: flex; align-items: center; gap: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
 .search-wrap {
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--paper-2);
   border: 1px solid var(--rule);
   border-radius: 999px;
-  padding: 8px 14px;
-  width: 280px;
+  padding: 0 14px;
+  /* Match .btn-cta / .search-toggle so the header reads as one even row. */
+  height: 40px;
+  flex: 0 1 280px;
+  min-width: 0;
+  max-width: 280px;
   transition: border-color .15s ease, background .15s ease;
 }
 .search-wrap:focus-within { border-color: var(--peri); background: var(--paper-3); }
 .search-wrap input {
   flex: 1;
+  min-width: 0;
   border: 0; background: transparent; outline: none;
   font-size: 13px;
   color: var(--ink);
 }
 .search-wrap input::placeholder { color: var(--ink-3); }
-.search-wrap .icon { color: var(--ink-3); }
+.search-wrap .icon { color: var(--ink-3); flex: none; }
 .search-toggle { width: 40px; height: 40px; flex: none; }
+.dash-top .btn-cta { flex: none; }
+/* Stable slot for Clerk's UserButton so it shares the 40px row rhythm
+   without styling Clerk internals (ODY-092). */
+.user-btn-slot {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 40px;
+}
 .kbd {
+  flex: none;
   font-family: var(--font-mono); font-size: 10.5px;
   color: var(--ink-3);
   border: 1px solid var(--rule-2);
@@ -2343,10 +2366,27 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 @media (max-width: 680px) {
   .trip-grid { grid-template-columns: 1fr; }
 }
+/* ODY-092 — the desktop header layout runs from 768px up (useIsMobile flips at
+   767px), so it has to survive narrow desktop widths. Shed the decorative bits
+   before the search pill can collide with "New trip". */
+@media (max-width: 1080px) {
+  .dash-top { padding: 22px 32px; }
+  .dash-top .kbd { display: none; }
+  .search-wrap { flex-basis: 220px; }
+}
+@media (max-width: 900px) {
+  .dash-top { padding: 18px 24px; }
+  .dash-top .top-actions { gap: 10px; }
+  .search-wrap { flex-basis: 180px; }
+  /* Icon-only CTA (same treatment as mobile) — the label is what overflows. */
+  .dash-top .btn-cta { width: 40px; padding: 0; border-radius: 50%; justify-content: center; }
+  .dash-top .btn-cta .btn-label { display: none; }
+}
+
 @media (max-width: 768px) {
   .dash-top { padding: 14px 20px; gap: 10px; }
   .dash-top .top-actions { gap: 8px; }
-  .search-wrap-mobile-active { width: 100%; }
+  .search-wrap-mobile-active { width: 100%; max-width: none; flex: 1 1 auto; }
   .dash-top .btn-cta { width: 40px; height: 40px; padding: 0; border-radius: 50%; }
   .dash-top .btn-cta .btn-label { display: none; }
 }
