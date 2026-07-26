@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { applyWindow } from "@/app/trips/[tripId]/schedule/actions";
 import { toast } from "@/components/shared/Toast";
 import type { GetScheduleResult } from "@/app/trips/[tripId]/schedule/actions";
 import type { AvailabilityBlock } from "@/types";
 import { Icons } from "@/components/shared/Icons";
+import { Modal } from "@/components/shared/Modal";
 import { BLOCK_LABEL, eachDay, formatDayLabel, toDateKey } from "./scheduleShared";
 
 type Poll = NonNullable<GetScheduleResult["poll"]>;
@@ -34,6 +35,7 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
   const totalMembers = members.length;
 
   const [isPending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Count distinct members marked "available" per date+block (dedupe per member).
   const counts = useMemo(() => {
@@ -69,13 +71,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
     } as React.CSSProperties;
   }
 
-  function handleApply() {
+  function confirmApply() {
     if (!bestWindow) return;
-    const ok = window.confirm(
-      `Apply ${formatWindowDate(bestWindow.startDate)} – ${formatWindowDate(bestWindow.endDate)} as the trip dates?\n\n` +
-        "Empty days outside the new range are removed. Days that already have events are kept — they'll just sit outside your trip dates, so nothing you've planned is deleted."
-    );
-    if (!ok) return;
     startTransition(async () => {
       try {
         await applyWindow({
@@ -83,6 +80,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
           startDate: bestWindow.startDate,
           endDate: bestWindow.endDate,
         });
+        setConfirmOpen(false);
+        toast("Trip dates updated.", "success");
       } catch {
         toast("Couldn't apply those dates — try again.");
       }
@@ -114,8 +113,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
               </div>
             </div>
             {isOwner && (
-              <button type="button" className="btn-cta" onClick={handleApply} disabled={isPending}>
-                <Icons.schedule size={14} /> {isPending ? "Applying…" : "Apply to trip dates"}
+              <button type="button" className="btn-cta" onClick={() => setConfirmOpen(true)} disabled={isPending}>
+                <Icons.schedule size={14} /> Apply to trip dates
               </button>
             )}
           </div>
@@ -164,6 +163,41 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
           </tbody>
         </table>
       </div>
+
+      {bestWindow && (
+        <Modal
+          open={confirmOpen}
+          onClose={() => { if (!isPending) setConfirmOpen(false); }}
+          ariaLabel="Apply best window to trip dates"
+        >
+          <div className="modal-head">
+            <div className="left">
+              <h3>Apply these dates?</h3>
+              <p>{formatWindowDate(bestWindow.startDate)} – {formatWindowDate(bestWindow.endDate)}</p>
+            </div>
+            <button className="icon-btn" onClick={() => setConfirmOpen(false)} aria-label="Close" disabled={isPending}>
+              <Icons.close size={16} />
+            </button>
+          </div>
+
+          <div className="modal-body">
+            <p className="confirm-copy">
+              Empty days outside the new range are removed. Days that already have
+              events are kept — they&apos;ll just sit outside your trip dates, so
+              nothing you&apos;ve planned is deleted.
+            </p>
+          </div>
+
+          <div className="modal-foot">
+            <button className="btn btn-ghost" onClick={() => setConfirmOpen(false)} disabled={isPending}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={confirmApply} disabled={isPending}>
+              {isPending ? "Applying…" : "Apply dates"}
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }
