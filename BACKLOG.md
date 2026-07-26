@@ -775,6 +775,6 @@ Collaboration feels static without realtime (ODY-070).
 4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082 · ODY-093 (named collection lists)
 5. **Launch blockers (human + eng):** ODY-036 → ODY-037
 6. **P2 residual polish:** ODY-061 → ODY-020/022/023/024/026
-7. **P3 delight:** ODY-094 (Splitwise-grade) · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 · ODY-096 (mobile commute overflow)
+7. **P3 delight:** ODY-094 (Splitwise schema+UX) · ODY-097 (budget UX / per-event split view) · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 · ODY-096 (mobile commute overflow)
 8. **Competitive / later:** ODY-066 · ODY-068–071
 9. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
