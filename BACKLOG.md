@@ -425,14 +425,9 @@ After Explore/Collections shipped, `NAV_ITEMS` has 7 destinations; `.mobile-tab-
 > states, and returning-user flow. No new external dependencies. Keep the calm,
 > editorial "boarding pass + printed map" tone; palette + type from globals.css.
 
-### ODY-074 · Empty-trip guided first steps — M, sonnet
-> **In plain terms:** Right after the wizard, a brand-new trip is a blank timeline that feels like a chore, not the start of an adventure. Give first-time planners a calm, dismissible checklist ("Add your arrival", "Pin where you're staying", "Invite one person") so the trip feels *started*.
-The itinerary empty state is a single generic card; there's no momentum for a new trip.
-- On a trip with zero events, render an editorial "first steps" checklist above/inside the empty state: suggested actions link to the real controls (open Add Event, Members, Explore). Derive completion from live data (has events? has ≥2 members? has a cover?) — no new persistence needed.
-- Dismissible for the session via component state (no localStorage — CLAUDE.md). Reappears only while the trip is genuinely empty.
-- Editor+ only sees actionable CTAs; viewers see a calm "nothing planned yet" line.
-- Files: `src/app/trips/[tripId]/itinerary/page.tsx`, a new `src/components/itinerary/FirstSteps.tsx`, `globals.css`.
-- Acceptance: a new empty trip shows warm, actionable next steps that disappear as they're completed; no layout shift for populated trips.
+### ODY-074 · Empty-trip guided first steps — M, sonnet — ✅ DONE
+> **In plain terms:** Right after the wizard, a brand-new trip is a blank timeline that feels like a chore, not the start of an adventure. Give first-time planners a calm, dismissible checklist so the trip feels *started*.
+- `FirstSteps` on itinerary when `totalEvents === 0`; dismissible session state; viewers get calm copy.
 
 ### ODY-075 · Progressive tab reveal for new trips — M, sonnet
 > **In plain terms:** Day one, a trip shows seven tabs (Schedule, Explore, Collections…) which is overwhelming before there's anything in them. Start simple and reveal advanced tabs as they become relevant.
@@ -504,12 +499,9 @@ No way to search inside a trip.
 - Files: `src/components/trips/` (search box), itinerary/collections client components.
 - Acceptance: typing a query highlights/filters matching stops and places within the current trip; clearing restores the full view.
 
-### ODY-084 · Leave trip (self-remove) — S, sonnet
+### ODY-084 · Leave trip (self-remove) — S, sonnet — ✅ DONE
 > **In plain terms:** A collaborator can be removed by the owner, but can't leave on their own. Add a clear "Leave trip" for non-owners.
-`removeMember` exists (owner-driven); there's no self-exit.
-- Add a `leaveTrip` server action: a non-owner member removes their own membership (block the owner from leaving unless ownership is transferred — out of scope here, so owner sees no leave button). Confirm dialog; revalidate; redirect to dashboard.
-- Files: `src/app/trips/[tripId]/members/actions.ts`, `src/app/trips/[tripId]/members/page.tsx`, `MemberActions.tsx`.
-- Acceptance: an editor/viewer can leave a trip and lands on the dashboard without it; owner cannot orphan the trip.
+- `leaveTrip` action + `LeaveTripButton` on Members (non-owners only); confirm → dashboard.
 
 ### ODY-085 · Post-invite "you're in" welcome on the joined trip — S, sonnet
 > **In plain terms:** After accepting an invite you get dropped on a generic screen. A short welcome on *that trip* (your role, who's hosting, "start on the itinerary") makes joining feel warm and oriented. Pairs with ODY-037.

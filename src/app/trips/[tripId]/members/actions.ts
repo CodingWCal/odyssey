@@ -192,3 +192,19 @@ export async function removeMember(memberId: string, tripId: string) {
   });
   revalidatePath(`/trips/${tripId}/members`);
 }
+
+/** Non-owner self-remove (ODY-084). Owners cannot leave (would orphan the trip). */
+export async function leaveTrip(tripId: string) {
+  const dbUser = await getDbUser();
+  const member = await db.tripMember.findFirst({
+    where: { tripId, userId: dbUser.id },
+  });
+  if (!member) throw new Error("Unauthorized");
+  if (member.role === "owner") {
+    throw new Error("Owners can't leave — transfer ownership first");
+  }
+
+  await db.tripMember.delete({ where: { id: member.id } });
+  revalidatePath("/dashboard");
+  revalidatePath(`/trips/${tripId}`);
+}
