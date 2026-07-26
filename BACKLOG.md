@@ -445,13 +445,9 @@ The dashboard already computes `live`/`upcoming`/`past`; the itinerary doesn't l
 - Files: `src/components/itinerary/DayBlock.tsx`, `src/app/trips/[tripId]/itinerary/page.tsx`, `globals.css`.
 - Acceptance: opening a live trip lands on today's day with a subtle badge; past/upcoming trips open at the top as before.
 
-### ODY-077 · Event time-overlap warnings — S, sonnet
-> **In plain terms:** Nothing stops you from booking dinner at 7 and a museum at 7 on the same day. A soft, non-blocking hint ("overlaps Sunset kayak") helps catch double-bookings.
-Events store `startTime`/`endTime` but nothing surfaces conflicts.
-- Pure display: within a day, detect overlapping time ranges (ignore events without times) and show a quiet `--peach`/`--coral` inline hint on the overlapping blocks. No blocking, no schema change.
-- Add a small unit-tested helper in `src/lib` for overlap detection.
-- Files: `src/lib/` (new helper + test), `src/components/itinerary/DayBlock.tsx`/`EventBlock.tsx`.
-- Acceptance: two timed events that overlap on a day show a soft conflict hint; untimed events and non-overlaps show nothing.
+### ODY-077 · Event time-overlap warnings — S, sonnet — ✅ DONE
+> **In plain terms:** Soft non-blocking hint when two timed events on a day overlap.
+- `findOverlaps` helper + unit tests; quiet peach hint on `EventBlock`.
 
 ### ODY-078 · Collections → add to a day in one tap — S, sonnet
 > **In plain terms:** Explore can drop a place onto the itinerary, but saved Collections places are a dead end — you can't easily say "put this on Thursday." Add that.

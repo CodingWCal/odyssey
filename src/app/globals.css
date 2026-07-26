@@ -696,6 +696,13 @@
   color: var(--teal);
   font-weight: 500;
 }
+/* Soft time-conflict hint (ODY-077) — non-blocking. */
+.event-overlap {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--peach);
+  line-height: 1.4;
+}
 
 /* Type badge */
 .badge {

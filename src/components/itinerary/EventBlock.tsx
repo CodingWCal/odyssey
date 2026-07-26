@@ -88,9 +88,11 @@ interface EventBlockProps {
   timeFormat?: TimeFormat;
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
+  /** Soft overlap titles for this event (ODY-077). */
+  overlapWith?: string[];
 }
 
-export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h", destination }: EventBlockProps) {
+export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h", destination, overlapWith }: EventBlockProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
@@ -154,6 +156,11 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
 
               {event.notes && (
                 <EventNotes text={event.notes} />
+              )}
+              {overlapWith && overlapWith.length > 0 && (
+                <p className="event-overlap">
+                  Overlaps {overlapWith.join(", ")}
+                </p>
               )}
             </div>
           </div>

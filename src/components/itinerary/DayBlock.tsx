@@ -28,6 +28,7 @@ import type { TripDay } from "@/types";
 import { formatDate, type TimeFormat } from "@/lib/utils";
 import { localDateKey, toDateInputValue } from "@/lib/dates";
 import { sortEventsByTime } from "@/lib/sortEvents";
+import { findOverlaps } from "@/lib/eventOverlap";
 
 type SortMode = "time" | "manual";
 
@@ -38,6 +39,7 @@ function SortableEvent({
   timeFormat,
   dragDisabled,
   destination,
+  overlapWith,
 }: {
   event: TripDay["events"][number];
   tripId: string;
@@ -45,6 +47,7 @@ function SortableEvent({
   timeFormat?: TimeFormat;
   dragDisabled?: boolean;
   destination?: string;
+  overlapWith?: string[];
 }) {
   const disabled = Boolean(readOnly || dragDisabled);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -62,6 +65,7 @@ function SortableEvent({
         readOnly={readOnly}
         timeFormat={timeFormat}
         destination={destination}
+        overlapWith={overlapWith}
         dragHandle={
           disabled ? undefined : (
             <span {...listeners} className="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
@@ -121,6 +125,8 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
 
   const displayedEvents = sortMode === "time" ? sortEventsByTime(events) : events;
   const dragDisabled = sortMode === "time";
+  // Soft conflict hints (ODY-077) — never blocks saving.
+  const overlaps = findOverlaps(events);
 
   // Collapse animation: write max-height straight to the DOM node (external
   // system) instead of routing measured pixels through state.
@@ -224,6 +230,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
                   timeFormat={timeFormat}
                   dragDisabled={dragDisabled}
                   destination={destination}
+                  overlapWith={overlaps.get(event.id)}
                 />
               ))}
             </div>
