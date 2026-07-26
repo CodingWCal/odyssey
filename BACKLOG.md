@@ -567,8 +567,26 @@ category label.
 - Works: expense CRUD (label/amount/category), event-linked costs, trip-level weights + equal reset, balances (paid − share), persistence of weights + expenses, settle-up suggestions (ODY-030), cent-reconciled shares.
 - Partial: “paid” = sum of expenses `addedBy` the member (who *logged* it), not a chosen payer; balances are trip-wide only; weight UI is share ratios not exact $/%%/shares per expense.
 - Missing (needs schema + UX — do not bolt onto weights alone): per-expense `paidBy` + participant selection; exact / % / shares / quantities; itemized lines (meals, drinks, shared apps); tax/tip/fees/discounts; review step; over/under allocation guards; mobile-first advanced flow.
-**Remaining after this branch:** implement ODY-094 stages (schema `ExpenseShare` / `paidBy`, then itemization). Keep equal split as the default fast path.
-- Acceptance (full epic): equal split stays one-tap; advanced options progressive; restaurant scenarios reconcile to the cent; edit/delete recalculates; survives refresh.
+
+**Required DB changes** (`prisma db push`; coordinate Supabase unpause; no migrations dir):
+1. **`Expense.paidBy String?`** — FK → `User.id` (who actually paid). Keep `addedBy` as “who logged it.” Backfill: `paidBy = addedBy` for existing rows.
+2. **`ExpenseShare`** (new) — `{ id, expenseId, userId, amountCents Int?, shares Float?, percent Float?, included Boolean @default(true) }` unique `(expenseId, userId)`. Rows define who is on the bill and how much they owe for that expense. Cascade delete with Expense.
+3. **`ExpenseLine`** (new, stage 2 — restaurant itemization) — `{ id, expenseId, label, amountCents, kind String? }` (e.g. food/drink/shared/fee/tax/tip/discount). Optional **`ExpenseLineShare`** `{ lineId, userId, shares/quantity }` for “shared appetizer among 3 people only.”
+4. Optional on Expense: `splitMode String @default("equal")` (`equal` | `exact` | `percent` | `shares`), `taxCents`/`tipCents`/`feeCents`/`discountCents` Int? if not modeled as lines.
+5. **Do not remove** `TripMember.splitWeight` yet — keep as trip-default / fallback until per-expense shares cover all expenses; then deprecate in a follow-up.
+6. **RLS:** add new tables to `prisma/rls.sql` (same posture as Expense).
+
+**Stages:** (A) `paidBy` + `ExpenseShare` + UI (equal / selected people / exact) · (B) settle math from shares not `addedBy` · (C) `ExpenseLine` + tax/tip · (D) event-scoped view (see ODY-097). Keep equal split one-tap.
+- Acceptance (full epic): equal split stays one-tap; advanced options progressive; restaurant scenarios reconcile to the cent; edit/delete recalculates; survives refresh; can open a restaurant event and see who owes what for that meal.
+
+### ODY-097 · Budget page UX refinement + per-event / restaurant split view — M, sonnet (P2)
+> **In plain terms:** The Budget tab feels clunky and hard to navigate, and you still can’t open a restaurant (or any) event and see how that meal’s cost splits among the people who ate — only a trip-wide weight card.
+Depends on / pairs with **ODY-094** (needs `paidBy` / `ExpenseShare` for real per-event numbers; until then, can only polish layout + link to linked expenses).
+- **IA / mobile:** simplify Budget hierarchy (summary → category list → expense → split); fewer competing cards; sticky add CTA; readable split rows at 375px (ties to older mobile budget audit).
+- **Per-event view:** from itinerary event (esp. restaurant) and from a linked expense, show “who paid / who owes / share breakdown” for that expense only — not just trip-level weights.
+- **Restaurant:** once ODY-094 stage C exists, show line items (meals/drinks/shared apps + tax/tip) and per-person totals for that bill.
+- Guardrails: editorial tokens; no new deps; progressive disclosure (equal default, advanced behind a reveal).
+- Acceptance: traveler can navigate Budget on a phone without hunting; can open a food event/expense and understand that meal’s split without doing mental math.
 
 ### ODY-096 · Mobile commute detail overflow on event cards — S, sonnet (future only)
 > **In plain terms:** Long origin/destination addresses on transport events overflow or feel cramped on phones.
