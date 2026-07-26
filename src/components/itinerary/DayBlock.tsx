@@ -37,12 +37,14 @@ function SortableEvent({
   readOnly,
   timeFormat,
   dragDisabled,
+  destination,
 }: {
   event: TripDay["events"][number];
   tripId: string;
   readOnly?: boolean;
   timeFormat?: TimeFormat;
   dragDisabled?: boolean;
+  destination?: string;
 }) {
   const disabled = Boolean(readOnly || dragDisabled);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -59,6 +61,7 @@ function SortableEvent({
         isDragging={isDragging}
         readOnly={readOnly}
         timeFormat={timeFormat}
+        destination={destination}
         dragHandle={
           disabled ? undefined : (
             <span {...listeners} className="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
@@ -79,9 +82,11 @@ interface DayBlockProps {
   readOnly?: boolean;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
+  /** Trip destination — biases location search toward it (ODY-091). */
+  destination?: string;
 }
 
-export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h" }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", destination }: DayBlockProps) {
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -218,6 +223,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
                   readOnly={readOnly}
                   timeFormat={timeFormat}
                   dragDisabled={dragDisabled}
+                  destination={destination}
                 />
               ))}
             </div>
@@ -239,6 +245,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
         dayId={day.id}
         tripId={tripId}
         dayLabel={`Day ${dayNumber} · ${formatDate(day.date)}`}
+        destination={destination}
         onClose={() => setAddOpen(false)}
         onSuccess={() => setAddOpen(false)}
       />

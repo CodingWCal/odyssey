@@ -19,8 +19,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Query must be 3–300 characters" }, { status: 400 });
   }
 
+  // Optional trip-destination bias (ODY-091); ignored if too long.
+  const nearRaw = req.nextUrl.searchParams.get("near") ?? "";
+  const near = nearRaw.trim().length > 0 && nearRaw.length <= 200 ? nearRaw : undefined;
+
   try {
-    const results = await searchPlaces(q, 5, { userKey: userId });
+    const results = await searchPlaces(q, 5, { userKey: userId, near });
     return NextResponse.json(results);
   } catch (err) {
     if (err instanceof GeocodeRateLimitError) {

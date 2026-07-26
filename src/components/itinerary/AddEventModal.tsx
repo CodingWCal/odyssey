@@ -16,9 +16,11 @@ interface AddEventModalProps {
   existing?: TripEvent;
   onClose: () => void;
   onSuccess?: () => void;
+  /** Trip destination — biases location search toward it (ODY-091). */
+  destination?: string;
 }
 
-export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose, onSuccess }: AddEventModalProps) {
+export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose, onSuccess, destination }: AddEventModalProps) {
   const isEdit = !!existing;
   const [isPending, startTransition] = useTransition();
   const [titleError, setTitleError] = useState(false);
@@ -172,6 +174,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
             id="ev-loc"
             value={form.location}
             placeholder={isFlight ? "John F. Kennedy International Airport" : hasRoute ? "Hotel lobby" : "Narita International Airport"}
+            near={destination}
             onChange={(text) => setForm((s) => ({ ...s, location: text }))}
             onPick={(s) => setForm((f) => ({ ...f, location: s.display, lat: s.lat, lng: s.lng }))}
           />
@@ -184,6 +187,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
               id="ev-dest"
               value={form.destLocation}
               placeholder={isFlight ? "Narita International Airport" : "Leave blank to use the next stop"}
+              near={destination}
               onChange={(text) => setForm((s) => ({ ...s, destLocation: text }))}
               onPick={(s) => setForm((f) => ({ ...f, destLocation: s.display, destLat: s.lat, destLng: s.lng }))}
             />

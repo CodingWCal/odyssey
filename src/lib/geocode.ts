@@ -1,4 +1,5 @@
 import "server-only";
+import { buildBiasedQuery } from "@/lib/geoQuery";
 
 /**
  * Shared server-side geocoding via Nominatim (ODY-010 / ODY-055). All lookups —
@@ -92,10 +93,13 @@ function writeCache(key: string, data: GeoSuggestion[]) {
 export async function searchPlaces(
   query: string,
   limit = 5,
-  opts?: { userKey?: string }
+  opts?: { userKey?: string; near?: string }
 ): Promise<GeoSuggestion[]> {
-  const q = query.trim();
-  if (q.length < 3) return [];
+  const raw = query.trim();
+  if (raw.length < 3) return [];
+  // Bias bare names toward the trip destination (ODY-091). The effective query
+  // flows into the cache key too, so biased/unbiased lookups stay distinct.
+  const q = buildBiasedQuery(raw, opts?.near);
   const boundedLimit = Math.min(Math.max(limit, 1), 5);
 
   const key = cacheKey(q, boundedLimit);
@@ -137,7 +141,7 @@ export async function searchPlaces(
 /** Resolve an address to its best-match coordinates, or null. */
 export async function geocode(
   address: string,
-  opts?: { userKey?: string }
+  opts?: { userKey?: string; near?: string }
 ): Promise<{ lat: number; lng: number } | null> {
   const results = await searchPlaces(address, 1, opts);
   return results[0] ? { lat: results[0].lat, lng: results[0].lng } : null;
