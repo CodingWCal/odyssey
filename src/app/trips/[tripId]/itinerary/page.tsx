@@ -1,6 +1,7 @@
 import { getTripById } from "@/app/trips/actions";
 import { DayBlock } from "@/components/itinerary/DayBlock";
 import { TripNotes } from "@/components/itinerary/TripNotes";
+import { FirstSteps } from "@/components/itinerary/FirstSteps";
 import { ItineraryHero } from "@/components/itinerary/ItineraryHero";
 import { fetchWeather } from "@/components/shared/WeatherBanner";
 import { notFound } from "next/navigation";
@@ -54,6 +55,14 @@ export default async function ItineraryPage({ params }: Props) {
       />
 
       <TripNotes tripId={tripId} initialText={noteText} readOnly={readOnly} />
+
+      {totalEvents === 0 && trip.days.length > 0 && (
+        <FirstSteps
+          tripId={tripId}
+          memberCount={trip.members.length}
+          readOnly={readOnly}
+        />
+      )}
 
       {trip.days.length === 0 ? (
         <div className="empty-card tall">

@@ -4,6 +4,7 @@ import { getOrCreateDbUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { InviteForm } from "@/components/trips/InviteForm";
 import { MemberActions } from "@/components/trips/MemberActions";
+import { LeaveTripButton } from "@/components/trips/LeaveTripButton";
 import { AvatarStack, avatarColor, initialsOf } from "@/components/shared/AvatarStack";
 
 interface Props {
@@ -120,6 +121,8 @@ export default async function MembersPage({ params }: Props) {
           <InviteForm tripId={tripId} />
         </div>
       )}
+
+      {!isOwner && <LeaveTripButton tripId={tripId} />}
     </div>
   );
 }
