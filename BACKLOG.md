@@ -523,6 +523,24 @@ Invite deep-links land on the trip, but there's no first-visit context for a joi
 - Files: `src/app/trips/[tripId]/` layout or itinerary page, a small `JoinWelcome` component, `globals.css`.
 - Acceptance: a freshly joined collaborator sees a warm, dismissible orientation on the trip; returning members don't.
 
+### ODY-090 · Branded apply-window confirm + success toast — S, sonnet
+> **In plain terms:** Locking the schedule's best window into your trip dates currently uses the browser's plain grey pop-up, and there's no confirmation once it works. Swap it for Odyssey's own calm confirm and a "Trip dates updated" toast so the action feels finished and on-brand. (From testing feedback: "apply window works but would look better as a stylized notification.")
+`AvailabilityHeatmap.handleApply` uses `window.confirm(...)` and shows only a failure toast.
+- Replace `window.confirm` with the existing `Modal` shell (`src/components/shared/Modal.tsx`) as a small confirm dialog: title, the honest ODY-080 body copy, Cancel + "Apply dates" (loading state reuses `isPending`). Keep it owner-only (parity with ODY-081).
+- On success, `toast("Trip dates updated.", "success")` (Toast already supports the `success` kind); keep the failure toast.
+- No schema, no new deps. Reuse `.modal-*` classes; no hardcoded hex.
+- Files: `src/components/trips/AvailabilityHeatmap.tsx` (+ `globals.css` only if a confirm-specific class is needed).
+- Acceptance: applying the best window shows an on-brand confirm, then a success toast; canceling does nothing; failures still toast an error.
+
+### ODY-091 · Destination-biased location search + clearer autocomplete states — M, sonnet
+> **In plain terms:** Adding a place in Collections (and event locations) feels finicky — the search only matches fairly exact addresses, doesn't bias toward the trip's destination, and a miss looks the same as a bug. Bias results toward where the trip actually is and make "no matches" read clearly, so saving "ramen" near Tokyo just works. (From testing feedback: "collection tab is hard to add a location, only takes specific addresses.")
+`LocationAutocomplete` → `/api/geocode` → `searchPlaces` sends a bare Nominatim query with no geographic bias; vague names return nothing and the dropdown looks empty/broken (ODY-079 added an error state; this adds a *no-matches* state + relevance).
+- **Bias:** thread an optional trip destination/viewbox into the lookup. Simplest: pass the trip `destination` string as a `near`/context hint the server appends to the query (e.g. `"${q}, ${destination}"` when the query looks like a bare place name), or use Nominatim `viewbox`+`bounded=0` / `countrycodes` derived from a one-time destination geocode. Keep it server-side in `src/lib/geocode.ts` (respect the shared cache key — include the bias in the key) and `/api/geocode` (accept an optional `near` param, validated).
+- **Clarity:** in `LocationAutocomplete`, distinguish loading vs. error (done in ODY-079) vs. **empty results** ("No matches — try a broader name or add city, e.g. 'ramen, Tokyo'"). Don't silently show an empty menu.
+- **Plumb destination:** `CollectionsClient` and `AddEventModal` should pass the trip destination to `LocationAutocomplete` (page already loads the trip). Add a `near?: string` prop.
+- Guardrails: still never hit Nominatim from the browser (ODY-010); keep rate limiting (ODY-055); no new deps; unit-test any new query-building/bias helper.
+- Acceptance: typing a common place name with a trip destination set surfaces relevant nearby suggestions; a true miss shows a clear "no matches" hint; errors still show the ODY-079 message; rate limiting and the proxy boundary are unchanged.
+
 ---
 
 ## P3 — New Features
@@ -612,11 +630,23 @@ High-effort differentiator; explicitly product-gated.
 - Out of scope until ODY-036 production auth is stable; do not build without go-ahead.
 - Acceptance: documented spike or MVP: one confirmation type (e.g. flight) → editable draft event on a trip.
 
-### ODY-067 · Packing checklist per trip — M, sonnet
-> **In plain terms:** A shared packing list on the trip so the group knows who brings the charger.
-- Lightweight `ChecklistItem` model (tripId, label, done, assignee optional) via db push; editor+ write; any member toggle done.
-- UI: section on itinerary or dedicated small tab; editorial checklist, not a dense task app.
-- Acceptance: add/check/uncheck items; viewers read-only.
+### ODY-067 · Packing checklist — trip-level + optional per-event — M→L, sonnet
+> **In plain terms:** A shared packing list so the group knows who brings the charger — *and* the ability to attach a small list to a specific plan item. Example: a Day 3 "Hike Cadillac Mountain" event carries "hiking boots, 2L water, rain shell," while the trip-level list holds "passport, chargers, sunscreen." When you look at that event you see exactly what to bring for it; the trip view can optionally roll everything up so nothing's forgotten at the door.
+Ship in two stages so trip-level value lands first and event-scoped is additive.
+
+**Data (one model, one `prisma db push`; coordinate the Supabase unpause):**
+- `ChecklistItem { id, tripId, eventId String? (nullable → trip-level), label, done Boolean @default(false), assigneeId String?, orderIndex Int, createdAt }`. Index `(tripId, eventId)`. `eventId = null` means trip-level; a set `eventId` scopes it to that event. On event delete, `onDelete: Cascade` (or `SetNull` to fall back to trip-level — decide in the ticket; Cascade is simpler and matches "for this hike" intent).
+- Access only via `src/lib/prisma/db.ts`; Zod-validate label length + category in `src/lib/validations`.
+
+**Stage A — trip-level (M):**
+- Server actions `addChecklistItem` / `toggleChecklistItem` / `removeChecklistItem` in a route `actions.ts`, `assertTripRole` editor+ to add/remove; **any member** (incl. viewer? — decide: default editor+ to mutate, viewers read-only per ODY-001) can toggle `done`.
+- UI: editorial checklist section (dedicated small tab or a card on the trip overview), not a dense task app. Optional assignee avatar chip. Mono counts ("6 of 11 packed").
+
+**Stage B — per-event (L, additive):**
+- Surface a compact packing list inside the event (in `AddEventModal` / `EventBlock` detail) filtered to `eventId`. Adding there sets `eventId`; the same actions are reused with an `eventId` arg.
+- Trip view shows trip-level items plus an optional "By activity" rollup grouping event-scoped items under their event title/day (read from existing itinerary data — no extra fetch shape).
+- Guardrails: editorial aesthetic; no new deps; keep it a checklist, not a todo manager. Assignee is optional and must not become a permissions system.
+- Acceptance: (A) any member can add/check/uncheck trip-level items, viewers read-only; (B) an event can carry its own list that shows on that event and rolls up in the trip view; deleting an event doesn't orphan stray items.
 
 ### ODY-068 · Offline read of itinerary / map — L, sonnet
 > **In plain terms:** Open the trip on a plane or abroad without signal and still see the plan (read-only first).
@@ -709,10 +739,10 @@ Collaboration feels static without realtime (ODY-070).
 ## Suggested session order
 1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅
 2. **P1 hardening:** ODY-053 ✅ → ODY-054 ✅ → ODY-055 ✅ → ODY-056 ✅ → ODY-057 ✅ → ODY-058 ✅
-3. **UX quick wins (safe, no schema):** ODY-081 → ODY-080 → ODY-079 → ODY-076 → ODY-062 → ODY-063
+3. **UX quick wins (safe, no schema):** ODY-081 ✅ → ODY-080 ✅ → ODY-079 ✅ → ODY-076 ✅ → ODY-090 → ODY-091 → ODY-062 → ODY-063
 4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082
 5. **Launch blockers (human + eng):** ODY-036 → ODY-037
 6. **P2 residual polish:** ODY-061 → ODY-020/022/023/024/026
-7. **P3 delight:** ODY-030 · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067
+7. **P3 delight:** ODY-030 · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 (packing: trip-level then per-event)
 8. **Competitive / later:** ODY-066 · ODY-068–071
 9. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
