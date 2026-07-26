@@ -86,9 +86,11 @@ interface EventBlockProps {
   readOnly?: boolean;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
+  /** Trip destination — biases location search toward it (ODY-091). */
+  destination?: string;
 }
 
-export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h" }: EventBlockProps) {
+export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h", destination }: EventBlockProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
@@ -164,6 +166,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
         dayId={event.dayId}
         dayLabel=""
         existing={event}
+        destination={destination}
         onClose={() => setEditOpen(false)}
         onSuccess={() => setEditOpen(false)}
       />

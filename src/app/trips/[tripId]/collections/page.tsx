@@ -19,6 +19,7 @@ export default async function CollectionsPage({ params }: Props) {
     <div className="canvas">
       <CollectionsClient
         tripId={tripId}
+        destination={trip.destination}
         places={places.map((p) => ({
           id: p.id,
           category: p.category,

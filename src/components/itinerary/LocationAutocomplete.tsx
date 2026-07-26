@@ -16,6 +16,8 @@ interface LocationAutocompleteProps {
   placeholder?: string;
   id?: string;
   autoFocus?: boolean;
+  /** Trip destination to bias bare-name searches toward (ODY-091). */
+  near?: string;
 }
 
 /**
@@ -32,11 +34,13 @@ export function LocationAutocomplete({
   placeholder,
   id,
   autoFocus,
+  near,
 }: LocationAutocompleteProps) {
   const [results, setResults] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState(false);
+  const [noResults, setNoResults] = useState(false);
   const [active, setActive] = useState(-1);
   const justPicked = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -51,6 +55,7 @@ export function LocationAutocomplete({
       if (results.length > 0) setResults([]);
       if (open) setOpen(false);
       if (searchError) setSearchError(false);
+      if (noResults) setNoResults(false);
     }
   }
 
@@ -66,8 +71,11 @@ export function LocationAutocomplete({
     const timer = setTimeout(async () => {
       setLoading(true);
       setSearchError(false);
+      setNoResults(false);
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`, {
+        const params = new URLSearchParams({ q });
+        if (near && near.trim()) params.set("near", near.trim());
+        const res = await fetch(`/api/geocode?${params.toString()}`, {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`geocode ${res.status}`);
@@ -77,6 +85,7 @@ export function LocationAutocomplete({
           (s: Suggestion) => s.display && !Number.isNaN(s.lat) && !Number.isNaN(s.lng)
         );
         setResults(next);
+        setNoResults(next.length === 0);
         setOpen(true);
         setActive(-1);
       } catch (err) {
@@ -96,7 +105,7 @@ export function LocationAutocomplete({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [value]);
+  }, [value, near]);
 
   // Close on outside click.
   useEffect(() => {
@@ -113,6 +122,7 @@ export function LocationAutocomplete({
     onPick(s);
     setOpen(false);
     setResults([]);
+    setNoResults(false);
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
@@ -144,7 +154,7 @@ export function LocationAutocomplete({
         onFocus={() => results.length > 0 && setOpen(true)}
         onKeyDown={onKeyDown}
       />
-      {open && (results.length > 0 || loading || searchError) && (
+      {open && (results.length > 0 || loading || searchError || noResults) && (
         <div className="ac-menu" role="listbox">
           {loading && results.length === 0 && !searchError && (
             <div className="ac-hint">Searching…</div>
@@ -152,6 +162,11 @@ export function LocationAutocomplete({
           {searchError && !loading && (
             <div className="ac-hint" role="status">
               Couldn&apos;t search right now — try again in a moment.
+            </div>
+          )}
+          {noResults && !loading && !searchError && (
+            <div className="ac-hint" role="status">
+              No matches — try a broader name or add a city, e.g. &ldquo;ramen, Tokyo&rdquo;.
             </div>
           )}
           {results.map((s, i) => (

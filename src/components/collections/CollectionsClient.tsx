@@ -23,9 +23,11 @@ interface CollectionsClientProps {
   tripId: string;
   places: CollectionPlace[];
   readOnly?: boolean;
+  /** Trip destination — biases location search toward it (ODY-091). */
+  destination?: string;
 }
 
-export function CollectionsClient({ tripId, places: initial, readOnly = false }: CollectionsClientProps) {
+export function CollectionsClient({ tripId, places: initial, readOnly = false, destination }: CollectionsClientProps) {
   const [places, setPlaces] = useState(initial);
   const [adding, setAdding] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -156,6 +158,7 @@ export function CollectionsClient({ tripId, places: initial, readOnly = false }:
               id="place-loc"
               value={form.location}
               placeholder="Neighborhood or address"
+              near={destination}
               onChange={(text) => setForm((s) => ({ ...s, location: text, lat: undefined, lng: undefined }))}
               onPick={(s) => setForm((f) => ({ ...f, location: s.display, lat: s.lat, lng: s.lng }))}
             />
