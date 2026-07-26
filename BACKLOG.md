@@ -410,11 +410,11 @@ Sign-up reads `?after=` and `forceRedirectUrl`; sign-in ignores it (ODY-046 find
 - Acceptance: `/sign-in?after=/trips/...` returns to that trip after auth (same rules as sign-up; no open redirect).
 
 ### ODY-063 · Dashboard mobile empty state + ⌘K honesty — S, haiku
-> **In plain terms:** New users on a phone don't get a clear "no trips yet" card, and the search box pretends ⌘K works when it doesn't.
-Desktop shows `NewTripCard`; mobile only a thin banner. Search shows `⌘K` with no handler.
-- Add empty copy/CTA on mobile; wire Cmd/Ctrl+K to focus search or remove the affordance.
+> **In plain terms:** New users on a phone don't get a clear "no trips yet" card, and the search box used to pretend ⌘K works when it doesn't.
+Desktop shows `NewTripCard`; mobile only a thin banner. Search showed `⌘K` with no handler.
+- **Partial (ODY-092 follow-up):** the decorative `⌘K` chip was removed so the header no longer lies. Remaining: add empty copy/CTA on mobile; optionally wire Cmd/Ctrl+K to focus search if you want the shortcut back for real.
 - Files: `src/components/trips/DashboardClient.tsx`.
-- Acceptance: zero-trip mobile state is clear; ⌘K either works or is gone.
+- Acceptance: zero-trip mobile state is clear; ⌘K is either wired or absent (absent ✅).
 
 ### ODY-064 · Dead code and utils dedupe — S, haiku
 > **In plain terms:** Leftover unused trip form code and two copies of the same date/money helpers make the house harder to keep tidy.
@@ -543,14 +543,21 @@ Invite deep-links land on the trip, but there's no first-visit context for a joi
 
 ### ODY-092 · Dashboard header responsive collision — S, sonnet — ✅ DONE
 > **In plain terms:** Shrinking the browser window made the dashboard search box run into the "New trip" button, and the header controls looked unevenly spaced because they weren't the same height. Fixed so the header stays tidy at every width.
-Reported from hands-on testing. Root causes:
-1. `.search-wrap` was a hard `width: 280px` with no `min-width: 0`, and `.top-actions` couldn't shrink — so between 768px (where `useIsMobile` flips to the desktop layout) and ~1080px the row overflowed and controls collided.
-2. `.dash-top` had no `gap` at desktop widths (only inside the ≤768px query), letting the brand touch the actions.
-3. Mismatched control heights (search pill ≈35px, `.btn-cta` 40px, Clerk `UserButton` ≈28px) made the spacing read as uneven.
-- Fix: `.search-wrap` becomes `flex: 0 1 280px` with `min-width: 0` and a 40px height; `.top-actions` gets `flex: 1 1 auto; min-width: 0`; brand is `flex: none`; added 1080px + 900px breakpoints that drop the (non-functional) `⌘K` chip and collapse the CTA to icon-only before anything can collide; Clerk's button gets a `.user-btn-slot` wrapper for consistent rhythm.
-- Note: the `⌘K` chip is now hidden below 1080px; **ODY-063** still owns wiring it up or removing it entirely.
-- Files: `src/app/globals.css`, `src/components/trips/DashboardClient.tsx`.
-- Acceptance: no overlap between search and "New trip" at any width from 320px to wide desktop; header controls share one even row.
+Reported from hands-on testing (follow-up screenshot still showed collision — the search pill's contents were overflowing into the button even after the first flex fix).
+- Search becomes an icon toggle at ≤1100px (new `useMediaQuery`), matching the mobile expand pattern; wide desktop keeps a shorter 240px pill with `overflow: hidden`.
+- Removed the decorative `⌘K` chip (it advertised a shortcut that wasn't wired — advances ODY-063 honesty).
+- "New trip" collapses to icon-only at ≤1100px; controls share a 40px row with 16px gaps.
+- Files: `src/app/globals.css`, `src/components/trips/DashboardClient.tsx`, `src/lib/hooks/useMediaQuery.ts`.
+- Acceptance: no overlap between search and "New trip" at any width from 320px to wide desktop; hard-refresh if an old CSS bundle is cached.
+
+### ODY-093 · Named collection lists (beyond category grouping) — M, sonnet
+> **In plain terms:** Collections already groups spots by type (all restaurants together, all activities together). Travelers also want their *own* named lists — "Date night", "Ramen crawl", "If we have time" — that can hold mixed or same-type places. From testing: "should collections allow saving multiple restaurants into 1 list?"
+Today: `Place.category` is an event-type chip; `CollectionsClient` groups by that category. That's already "multiple restaurants in one list," but the list name is the type, not a traveler-chosen title.
+- Add optional `listId` / `PlaceList { id, tripId, title, createdBy }` (or a freeform `listLabel String?` on Place if you want to avoid a join — prefer a real `PlaceList` model so rename/delete is clean). `prisma db push`; coordinate Supabase unpause.
+- UI: "New list" + assign a place to a list when saving; Collections page shows named lists (and still allows filtering by category). Map legend can stay category-based (ODY-045) — lists are a planning surface, not a new pin type.
+- Editor+ write; viewers read-only. No new deps. Reuse editorial checklist/card language — not a nested folder browser.
+- Pairs with ODY-078 (promote a place → day) and ODY-091 (biased search).
+- Acceptance: a traveler can create "Ramen crawl", save several restaurant places into it, and see that list on the Collections page; category grouping still works for unlisted places.
 
 ---
 
@@ -750,8 +757,8 @@ Collaboration feels static without realtime (ODY-070).
 ## Suggested session order
 1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅
 2. **P1 hardening:** ODY-053 ✅ → ODY-054 ✅ → ODY-055 ✅ → ODY-056 ✅ → ODY-057 ✅ → ODY-058 ✅
-3. **UX quick wins (safe, no schema):** ODY-081 ✅ → ODY-080 ✅ → ODY-079 ✅ → ODY-076 ✅ → ODY-090 → ODY-091 → ODY-062 → ODY-063
-4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082
+3. **UX quick wins (safe, no schema):** ODY-081 ✅ → ODY-080 ✅ → ODY-079 ✅ → ODY-076 ✅ → ODY-090 ✅ → ODY-091 ✅ → ODY-092 ✅ → ODY-062 → ODY-063 (⌘K removed; empty-state remains)
+4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082 · ODY-093 (named collection lists)
 5. **Launch blockers (human + eng):** ODY-036 → ODY-037
 6. **P2 residual polish:** ODY-061 → ODY-020/022/023/024/026
 7. **P3 delight:** ODY-030 · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 (packing: trip-level then per-event)
