@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "./navItems";
+import { CORE_NAV_ITEMS } from "./navItems";
 
 interface MobileTabBarProps {
   tripId: string;
@@ -13,7 +13,7 @@ export function MobileTabBar({ tripId }: MobileTabBarProps) {
 
   return (
     <nav className="mobile-tab-bar" aria-label="Trip navigation">
-      {NAV_ITEMS.map(({ href, label, Icon }) => {
+      {CORE_NAV_ITEMS.map(({ href, label, Icon }) => {
         const full = `/trips/${tripId}/${href}`;
         const active = pathname === full || pathname.startsWith(full + "/");
         return (

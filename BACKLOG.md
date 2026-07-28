@@ -397,11 +397,11 @@ are displayed raw, so everything reads as military time.
 - Time *inputs* may stay native (`<input type="time">` renders per browser locale) — this ticket is about display.
 - Acceptance: toggling the trip preference flips every displayed time between 2:30 PM and 14:30; stored values unchanged; new util unit-tested.
 
-### ODY-059 · Mobile nav for 7+ trip tabs — M, sonnet
+### ODY-059 · Mobile nav for 7+ trip tabs — M, sonnet — ✅ DONE
 > **In plain terms:** The phone bottom bar now has too many tabs (Explore, Collections, …) so labels crush. Keep the four tabs people use every day on the bottom bar and tuck the rest behind a hamburger menu.
 After Explore/Collections shipped, `NAV_ITEMS` has 7 destinations; `.mobile-tab-bar` squeezes labels (~50px each) — confirmed cramped on-device (2026-07-27 screenshot, all 7 items visible and tight at 375px).
 - **Decision:** bottom tab bar keeps exactly 4 core destinations — Itinerary, Map, Collections, Budget. Everything else (Schedule, Explore, Members) moves into a hamburger-icon drawer/sheet nav triggered from the top-right of the trip header.
-- Files: `src/components/trips/navItems.ts` (split into core vs. overflow, e.g. a `core: boolean` flag or two exported lists), `MobileTabBar.tsx` (render only the 4 core items), a new `MobileNavDrawer.tsx` (or reuse the `sheet.tsx` primitive already backing `WorkspaceSidebar`/mobile `Modal`) wired to a hamburger trigger in the trip header, `globals.css`.
+> Shipped: `NAV_ITEMS` in `navItems.ts` gained a `core` flag, exported as `CORE_NAV_ITEMS`/`MORE_NAV_ITEMS`; `MobileTabBar` now renders only the 4 core items. New `MobileNavDrawer.tsx` renders a right-side `Sheet` (reusing `.nav`/`.nav a` styling from the sidebar) triggered by a new hamburger icon (`Icons.menu`) in `MobileTripHeader`'s top-right, listing Schedule/Explore/Members; closes on link click. Verified with Playwright at 375×812 — bottom bar shows exactly 4 uncrushed tabs, drawer opens with all 3 overflow items reachable.
 - Acceptance: bottom bar shows only Itinerary/Map/Collections/Budget at 375px with no crushed labels; Schedule/Explore/Members are reachable in ≤2 taps via the top-right hamburger drawer; all 7 destinations remain reachable somewhere.
 
 ### ODY-100 · Itinerary hero: weather/length/location row cramped on mobile — S, haiku
