@@ -9,16 +9,26 @@
 
 export const NOTE_TEXT_MAX = 20_000;
 export const NOTE_JSON_MAX = 100_000;
+/** Shared notes sections (ODY-104) — Important Reminders, Packing List, etc. */
+export const NOTE_SECTIONS_MAX = 20;
+export const NOTE_SECTION_TITLE_MAX = 80;
 
 export type TripNoteDoc = {
   type: "doc";
   content?: Array<Record<string, unknown>>;
 };
 
+export type TripNoteSection = {
+  id: string;
+  title: string;
+  text: string;
+};
+
 export type TripNoteContentV1 = {
   v: 1;
   text: string;
   doc: TripNoteDoc;
+  sections: TripNoteSection[];
 };
 
 const EMPTY_DOC: TripNoteDoc = {
@@ -27,7 +37,27 @@ const EMPTY_DOC: TripNoteDoc = {
 };
 
 export function emptyTripNote(): TripNoteContentV1 {
-  return { v: 1, text: "", doc: EMPTY_DOC };
+  return { v: 1, text: "", doc: EMPTY_DOC, sections: [] };
+}
+
+/** The starting sections a trip's shared notes seed with (ODY-104). */
+export function defaultNoteSections(): TripNoteSection[] {
+  return [
+    { id: "default-reminders", title: "Important Reminders", text: "" },
+    { id: "default-packing", title: "Packing List", text: "" },
+    { id: "default-todo", title: "To Do", text: "" },
+  ];
+}
+
+function isValidSection(v: unknown): v is TripNoteSection {
+  if (!v || typeof v !== "object") return false;
+  const s = v as Record<string, unknown>;
+  return typeof s.id === "string" && typeof s.title === "string" && typeof s.text === "string";
+}
+
+function normalizeSections(raw: unknown): TripNoteSection[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isValidSection).slice(0, NOTE_SECTIONS_MAX);
 }
 
 /** Build a minimal TipTap doc from plain lines (pinned notes → rich). */
@@ -77,7 +107,7 @@ export function normalizeTripNoteContent(raw: unknown): TripNoteContentV1 {
   const o = raw as Record<string, unknown>;
 
   if (o.v === 1 && typeof o.text === "string" && isDoc(o.doc)) {
-    return { v: 1, text: o.text, doc: o.doc };
+    return { v: 1, text: o.text, doc: o.doc, sections: normalizeSections(o.sections) };
   }
 
   // Legacy TipTap root document
@@ -86,32 +116,47 @@ export function normalizeTripNoteContent(raw: unknown): TripNoteContentV1 {
       v: 1,
       text: trimTrailingNewlines(plainTextFromDoc(raw)),
       doc: raw,
+      sections: [],
     };
   }
 
   // Legacy pinned plain notes
   if (typeof o.text === "string") {
-    return { v: 1, text: o.text, doc: docFromPlainText(o.text) };
+    return { v: 1, text: o.text, doc: docFromPlainText(o.text), sections: normalizeSections(o.sections) };
   }
 
   return emptyTripNote();
 }
 
-export function applyPlainPatch(text: string): TripNoteContentV1 {
-  return { v: 1, text, doc: docFromPlainText(text) };
+/** Patches rebuild `text`/`doc` from scratch (ODY-051) — always pass the
+ * current `sections` through so a main-note save can't drop them. */
+export function applyPlainPatch(text: string, sections: TripNoteSection[] = []): TripNoteContentV1 {
+  return { v: 1, text, doc: docFromPlainText(text), sections };
 }
 
-export function applyRichPatch(doc: TripNoteDoc): TripNoteContentV1 {
+export function applyRichPatch(doc: TripNoteDoc, sections: TripNoteSection[] = []): TripNoteContentV1 {
   return {
     v: 1,
     text: trimTrailingNewlines(plainTextFromDoc(doc)),
     doc,
+    sections,
   };
+}
+
+/** Patch just the sections, leaving the pinned text/doc untouched (ODY-104). */
+export function applySectionsPatch(
+  current: TripNoteContentV1,
+  sections: TripNoteSection[]
+): TripNoteContentV1 {
+  return { ...current, sections: normalizeSections(sections) };
 }
 
 export function assertNotePayloadSize(content: TripNoteContentV1): void {
   if (content.text.length > NOTE_TEXT_MAX) {
     throw new Error("Notes are too long");
+  }
+  if (content.sections.length > NOTE_SECTIONS_MAX) {
+    throw new Error("Too many sections");
   }
   if (JSON.stringify(content).length > NOTE_JSON_MAX) {
     throw new Error("Notes are too long");

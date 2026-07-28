@@ -462,6 +462,103 @@
 }
 .notes-editor::placeholder { color: var(--ink-3); font-style: italic; }
 
+/* Rendered checklist/bullet view (ODY-105) — shown blurred, in place of the
+ * raw textarea. Every non-blank line is a full-width text <button> so
+ * clicking it re-enters edit mode; checkboxes toggle without doing so. */
+.checklist-empty {
+  display: block;
+  width: 100%; text-align: left;
+  background: none; border: 0; padding: 0;
+  font: 15px/1.55 var(--font-body); font-style: italic; color: var(--ink-3);
+  cursor: pointer; min-height: 48px;
+}
+.checklist-view { display: flex; flex-direction: column; }
+.checklist-blank { height: 15px; }
+.checklist-line-btn {
+  display: block;
+  width: 100%; text-align: left;
+  background: none; border: 0; padding: 3px 2px;
+  border-radius: 6px;
+  font: 15px/1.55 var(--font-body); color: var(--ink);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.checklist-line-btn:hover { background: rgba(31,34,56,.04); }
+.checklist-bullet { padding-left: 16px; position: relative; }
+.checklist-bullet::before {
+  content: "•"; position: absolute; left: 2px; color: var(--ink-3);
+}
+.checklist-item {
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.checklist-item .checklist-line-btn { flex: 1; min-width: 0; }
+.checklist-item.checked .checklist-line-btn { color: var(--ink-3); text-decoration: line-through; }
+.checklist-checkbox-hit {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 32px;
+  cursor: pointer;
+}
+.checklist-checkbox-hit input {
+  width: 16px; height: 16px;
+  accent-color: var(--peri);
+  cursor: pointer;
+}
+
+/* Shared notes sections (ODY-104) — Important Reminders, Packing List, etc. */
+.note-sections {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.note-section {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+.note-section-head {
+  display: flex; align-items: center; gap: 6px;
+}
+.note-section-chevron-btn { flex: none; }
+.note-section-title {
+  flex: 1; min-width: 0;
+  border: 0; background: none; outline: none;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  padding: 4px 2px;
+  border-radius: 6px;
+  transition: background .15s ease;
+}
+.note-section-title:hover, .note-section-title:focus { background: var(--paper-3); }
+.note-section-title::placeholder { color: var(--ink-3); font-weight: 500; }
+.note-section-editor {
+  width: 100%; border: 0; background: transparent; resize: none;
+  overflow-y: hidden;
+  font: 14px/1.5 var(--font-body); color: var(--ink);
+  padding: 6px 2px 0; margin-top: 2px; outline: none;
+  min-height: 36px;
+}
+.note-section-editor::placeholder { color: var(--ink-3); font-style: italic; }
+
+.note-add-section, .note-add-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 12px;
+  padding: 8px 4px;
+  min-height: 40px;
+  background: none; border: 0;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--peri);
+  cursor: pointer;
+}
+.note-add-section:hover, .note-add-item:hover { text-decoration: underline; }
+.note-add-section .plus, .note-add-item .plus {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--peri-soft); color: var(--peri);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none;
+}
+
 /* Day-level notes — slimmer */
 .day-notes {
   margin: 10px 0 18px 38px;

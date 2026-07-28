@@ -157,6 +157,14 @@ export const exploreVibeSchema = z.object({
 
 /** Trip notes upsert patch (ODY-051) — plain OR TipTap doc, not both required. */
 const NOTE_TEXT_MAX = 20_000;
+/** Shared notes sections (ODY-104). */
+const NOTE_SECTIONS_MAX = 20;
+const NOTE_SECTION_TITLE_MAX = 80;
+const noteSectionSchema = z.object({
+  id: z.string().min(1).max(64),
+  title: z.string().max(NOTE_SECTION_TITLE_MAX),
+  text: z.string().max(NOTE_TEXT_MAX),
+});
 export const upsertNotePatchSchema = z.union([
   z.object({
     text: z.string().max(NOTE_TEXT_MAX),
@@ -166,6 +174,9 @@ export const upsertNotePatchSchema = z.union([
       .object({ type: z.literal("doc") })
       .passthrough()
       .refine((d) => JSON.stringify(d).length <= 100_000, "Notes are too long"),
+  }),
+  z.object({
+    sections: z.array(noteSectionSchema).max(NOTE_SECTIONS_MAX),
   }),
 ]);
 
