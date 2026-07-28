@@ -585,6 +585,20 @@
   border-left: 1px solid var(--rule-2);
 }
 
+/* Mobile "show N more events" cap toggle (ODY-101) — aligned under the
+ * timeline's own left indent (38px margin + 22px padding). */
+.day-more-toggle {
+  display: inline-flex; align-items: center;
+  min-height: 40px;
+  margin: 4px 0 4px 60px;
+  padding: 4px;
+  background: none; border: 0;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--peri);
+  cursor: pointer;
+}
+.day-more-toggle:hover { text-decoration: underline; }
+
 .event-row {
   position: relative;
   margin-bottom: 14px;
