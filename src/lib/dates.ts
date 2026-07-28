@@ -36,6 +36,16 @@ export function enumerateDays(start: Date, end: Date): Date[] {
   return days;
 }
 
+/**
+ * Weekday name for a stored trip/day Date (ODY-098). Uses the UTC calendar
+ * day so it always agrees with `formatDate`/`toDateInputValue` instead of
+ * drifting a day behind in negative-UTC-offset timezones.
+ */
+export function formatWeekday(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+}
+
 /** Key a date by its local calendar day (matches how Day rows are stored). */
 export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;

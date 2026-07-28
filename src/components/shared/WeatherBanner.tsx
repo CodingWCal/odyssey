@@ -33,7 +33,10 @@ export async function fetchWeather(destination: string, startDate: Date): Promis
 
     const { daily } = weather;
     const forecast = daily.time.map((date: string, i: number) => ({
-      date: new Date(date).toLocaleDateString("en-US", { weekday: "short" }),
+      // `date` is a "YYYY-MM-DD" destination-local calendar day from the
+      // forecast API — format in UTC so it doesn't drift a day in US
+      // timezones when parsed as UTC midnight (ODY-098 pattern).
+      date: new Date(date).toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }),
       high: daily.temperature_2m_max[i],
       low: daily.temperature_2m_min[i],
       condition: getConditionFromCode(daily.weathercode[i]),

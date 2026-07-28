@@ -128,8 +128,9 @@ Two editors write incompatible shapes into `Note.content`: itinerary `TripNotes`
 - Files: `src/app/trips/[tripId]/itinerary/actions.ts`, `src/app/trips/[tripId]/explore/actions.ts`.
 - Acceptance: mismatched `dayId`/`tripId` is rejected; honest same-trip creates still work.
 
-### ODY-098 · Day-of-week label off by one on itinerary — S, haiku
+### ODY-098 · Day-of-week label off by one on itinerary — S, haiku — ✅ DONE
 > **In plain terms:** A trip's day headers show the wrong weekday name — e.g. "Monday" next to "Tuesday, Aug 4." The calendar date is right; only the big weekday word is wrong.
+> Shipped: added `formatWeekday()` (UTC-safe) to `src/lib/dates.ts`, used in `DayBlock.tsx`. Swept the rest of the app for the same bug class (missing `timeZone: "UTC"` on stored trip/day dates) and fixed dashboard trip cards, schedule/budget/map/members date ranges, the map's per-day date label, and the weather forecast's weekday labels.
 `DayBlock.tsx:169` computes the weekday with `new Date(day.date).toLocaleDateString("en-US", { weekday: "long" })`, which resolves in the **browser's local timezone**. Day dates are stored as UTC-midnight (ODY-003) and `formatDate`/`formatShortDate` in `src/lib/utils.ts` already correctly pass `timeZone: "UTC"` for the adjacent date line, but this one call site doesn't — so on any negative-UTC-offset timezone (all of the US) the large weekday heading renders one day behind the correct date shown right next to it. Confirmed on-device 2026-07-27 (screenshot: "Monday" heading over "Tuesday, Aug 4" date line).
 - Fix: add `{ timeZone: "UTC" }` to the `toLocaleDateString` options at `DayBlock.tsx:169`, matching the pattern already used in `src/lib/utils.ts`. Prefer a shared `formatWeekday(date)` helper in `src/lib/dates.ts` (or `src/lib/utils.ts`) over a local one-off, and use it here.
 - Grep for any other bare `toLocaleDateString`/`toLocaleString` call sites on `Day`/`Trip` dates missing `timeZone: "UTC"` (revisit ODY-003's original audit) and fix those too.
@@ -295,9 +296,10 @@ scrolling back to the sidebar or menu. Forms are cramped; workflows interrupt fo
 - **Forms:** stacked layout on mobile (full-width inputs), adjust modal widths/padding for 375px viewport.
 - Acceptance: adding an event on mobile is as easy as desktop (no hand strain, no excessive scrolling); switching between tabs feels native and intuitive.
 
-### ODY-042 · Auto-sort itinerary events by start time — S, haiku — ⚠️ NEEDS REWORK
-> **In plain terms:** Events should always line up in time order — no mode to switch off. Dragging should still work if someone wants to nudge things around (e.g. two stops at the same time), but there is no "Manual" mode that turns off auto-sorting.
-**Current state (wrong shape — remove the toggle):** `DayBlock.tsx` shipped a "By time" / "Manual" toggle (`sortMode` state, `.day-sort` button group in the day header) where "Manual" mode disables time-sorting entirely and reverts to raw drag order, and "By time" mode disables the drag handle outright. That's not what's wanted.
+### ODY-042 · Auto-sort itinerary events by start time — S, haiku — ✅ DONE
+> **In plain terms:** Events should always line up in time order — no mode to switch off. Dragging still works if someone wants to nudge things around (e.g. two stops at the same time), but there is no "Manual" mode that turns off auto-sorting.
+> Shipped: removed the `sortMode` state and "By time"/"Manual" toggle from `DayBlock.tsx`'s day header entirely (and the now-dead `.day-sort*` CSS). `displayedEvents` is always `sortEventsByTime(events)`. Drag-and-drop stays enabled unconditionally and `handleDragEnd` now reorders against `displayedEvents`, persisting the new `orderIndex` as the tie-break among same-time/no-time events.
+**Previous state (now fixed):** `DayBlock.tsx` had shipped a "By time" / "Manual" toggle (`sortMode` state, `.day-sort` button group in the day header) where "Manual" mode disabled time-sorting entirely and reverted to raw drag order, and "By time" mode disabled the drag handle outright. That was not what was wanted.
 - **Remove** the `sortMode` state and the "By time" / "Manual" buttons from the day header entirely — no user-facing toggle.
 - **Always** render `displayedEvents = sortEventsByTime(events)` (already exists in `src/lib/sortEvents.ts` — untimed events sort last, ties break on `orderIndex`, no changes needed there).
 - **Keep drag-and-drop always enabled** (remove the `dragDisabled` prop path in `SortableEvent`/`handleDragEnd`) so a traveler can still reorder — dragging changes `orderIndex`, which only visibly matters as the tie-break among events sharing a start time (or no start time); events with distinct times stay time-ordered regardless of drag.

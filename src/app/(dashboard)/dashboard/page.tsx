@@ -8,7 +8,9 @@ import { resolveCover } from "@/components/trips/cover";
 import { clerkUserNeedsName } from "@/lib/auth";
 
 function fmtDate(d: Date) {
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  // Trip dates are UTC-midnight (ODY-003) — format in UTC so US timezones
+  // never see an off-by-one (ODY-098).
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 function daysBetween(a: Date, b: Date) {
