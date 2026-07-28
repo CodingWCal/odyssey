@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useLayoutEffect, useTransition } from "react";
 import { upsertNote } from "@/app/trips/[tripId]/notes/actions";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
@@ -20,8 +20,18 @@ export function TripNotes({ tripId, initialText, readOnly = false }: TripNotesPr
   const [value, setValue] = useState(initialText);
   const [focused, setFocused] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [isPending, startTransition] = useTransition();
   const lastSaved = useRef(initialText);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow to fit the note — no internal scrollbar on mobile (ODY-102).
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }, [value, collapsed]);
 
   function save() {
     if (value === lastSaved.current) return;
@@ -41,26 +51,39 @@ export function TripNotes({ tripId, initialText, readOnly = false }: TripNotesPr
 
   return (
     <div className={`notes-card ${focused ? "focused" : ""}`}>
-      <div className="notes-head">
+      <button
+        type="button"
+        className="notes-head"
+        onClick={() => setCollapsed((c) => !c)}
+        aria-expanded={!collapsed}
+      >
         <div className="left">
           <span className="notes-pin"><Icons.note size={14} /></span>
           <span className="notes-label">Trip notes — pinned</span>
         </div>
-        <span className={`save-pill ${isPending || saved ? "show" : ""} ${saved && !isPending ? "saved" : ""}`}>
-          <span className="dot" />
-          {isPending ? "Saving…" : "Saved just now"}
-        </span>
-      </div>
-      <textarea
-        className="notes-editor"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => { setFocused(false); save(); }}
-        placeholder={readOnly ? "No trip notes yet." : "What's the vibe? Confirmations, must-knows, packing reminders…"}
-        rows={2}
-        readOnly={readOnly}
-      />
+        <div className="right">
+          <span className={`save-pill ${isPending || saved ? "show" : ""} ${saved && !isPending ? "saved" : ""}`}>
+            <span className="dot" />
+            {isPending ? "Saving…" : "Saved just now"}
+          </span>
+          <span className={`notes-chevron${collapsed ? " collapsed" : ""}`} aria-hidden="true">
+            <Icons.chevron size={16} />
+          </span>
+        </div>
+      </button>
+      {!collapsed && (
+        <textarea
+          ref={textareaRef}
+          className="notes-editor"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => { setFocused(false); save(); }}
+          placeholder={readOnly ? "No trip notes yet." : "What's the vibe? Confirmations, must-knows, packing reminders…"}
+          rows={2}
+          readOnly={readOnly}
+        />
+      )}
     </div>
   );
 }

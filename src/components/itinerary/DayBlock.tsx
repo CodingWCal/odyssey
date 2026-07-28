@@ -139,11 +139,23 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
     const el = bodyRef.current;
     if (!el) return;
     if (collapsed) {
-      el.style.maxHeight = "0px";
+      // Seed a concrete pixel starting point before collapsing to 0 — a
+      // transition from "none" (our open resting value) doesn't animate,
+      // since "none" isn't an interpolable length (ODY-103).
+      el.style.maxHeight = el.scrollHeight + "px";
+      const raf = requestAnimationFrame(() => {
+        el.style.maxHeight = "0px";
+      });
+      return () => cancelAnimationFrame(raf);
     } else {
       el.style.maxHeight = el.scrollHeight + "px";
       const t = setTimeout(() => {
-        el.style.maxHeight = "3000px";
+        // No fixed ceiling once settled open (ODY-103) — mobile event
+        // cards can genuinely exceed any hardcoded cap (long wrapped
+        // addresses), and `overflow: hidden` would silently clip
+        // whatever renders past it, including the show-more/add-event
+        // controls after the event list.
+        el.style.maxHeight = "none";
       }, 360);
       return () => clearTimeout(t);
     }
