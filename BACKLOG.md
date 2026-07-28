@@ -404,11 +404,10 @@ After Explore/Collections shipped, `NAV_ITEMS` has 7 destinations; `.mobile-tab-
 > Shipped: `NAV_ITEMS` in `navItems.ts` gained a `core` flag, exported as `CORE_NAV_ITEMS`/`MORE_NAV_ITEMS`; `MobileTabBar` now renders only the 4 core items. New `MobileNavDrawer.tsx` renders a right-side `Sheet` (reusing `.nav`/`.nav a` styling from the sidebar) triggered by a new hamburger icon (`Icons.menu`) in `MobileTripHeader`'s top-right, listing Schedule/Explore/Members; closes on link click. Verified with Playwright at 375×812 — bottom bar shows exactly 4 uncrushed tabs, drawer opens with all 3 overflow items reachable.
 - Acceptance: bottom bar shows only Itinerary/Map/Collections/Budget at 375px with no crushed labels; Schedule/Explore/Members are reachable in ≤2 taps via the top-right hamburger drawer; all 7 destinations remain reachable somewhere.
 
-### ODY-100 · Itinerary hero: weather/length/location row cramped on mobile — S, haiku
+### ODY-100 · Itinerary hero: weather/length/location row cramped on mobile — S, haiku — ✅ DONE
 > **In plain terms:** The trip title card's weather, trip-length, and destination line look off-center and crowd together on a phone.
 `ItineraryHero.tsx:82-98`'s `.hero-row` (`display:flex; gap:18px; flex-wrap:wrap; font-size:13px`) relies purely on default flex-wrap with no dedicated small-screen breakpoint — the only hero-specific mobile rule is `.hero-title { font-size: 32px }` at `@media (max-width: 768px)` (`globals.css:1011`). There's no `<500px` rule for `.hero-row`/its children, so at phone width the wrapped items read off-center/uneven rather than a deliberate stacked layout. Confirmed on-device 2026-07-27 screenshot.
-- Add a `@media (max-width: 500px)` block for `.hero-row` (and children) that stacks weather / trip-length / location into a left-aligned column (or a tidy, evenly-spaced 2-line wrap) instead of relying on default flex-wrap.
-- Guardrails: no inline styles, no hardcoded hex, keep editorial type scale; pixel-faithful elsewhere (desktop/tablet unchanged).
+> Shipped: added `@media (max-width: 500px) { .hero-row { flex-direction: column; align-items: flex-start; gap: 8px; } .hero-row .dot { display: none; } }` — stacks the weather pill, "N days", "N planned events", and pinned destination into an evenly-spaced left-aligned column instead of wrapping mid-row with orphaned `·` separators. Verified with Playwright at 375px. No changes above 500px.
 - Acceptance: at 375px the hero's weather/length/location line reads left-aligned and evenly spaced with no visually off-center wrapping; desktop/tablet unchanged.
 
 ### ODY-060 · One Notes information architecture — S, sonnet

@@ -382,6 +382,18 @@
   color: rgba(255,255,255,.9);
 }
 
+/* Hero weather/length/location row on phones (ODY-100) — flex-wrap alone
+ * left these looking off-center with orphaned "·" separators at wrap
+ * points; stack them into an evenly-spaced left-aligned column instead. */
+@media (max-width: 500px) {
+  .hero-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .hero-row .dot { display: none; }
+}
+
 /* ─── Trip-level notes (pinned) ───────────────────────────────────── */
 
 .notes-card {
