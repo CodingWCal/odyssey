@@ -440,6 +440,17 @@ Raised alongside ODY-102 as a "maybe duo task" — bigger in scope (new named se
 - Guardrails: editor+ to add/edit/remove sections, viewers read-only (ODY-001); no new deps; editorial aesthetic; no inline styles/hardcoded hex.
 - Acceptance: a trip's notes show 3 default named sections if none exist yet; each section's title is editable, its body auto-grows with no internal scroll, and it collapses independently; sections can be added and removed; editing the main pinned note never drops sections and vice versa; viewers see sections read-only.
 
+### ODY-105 · Bullet points & interactive checklists in trip/section notes — M, sonnet (follow-up to ODY-104)
+> **In plain terms:** "Packing List" and "To Do" sections (and the main pinned note) are just plain paragraphs right now. Let people type a bullet or checklist line and get a real, tappable checkbox instead of a wall of text.
+Both `TripNotes`' pinned textarea and `NoteSection`'s per-section textarea are plain multi-line text with no structure. Checklists are the obvious fit for "Packing List"/"To Do" — this is the natural next step after ODY-104.
+- **Syntax (reuse ODY-039's established convention):** a line starting with `- ` or `* ` renders as a bullet; `- [ ] ` / `- [x] ` (or `* [ ]` / `* [x]`) renders as an interactive checkbox item. Storage stays plain text (no schema change) — the checkbox state lives in the `[ ]`/`[x]` marker itself, same string field already in `Note.content`.
+- **Interaction model:** blurred/idle state renders the parsed list (checkboxes + bullets + plain lines); tapping a checkbox toggles that one line's marker and autosaves immediately, **without** entering edit mode (checking off "milk" shouldn't require opening a text editor). Tapping the line's text (not the checkbox) focuses the raw textarea at that point so wording can be edited; on blur, re-render the parsed view.
+- **Adding items easily:** don't rely on users knowing the markdown-ish syntax — add a small "+ Add item" quick action (per section, and on the main note) that appends a `- [ ] ` line and focuses the textarea so they can type the item immediately.
+- New pure helper module (e.g. `src/lib/checklist.ts`): `parseChecklistLines`, `toggleChecklistLine`, `appendChecklistItem` — unit-test line-parsing edge cases (empty lines, mixed bullet/checkbox/plain, toggling preserves everything else).
+- Files: `src/components/itinerary/TripNotes.tsx`, `src/components/itinerary/NoteSection.tsx`, new shared render component (e.g. `ChecklistText.tsx`) so both surfaces share one implementation, `src/lib/checklist.ts`, `globals.css`.
+- Guardrails: editor+ can toggle/add/edit; viewers see checkboxes rendered but inert (ODY-001, matches existing read-only handling); no inline styles/hardcoded hex; no new deps.
+- Acceptance: typing `- [ ] buy sunscreen` and blurring shows a real checkbox; tapping it checks/unchecks and saves without opening the textarea; a plain `- ` line shows as a bullet; "+ Add item" inserts a new checklist line and focuses it; viewers can see but not toggle checkboxes.
+
 ### ODY-060 · One Notes information architecture — S, sonnet
 > **In plain terms:** There's a rich Notes page that never appears in the menu, while the itinerary has a separate notes box. Pick one home for trip notes.
 `/trips/[id]/notes` is orphaned from `NAV_ITEMS`; itinerary uses `TripNotes`. Confuses IA and worsens ODY-051.
