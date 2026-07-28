@@ -411,9 +411,16 @@
 }
 .notes-card .notes-head {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
+  width: 100%; margin-bottom: 10px;
+  /* Reset <button> defaults — this is a real button for keyboard/a11y
+   * (ODY-102), not a styled div. */
+  background: none; border: 0; padding: 0; margin-top: 0;
+  font: inherit; text-align: left; cursor: pointer;
 }
 .notes-card .notes-head .left {
+  display: flex; align-items: center; gap: 10px;
+}
+.notes-card .notes-head .right {
   display: flex; align-items: center; gap: 10px;
 }
 .notes-pin {
@@ -440,9 +447,15 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .35; transform: scale(.85); }
 }
+.notes-chevron {
+  display: inline-flex; color: var(--ink-3);
+  transition: transform .2s cubic-bezier(.4,0,.2,1);
+}
+.notes-chevron.collapsed { transform: rotate(-90deg); }
 
 .notes-editor {
   width: 100%; border: 0; background: transparent; resize: none;
+  overflow-y: hidden;
   font: 15px/1.55 var(--font-body); color: var(--ink);
   padding: 0; outline: none;
   min-height: 48px;
