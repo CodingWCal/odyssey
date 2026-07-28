@@ -2583,6 +2583,25 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .wz-next:disabled { opacity: .45; cursor: default; }
 
+/* Mobile sheet: .wizard uses its own head/body/foot classes instead of the
+ * .modal-body/.modal-foot convention, so it misses the sheet's scroll +
+ * sticky-footer treatment by default (ODY-099) — mirror it here, scoped to
+ * the sheet, without touching desktop's fixed-width modal padding. */
+.sheet-panel .wizard {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.sheet-panel .wizard-foot {
+  position: sticky;
+  bottom: 0;
+  margin: 24px -30px 0;
+  padding: 14px 30px calc(14px + env(safe-area-inset-bottom));
+  background: var(--paper-2);
+  border-top: 1px solid var(--rule);
+}
+
 /* ── Toast (ODY-013 / ODY-058) ───────────────────────────────────── */
 .toast-stack {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);

@@ -136,11 +136,10 @@ Two editors write incompatible shapes into `Note.content`: itinerary `TripNotes`
 - Grep for any other bare `toLocaleDateString`/`toLocaleString` call sites on `Day`/`Trip` dates missing `timeZone: "UTC"` (revisit ODY-003's original audit) and fix those too.
 - Acceptance: for a trip starting Monday Aug 3, Day 1 shows "Monday" (not "Sunday") in every US timezone; the date line and weekday heading always agree.
 
-### ODY-099 · New Trip wizard: submit button unreachable on mobile — S, haiku
+### ODY-099 · New Trip wizard: submit button unreachable on mobile — S, haiku — ✅ DONE
 > **In plain terms:** On a phone, the "Create trip" button at the bottom of the new-trip form can be scrolled past or cut off — it's hard to actually submit.
 `NewTripWizard.tsx` renders its own `.wizard` / `.wizard-body` / `.wizard-foot` classes instead of the `.modal-head` / `.modal-body` / `.modal-foot` convention `Modal.tsx` documents it expects callers to use (`src/components/shared/Modal.tsx:18`). On mobile, `Modal` renders the shadcn `Sheet` (`.sheet-panel`, `max-height: 90vh`), and only `.sheet-panel .modal-body { overflow-y: auto }` / `.sheet-panel .modal-foot { position: sticky; bottom: 0 }` (`globals.css:853-861`) get scroll + sticky-footer treatment. `.wizard-foot` (`globals.css:2597`) gets neither, so on a tall step (e.g. vibes/cover-mood picker) the submit button can sit past the visible sheet height with no guaranteed way to reach it.
-- Reuse `.modal-body` / `.modal-foot` on `NewTripWizard`'s structural divs (additive classNames are fine, e.g. `className="wizard-body modal-body"`, keeping existing `.wizard-*` visual styling).
-- Check `.wizard-foot`'s `margin-top: 24px` (`globals.css:2597`) doesn't fight the sticky footer's own padding once `.modal-foot` applies.
+> Shipped: reusing `.modal-body`/`.modal-foot` directly would have double-applied desktop's `.modal-body` padding on top of `.wizard`'s own (breaking the desktop layout), so instead added scoped rules — `.sheet-panel .wizard { overflow-y: auto; max-height: 90vh }` and `.sheet-panel .wizard-foot { position: sticky; bottom: 0; ... }` — mirroring the same scroll + sticky-footer treatment without touching desktop. Verified with Playwright at 375×812: the submit button sits in a sticky bar at the bottom of the sheet after scrolling through all of step 3 (name, budget, invites, 8 cover moods).
 - Acceptance: at 375px, every wizard step's primary action ("Create trip ✨") stays reachable — sticky or scrollable within the sheet — no clipped/unreachable submit button on any step.
 
 ---
@@ -791,7 +790,7 @@ Collaboration feels static without realtime (ODY-070).
 - Full LLM Explore ranking — optional once a provider key exists (ODY-049 MVP already ships Nominatim).
 
 ## Suggested session order
-1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅ → ODY-098 (weekday label off-by-one) → ODY-099 (wizard submit button unreachable, mobile)
+1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅ → ODY-098 (weekday label off-by-one) ✅ → ODY-099 (wizard submit button unreachable, mobile) ✅
 2. **P1 hardening:** ODY-053 ✅ → ODY-054 ✅ → ODY-055 ✅ → ODY-056 ✅ → ODY-057 ✅ → ODY-058 ✅
 3. **UX quick wins (safe, no schema):** ODY-081 ✅ → ODY-080 ✅ → ODY-079 ✅ → ODY-076 ✅ → ODY-090 ✅ → ODY-091 ✅ → ODY-092 ✅ → ODY-062 → ODY-063 (⌘K removed; empty-state remains)
 4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060/100 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082 · ODY-093 (named collection lists)
