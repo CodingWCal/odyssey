@@ -7,20 +7,26 @@ import { upsertNotePatchSchema } from "@/lib/validations";
 import {
   applyPlainPatch,
   applyRichPatch,
+  applySectionsPatch,
   assertNotePayloadSize,
+  normalizeTripNoteContent,
   type TripNoteDoc,
+  type TripNoteSection,
 } from "@/lib/tripNotes";
 
 const getDbUser = getOrCreateDbUser;
 
 /**
- * Upsert trip-level notes (ODY-051 / ODY-056).
- * Plain `{ text }` and TipTap `{ doc }` patches write one v1 shape so
- * neither surface blanks the other. Payload size is capped (ODY-056).
+ * Upsert trip-level notes (ODY-051 / ODY-056 / ODY-104).
+ * Plain `{ text }`, TipTap `{ doc }`, and `{ sections }` patches all write
+ * the same v1 shape. The text/doc patches rebuild content from scratch, so
+ * we read the existing row first and carry over whatever the current patch
+ * doesn't touch — otherwise saving the pinned note would drop sections and
+ * vice versa. Payload size is capped (ODY-056).
  */
 export async function upsertNote(
   tripId: string,
-  patch: { text: string } | { doc: object }
+  patch: { text: string } | { doc: object } | { sections: TripNoteSection[] }
 ) {
   const dbUser = await getDbUser();
 
@@ -28,10 +34,15 @@ export async function upsertNote(
 
   const validated = upsertNotePatchSchema.parse(patch);
 
+  const existing = await db.note.findUnique({ where: { tripId }, select: { content: true } });
+  const current = normalizeTripNoteContent(existing?.content);
+
   const next =
     "text" in validated
-      ? applyPlainPatch(validated.text)
-      : applyRichPatch(validated.doc as TripNoteDoc);
+      ? applyPlainPatch(validated.text, current.sections)
+      : "doc" in validated
+        ? applyRichPatch(validated.doc as TripNoteDoc, current.sections)
+        : applySectionsPatch(current, validated.sections);
 
   assertNotePayloadSize(next);
 

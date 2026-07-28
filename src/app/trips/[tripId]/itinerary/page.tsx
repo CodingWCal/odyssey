@@ -30,7 +30,7 @@ export default async function ItineraryPage({ params }: Props) {
   const dateRange = `${formatShortDate(trip.startDate)} – ${formatShortDate(trip.endDate)}`;
   const members = trip.members.map((m: (typeof trip.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" }));
   const { head, tail } = titleParts(trip.title);
-  const noteText = normalizeTripNoteContent(trip.note?.content).text;
+  const note = normalizeTripNoteContent(trip.note?.content);
   const readOnly = trip.myRole === "viewer"; // ODY-001
 
   return (
@@ -54,7 +54,7 @@ export default async function ItineraryPage({ params }: Props) {
         canEdit={!readOnly}
       />
 
-      <TripNotes tripId={tripId} initialText={noteText} readOnly={readOnly} />
+      <TripNotes tripId={tripId} initialText={note.text} initialSections={note.sections} readOnly={readOnly} />
 
       {totalEvents === 0 && trip.days.length > 0 && (
         <FirstSteps
