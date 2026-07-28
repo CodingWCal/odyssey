@@ -462,6 +462,49 @@
 }
 .notes-editor::placeholder { color: var(--ink-3); font-style: italic; }
 
+/* Rendered checklist/bullet view (ODY-105) — shown blurred, in place of the
+ * raw textarea. Every non-blank line is a full-width text <button> so
+ * clicking it re-enters edit mode; checkboxes toggle without doing so. */
+.checklist-empty {
+  display: block;
+  width: 100%; text-align: left;
+  background: none; border: 0; padding: 0;
+  font: 15px/1.55 var(--font-body); font-style: italic; color: var(--ink-3);
+  cursor: pointer; min-height: 48px;
+}
+.checklist-view { display: flex; flex-direction: column; }
+.checklist-blank { height: 15px; }
+.checklist-line-btn {
+  display: block;
+  width: 100%; text-align: left;
+  background: none; border: 0; padding: 3px 2px;
+  border-radius: 6px;
+  font: 15px/1.55 var(--font-body); color: var(--ink);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.checklist-line-btn:hover { background: rgba(31,34,56,.04); }
+.checklist-bullet { padding-left: 16px; position: relative; }
+.checklist-bullet::before {
+  content: "•"; position: absolute; left: 2px; color: var(--ink-3);
+}
+.checklist-item {
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.checklist-item .checklist-line-btn { flex: 1; min-width: 0; }
+.checklist-item.checked .checklist-line-btn { color: var(--ink-3); text-decoration: line-through; }
+.checklist-checkbox-hit {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 32px;
+  cursor: pointer;
+}
+.checklist-checkbox-hit input {
+  width: 16px; height: 16px;
+  accent-color: var(--peri);
+  cursor: pointer;
+}
+
 /* Shared notes sections (ODY-104) — Important Reminders, Packing List, etc. */
 .note-sections {
   display: flex; flex-direction: column; gap: 10px;
@@ -498,7 +541,7 @@
 }
 .note-section-editor::placeholder { color: var(--ink-3); font-style: italic; }
 
-.note-add-section {
+.note-add-section, .note-add-item {
   display: inline-flex; align-items: center; gap: 8px;
   margin-top: 12px;
   padding: 8px 4px;
@@ -508,8 +551,8 @@
   color: var(--peri);
   cursor: pointer;
 }
-.note-add-section:hover { text-decoration: underline; }
-.note-add-section .plus {
+.note-add-section:hover, .note-add-item:hover { text-decoration: underline; }
+.note-add-section .plus, .note-add-item .plus {
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--peri-soft); color: var(--peri);
   display: inline-flex; align-items: center; justify-content: center;
