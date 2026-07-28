@@ -86,33 +86,22 @@ function writeCache(key: string, data: GeoSuggestion[]) {
 }
 
 /**
- * Search Nominatim for up to `limit` place suggestions. Returns [] on soft
- * network failure. Throws GeocodeRateLimitError when `userKey` is over quota
- * on a cache miss.
+ * One cached, rate-limited Nominatim search for the exact query string given
+ * (no biasing) — the shared building block `searchPlaces` calls once or
+ * twice (ODY-106's fallback).
  */
-export async function searchPlaces(
-  query: string,
-  limit = 5,
-  opts?: { userKey?: string; near?: string }
-): Promise<GeoSuggestion[]> {
-  const raw = query.trim();
-  if (raw.length < 3) return [];
-  // Bias bare names toward the trip destination (ODY-091). The effective query
-  // flows into the cache key too, so biased/unbiased lookups stay distinct.
-  const q = buildBiasedQuery(raw, opts?.near);
-  const boundedLimit = Math.min(Math.max(limit, 1), 5);
-
-  const key = cacheKey(q, boundedLimit);
+async function fetchOnce(q: string, limit: number, userKey?: string): Promise<GeoSuggestion[]> {
+  const key = cacheKey(q, limit);
   const cached = readCache(key);
   if (cached) return cached;
 
-  if (opts?.userKey) {
-    assertGeocodeAllowed(opts.userKey);
+  if (userKey) {
+    assertGeocodeAllowed(userKey);
   }
 
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=${boundedLimit}`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=${limit}`,
       {
         headers: {
           "Accept-Language": "en",
@@ -136,6 +125,32 @@ export async function searchPlaces(
     if (err instanceof GeocodeRateLimitError) throw err;
     return [];
   }
+}
+
+/**
+ * Search Nominatim for up to `limit` place suggestions. Returns [] on soft
+ * network failure. Throws GeocodeRateLimitError when `userKey` is over quota
+ * on a cache miss.
+ */
+export async function searchPlaces(
+  query: string,
+  limit = 5,
+  opts?: { userKey?: string; near?: string }
+): Promise<GeoSuggestion[]> {
+  const raw = query.trim();
+  if (raw.length < 3) return [];
+  // Bias bare names toward the trip destination (ODY-091).
+  const biased = buildBiasedQuery(raw, opts?.near);
+  const boundedLimit = Math.min(Math.max(limit, 1), 5);
+
+  const primary = await fetchOnce(biased, boundedLimit, opts?.userKey);
+  if (primary.length > 0 || biased === raw) return primary;
+
+  // A biased miss doesn't mean the place doesn't exist — it often means the
+  // place (e.g. a departure airport) just isn't located in/near the trip
+  // destination the bias appended. Fall back to the traveler's exact,
+  // unbiased query before giving up (ODY-106).
+  return fetchOnce(raw, boundedLimit, opts?.userKey);
 }
 
 /** Resolve an address to its best-match coordinates, or null. */
