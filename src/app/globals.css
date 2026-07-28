@@ -382,6 +382,18 @@
   color: rgba(255,255,255,.9);
 }
 
+/* Hero weather/length/location row on phones (ODY-100) — flex-wrap alone
+ * left these looking off-center with orphaned "·" separators at wrap
+ * points; stack them into an evenly-spaced left-aligned column instead. */
+@media (max-width: 500px) {
+  .hero-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .hero-row .dot { display: none; }
+}
+
 /* ─── Trip-level notes (pinned) ───────────────────────────────────── */
 
 .notes-card {
@@ -548,30 +560,8 @@
   font-family: var(--font-mono);
   letter-spacing: .02em;
 }
-.day-sort {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-  align-items: center;
-}
-.day-sort-btn {
-  padding: 4px 10px;
-  font-size: 11.5px;
-  letter-spacing: .02em;
-  border: 1px solid var(--rule-2);
-  border-radius: var(--radius-md);
-  background: var(--paper);
-  color: var(--ink-3);
-  cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-}
-.day-sort-btn:hover { color: var(--ink-2); border-color: var(--rule); }
-.day-sort-btn.on {
-  background: var(--peri-soft);
-  border-color: var(--peri);
-  color: var(--peri);
-}
 .day-count {
+  margin-left: auto;
   font-size: 11.5px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
@@ -594,6 +584,20 @@
   padding-left: 22px;
   border-left: 1px solid var(--rule-2);
 }
+
+/* Mobile "show N more events" cap toggle (ODY-101) — aligned under the
+ * timeline's own left indent (38px margin + 22px padding). */
+.day-more-toggle {
+  display: inline-flex; align-items: center;
+  min-height: 40px;
+  margin: 4px 0 4px 60px;
+  padding: 4px;
+  background: none; border: 0;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--peri);
+  cursor: pointer;
+}
+.day-more-toggle:hover { text-decoration: underline; }
 
 .event-row {
   position: relative;
@@ -1027,10 +1031,37 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     border-radius: 8px;
   }
   .mobile-trip-header .title {
+    flex: 1; min-width: 0;
     font-family: var(--font-display);
     font-size: 17px;
     color: var(--ink);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .mobile-trip-header .menu-trigger {
+    flex: none;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2);
+    border-radius: 8px;
+    background: none; border: 0; cursor: pointer;
+  }
+  .mobile-trip-header .menu-trigger:hover { background: rgba(31,34,56,.04); color: var(--ink); }
+
+  /* Overflow-tabs drawer (ODY-059) — right-side sheet with the non-core nav items. */
+  .nav-drawer {
+    background: var(--paper-2) !important;
+    border-left: 1px solid var(--rule) !important;
+    width: 76vw !important;
+    max-width: 280px !important;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)) !important;
+  }
+  .nav-drawer-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 4px;
   }
 
   .map-layout { padding-top: calc(52px + env(safe-area-inset-top)); }
@@ -2604,6 +2635,25 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   transition: opacity .15s ease;
 }
 .wz-next:disabled { opacity: .45; cursor: default; }
+
+/* Mobile sheet: .wizard uses its own head/body/foot classes instead of the
+ * .modal-body/.modal-foot convention, so it misses the sheet's scroll +
+ * sticky-footer treatment by default (ODY-099) — mirror it here, scoped to
+ * the sheet, without touching desktop's fixed-width modal padding. */
+.sheet-panel .wizard {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.sheet-panel .wizard-foot {
+  position: sticky;
+  bottom: 0;
+  margin: 24px -30px 0;
+  padding: 14px 30px calc(14px + env(safe-area-inset-bottom));
+  background: var(--paper-2);
+  border-top: 1px solid var(--rule);
+}
 
 /* ── Toast (ODY-013 / ODY-058) ───────────────────────────────────── */
 .toast-stack {

@@ -16,7 +16,7 @@ export default async function MapPage({ params }: Props) {
 
   const savedPlaces = await listPlaces(tripId);
 
-  const dateRange = `${new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  const dateRange = `${new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
 
   // Build day-grouped events with a running global index across all geocoded
   // events, in itinerary order (day date → event orderIndex).
@@ -26,7 +26,7 @@ export default async function MapPage({ params }: Props) {
 
   trip.days.forEach((d: (typeof trip.days)[number], di: number) => {
     const dayLabel = `Day ${String(di + 1).padStart(2, "0")}`;
-    const dayDate = new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dayDate = new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
     const dayEvents: MapEvent[] = [];
     d.events.forEach((e: (typeof d.events)[number]) => {
       if (e.lat == null || e.lng == null) return;

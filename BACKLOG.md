@@ -128,6 +128,20 @@ Two editors write incompatible shapes into `Note.content`: itinerary `TripNotes`
 - Files: `src/app/trips/[tripId]/itinerary/actions.ts`, `src/app/trips/[tripId]/explore/actions.ts`.
 - Acceptance: mismatched `dayId`/`tripId` is rejected; honest same-trip creates still work.
 
+### ODY-098 · Day-of-week label off by one on itinerary — S, haiku — ✅ DONE
+> **In plain terms:** A trip's day headers show the wrong weekday name — e.g. "Monday" next to "Tuesday, Aug 4." The calendar date is right; only the big weekday word is wrong.
+> Shipped: added `formatWeekday()` (UTC-safe) to `src/lib/dates.ts`, used in `DayBlock.tsx`. Swept the rest of the app for the same bug class (missing `timeZone: "UTC"` on stored trip/day dates) and fixed dashboard trip cards, schedule/budget/map/members date ranges, the map's per-day date label, and the weather forecast's weekday labels.
+`DayBlock.tsx:169` computes the weekday with `new Date(day.date).toLocaleDateString("en-US", { weekday: "long" })`, which resolves in the **browser's local timezone**. Day dates are stored as UTC-midnight (ODY-003) and `formatDate`/`formatShortDate` in `src/lib/utils.ts` already correctly pass `timeZone: "UTC"` for the adjacent date line, but this one call site doesn't — so on any negative-UTC-offset timezone (all of the US) the large weekday heading renders one day behind the correct date shown right next to it. Confirmed on-device 2026-07-27 (screenshot: "Monday" heading over "Tuesday, Aug 4" date line).
+- Fix: add `{ timeZone: "UTC" }` to the `toLocaleDateString` options at `DayBlock.tsx:169`, matching the pattern already used in `src/lib/utils.ts`. Prefer a shared `formatWeekday(date)` helper in `src/lib/dates.ts` (or `src/lib/utils.ts`) over a local one-off, and use it here.
+- Grep for any other bare `toLocaleDateString`/`toLocaleString` call sites on `Day`/`Trip` dates missing `timeZone: "UTC"` (revisit ODY-003's original audit) and fix those too.
+- Acceptance: for a trip starting Monday Aug 3, Day 1 shows "Monday" (not "Sunday") in every US timezone; the date line and weekday heading always agree.
+
+### ODY-099 · New Trip wizard: submit button unreachable on mobile — S, haiku — ✅ DONE
+> **In plain terms:** On a phone, the "Create trip" button at the bottom of the new-trip form can be scrolled past or cut off — it's hard to actually submit.
+`NewTripWizard.tsx` renders its own `.wizard` / `.wizard-body` / `.wizard-foot` classes instead of the `.modal-head` / `.modal-body` / `.modal-foot` convention `Modal.tsx` documents it expects callers to use (`src/components/shared/Modal.tsx:18`). On mobile, `Modal` renders the shadcn `Sheet` (`.sheet-panel`, `max-height: 90vh`), and only `.sheet-panel .modal-body { overflow-y: auto }` / `.sheet-panel .modal-foot { position: sticky; bottom: 0 }` (`globals.css:853-861`) get scroll + sticky-footer treatment. `.wizard-foot` (`globals.css:2597`) gets neither, so on a tall step (e.g. vibes/cover-mood picker) the submit button can sit past the visible sheet height with no guaranteed way to reach it.
+> Shipped: reusing `.modal-body`/`.modal-foot` directly would have double-applied desktop's `.modal-body` padding on top of `.wizard`'s own (breaking the desktop layout), so instead added scoped rules — `.sheet-panel .wizard { overflow-y: auto; max-height: 90vh }` and `.sheet-panel .wizard-foot { position: sticky; bottom: 0; ... }` — mirroring the same scroll + sticky-footer treatment without touching desktop. Verified with Playwright at 375×812: the submit button sits in a sticky bar at the bottom of the sheet after scrolling through all of step 3 (name, budget, invites, 8 cover moods).
+- Acceptance: at 375px, every wizard step's primary action ("Create trip ✨") stays reachable — sticky or scrollable within the sheet — no clipped/unreachable submit button on any step.
+
 ---
 
 ## P1 — Refactors & Robustness
@@ -281,15 +295,15 @@ scrolling back to the sidebar or menu. Forms are cramped; workflows interrupt fo
 - **Forms:** stacked layout on mobile (full-width inputs), adjust modal widths/padding for 375px viewport.
 - Acceptance: adding an event on mobile is as easy as desktop (no hand strain, no excessive scrolling); switching between tabs feels native and intuitive.
 
-### ODY-042 · Auto-sort itinerary events by start time — M, sonnet
-> **In plain terms:** Events should line up in time order on their own instead of making you drag every one into place.
-Events currently render only by `orderIndex` (manual dnd-kit order via
-`reorderEvents`). Add time-aware ordering without breaking drag-to-reorder.
-- Add a per-day sort mode: "By time" (default) vs "Manual" — a small toggle in the day header (`src/components/itinerary/DayBlock.tsx`). Persist per-trip only if trivial (Trip field via `prisma db push`, no migrations dir); otherwise per-card local state defaulting to "By time".
-- "By time": sort by `startTime` ("HH:MM" ascending); events with no start time sort last, keeping their `orderIndex` among themselves. Disable the drag handle in this mode. "Manual": current dnd-kit behavior untouched.
-- Put the sort in a pure helper in `src/lib` (e.g. `sortEventsByTime`) and unit-test it (Vitest, matching `src/lib/__tests__` patterns): empty-times-last, stable tie-break, 12h/24h-agnostic.
-- Guardrails: no new deps, no inline styles, editorial aesthetic intact.
-- Acceptance: events with start times appear chronologically by default; drag reorder still works in Manual mode; helper is unit-tested.
+### ODY-042 · Auto-sort itinerary events by start time — S, haiku — ✅ DONE
+> **In plain terms:** Events should always line up in time order — no mode to switch off. Dragging still works if someone wants to nudge things around (e.g. two stops at the same time), but there is no "Manual" mode that turns off auto-sorting.
+> Shipped: removed the `sortMode` state and "By time"/"Manual" toggle from `DayBlock.tsx`'s day header entirely (and the now-dead `.day-sort*` CSS). `displayedEvents` is always `sortEventsByTime(events)`. Drag-and-drop stays enabled unconditionally and `handleDragEnd` now reorders against `displayedEvents`, persisting the new `orderIndex` as the tie-break among same-time/no-time events.
+**Previous state (now fixed):** `DayBlock.tsx` had shipped a "By time" / "Manual" toggle (`sortMode` state, `.day-sort` button group in the day header) where "Manual" mode disabled time-sorting entirely and reverted to raw drag order, and "By time" mode disabled the drag handle outright. That was not what was wanted.
+- **Remove** the `sortMode` state and the "By time" / "Manual" buttons from the day header entirely — no user-facing toggle.
+- **Always** render `displayedEvents = sortEventsByTime(events)` (already exists in `src/lib/sortEvents.ts` — untimed events sort last, ties break on `orderIndex`, no changes needed there).
+- **Keep drag-and-drop always enabled** (remove the `dragDisabled` prop path in `SortableEvent`/`handleDragEnd`) so a traveler can still reorder — dragging changes `orderIndex`, which only visibly matters as the tie-break among events sharing a start time (or no start time); events with distinct times stay time-ordered regardless of drag.
+- Fix `handleDragEnd` (`DayBlock.tsx:152-167`) to compute old/new index against `displayedEvents` (what's actually rendered/dragged), not the raw `events` state, then persist the resulting `orderIndex` values via `reorderEvents` as before.
+- Acceptance: events with start times always appear chronologically, with no way to turn that off; drag-and-drop still works (visibly reorders same-time/no-time events; timed events snap back to time order); no leftover "By time"/"Manual" UI.
 
 ### ODY-047 · Cover "skin" doesn't carry to the itinerary page — S, sonnet
 > **In plain terms:** The cover look you pick when creating a trip shows on the dashboard card but the itinerary page ignores it and always goes purple. This makes the itinerary match your pick.
@@ -383,12 +397,24 @@ are displayed raw, so everything reads as military time.
 - Time *inputs* may stay native (`<input type="time">` renders per browser locale) — this ticket is about display.
 - Acceptance: toggling the trip preference flips every displayed time between 2:30 PM and 14:30; stored values unchanged; new util unit-tested.
 
-### ODY-059 · Mobile nav for 7+ trip tabs — M, sonnet
-> **In plain terms:** The phone bottom bar now has too many tabs (Explore, Collections, …) so labels crush. Make switching sections usable at 375px.
-After Explore/Collections shipped, `NAV_ITEMS` has 7 destinations; `.mobile-tab-bar` squeezes labels (~50px each).
-- Overflow pattern: primary 4–5 tabs + "More" sheet, or scrollable tab strip with ≥40px targets; keep editorial look.
-- Files: `src/components/trips/navItems.ts`, `MobileTabBar.tsx`, `globals.css`.
-- Acceptance: no crushed/illegible labels at 375px; all sections still reachable in ≤2 taps.
+### ODY-059 · Mobile nav for 7+ trip tabs — M, sonnet — ✅ DONE
+> **In plain terms:** The phone bottom bar now has too many tabs (Explore, Collections, …) so labels crush. Keep the four tabs people use every day on the bottom bar and tuck the rest behind a hamburger menu.
+After Explore/Collections shipped, `NAV_ITEMS` has 7 destinations; `.mobile-tab-bar` squeezes labels (~50px each) — confirmed cramped on-device (2026-07-27 screenshot, all 7 items visible and tight at 375px).
+- **Decision:** bottom tab bar keeps exactly 4 core destinations — Itinerary, Map, Collections, Budget. Everything else (Schedule, Explore, Members) moves into a hamburger-icon drawer/sheet nav triggered from the top-right of the trip header.
+> Shipped: `NAV_ITEMS` in `navItems.ts` gained a `core` flag, exported as `CORE_NAV_ITEMS`/`MORE_NAV_ITEMS`; `MobileTabBar` now renders only the 4 core items. New `MobileNavDrawer.tsx` renders a right-side `Sheet` (reusing `.nav`/`.nav a` styling from the sidebar) triggered by a new hamburger icon (`Icons.menu`) in `MobileTripHeader`'s top-right, listing Schedule/Explore/Members; closes on link click. Verified with Playwright at 375×812 — bottom bar shows exactly 4 uncrushed tabs, drawer opens with all 3 overflow items reachable.
+- Acceptance: bottom bar shows only Itinerary/Map/Collections/Budget at 375px with no crushed labels; Schedule/Explore/Members are reachable in ≤2 taps via the top-right hamburger drawer; all 7 destinations remain reachable somewhere.
+
+### ODY-100 · Itinerary hero: weather/length/location row cramped on mobile — S, haiku — ✅ DONE
+> **In plain terms:** The trip title card's weather, trip-length, and destination line look off-center and crowd together on a phone.
+`ItineraryHero.tsx:82-98`'s `.hero-row` (`display:flex; gap:18px; flex-wrap:wrap; font-size:13px`) relies purely on default flex-wrap with no dedicated small-screen breakpoint — the only hero-specific mobile rule is `.hero-title { font-size: 32px }` at `@media (max-width: 768px)` (`globals.css:1011`). There's no `<500px` rule for `.hero-row`/its children, so at phone width the wrapped items read off-center/uneven rather than a deliberate stacked layout. Confirmed on-device 2026-07-27 screenshot.
+> Shipped: added `@media (max-width: 500px) { .hero-row { flex-direction: column; align-items: flex-start; gap: 8px; } .hero-row .dot { display: none; } }` — stacks the weather pill, "N days", "N planned events", and pinned destination into an evenly-spaced left-aligned column instead of wrapping mid-row with orphaned `·` separators. Verified with Playwright at 375px. No changes above 500px.
+- Acceptance: at 375px the hero's weather/length/location line reads left-aligned and evenly spaced with no visually off-center wrapping; desktop/tablet unchanged.
+
+### ODY-101 · Cap mobile day view to 5 events + "show more"; confirm day collapse works on mobile — S, haiku — ✅ DONE
+> **In plain terms:** A busy day can list a dozen events, which turns into a long scroll on a phone. Show the first 5 on mobile with a "Show N more" toggle to reveal the rest, and make sure tapping a day header to collapse/expand it works on mobile too.
+`DayBlock.tsx` renders every event in `displayedEvents` with no cap, so a dense day is a long uninterrupted scroll on a 375px screen. Desktop is fine (more vertical room, less scroll fatigue) — this is mobile-only, using the existing `useIsMobile()` hook (`src/lib/hooks/useIsMobile.ts`, 768px breakpoint, same one `Modal.tsx` uses).
+> Shipped: `DayBlock` now slices to `displayedEvents.slice(0, 5)` on mobile (`isMobile && !showAllMobile`), with a `.day-more-toggle` "Show N more events" / "Show less" button (periwinkle, `.notes-toggle`-style). Drag-and-drop reorders within the visible slice only; hidden events keep their relative order and get renumbered into the final `orderIndex` alongside the visible ones. Day collapse (`.day-head` onClick) was already unconditional in the code and confirmed working correctly on mobile with Playwright — no fix needed there, just verification. Desktop/tablet always renders every event (no cap). Verified with Playwright at 375×900: 8-event day shows 5 + "Show 3 more events" → expands to 8 + "Show less" → re-collapses to 5; day-head tap toggles the `collapsed` class.
+- Acceptance: on a day with >5 events at 375px, only 5 show plus a "Show N more" toggle that reveals the rest; desktop is unaffected (all events always shown); tapping a day header on mobile collapses/expands it.
 
 ### ODY-060 · One Notes information architecture — S, sonnet
 > **In plain terms:** There's a rich Notes page that never appears in the menu, while the itinerary has a separate notes box. Pick one home for trip notes.
@@ -769,10 +795,10 @@ Collaboration feels static without realtime (ODY-070).
 - Full LLM Explore ranking — optional once a provider key exists (ODY-049 MVP already ships Nominatim).
 
 ## Suggested session order
-1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅
+1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅ → ODY-098 (weekday label off-by-one) ✅ → ODY-099 (wizard submit button unreachable, mobile) ✅
 2. **P1 hardening:** ODY-053 ✅ → ODY-054 ✅ → ODY-055 ✅ → ODY-056 ✅ → ODY-057 ✅ → ODY-058 ✅
 3. **UX quick wins (safe, no schema):** ODY-081 ✅ → ODY-080 ✅ → ODY-079 ✅ → ODY-076 ✅ → ODY-090 ✅ → ODY-091 ✅ → ODY-092 ✅ → ODY-062 → ODY-063 (⌘K removed; empty-state remains)
-4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082 · ODY-093 (named collection lists)
+4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060/100 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082 · ODY-093 (named collection lists)
 5. **Launch blockers (human + eng):** ODY-036 → ODY-037
 6. **P2 residual polish:** ODY-061 → ODY-020/022/023/024/026
 7. **P3 delight:** ODY-094 (Splitwise schema+UX) · ODY-097 (budget UX / per-event split view) · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 · ODY-096 (mobile commute overflow)

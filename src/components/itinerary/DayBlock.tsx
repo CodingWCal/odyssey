@@ -26,18 +26,18 @@ import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import type { TripDay } from "@/types";
 import { formatDate, type TimeFormat } from "@/lib/utils";
-import { localDateKey, toDateInputValue } from "@/lib/dates";
+import { formatWeekday, localDateKey, toDateInputValue } from "@/lib/dates";
 import { sortEventsByTime } from "@/lib/sortEvents";
 import { findOverlaps } from "@/lib/eventOverlap";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
-type SortMode = "time" | "manual";
+const MOBILE_VISIBLE_LIMIT = 5;
 
 function SortableEvent({
   event,
   tripId,
   readOnly,
   timeFormat,
-  dragDisabled,
   destination,
   overlapWith,
 }: {
@@ -45,11 +45,10 @@ function SortableEvent({
   tripId: string;
   readOnly?: boolean;
   timeFormat?: TimeFormat;
-  dragDisabled?: boolean;
   destination?: string;
   overlapWith?: string[];
 }) {
-  const disabled = Boolean(readOnly || dragDisabled);
+  const disabled = Boolean(readOnly);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: event.id,
     disabled,
@@ -94,8 +93,8 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  // Per-day local preference (ODY-042) — default chronological; Manual keeps dnd order.
-  const [sortMode, setSortMode] = useState<SortMode>("time");
+  const [showAllMobile, setShowAllMobile] = useState(false);
+  const isMobile = useIsMobile();
   const bodyRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -123,8 +122,14 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
     setEvents(day.events);
   }
 
-  const displayedEvents = sortMode === "time" ? sortEventsByTime(events) : events;
-  const dragDisabled = sortMode === "time";
+  // Always chronological (ODY-042) — untimed events sort last, ties break on
+  // orderIndex, which drag-and-drop can still adjust.
+  const displayedEvents = sortEventsByTime(events);
+  // Cap a busy day to 5 events on mobile, with a "show more" toggle (ODY-101).
+  // Desktop always shows every event.
+  const capped = isMobile && !showAllMobile && displayedEvents.length > MOBILE_VISIBLE_LIMIT;
+  const visibleEvents = capped ? displayedEvents.slice(0, MOBILE_VISIBLE_LIMIT) : displayedEvents;
+  const hiddenCount = displayedEvents.length - visibleEvents.length;
   // Soft conflict hints (ODY-077) — never blocks saving.
   const overlaps = findOverlaps(events);
 
@@ -142,7 +147,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
       }, 360);
       return () => clearTimeout(t);
     }
-  }, [collapsed, events.length, sortMode]);
+  }, [collapsed, events.length, visibleEvents.length]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -150,13 +155,20 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   );
 
   async function handleDragEnd(e: DragEndEvent) {
-    if (dragDisabled) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const oldIndex = events.findIndex((ev) => ev.id === active.id);
-    const newIndex = events.findIndex((ev) => ev.id === over.id);
+    const oldIndex = visibleEvents.findIndex((ev) => ev.id === active.id);
+    const newIndex = visibleEvents.findIndex((ev) => ev.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
     const previous = events;
-    const reordered = arrayMove(events, oldIndex, newIndex);
+    // Reassign orderIndex from the new drag order; sortEventsByTime uses it
+    // as the tie-break, so this only visibly moves same-time/no-time events.
+    // Reordering only ever touches the visible (capped) slice — hidden
+    // events keep their relative order untouched.
+    const reorderedVisible = arrayMove(visibleEvents, oldIndex, newIndex).map((ev, i) => ({ ...ev, orderIndex: i }));
+    const reordered = capped
+      ? [...reorderedVisible, ...displayedEvents.slice(MOBILE_VISIBLE_LIMIT)]
+      : reorderedVisible;
     setEvents(reordered);
     try {
       await reorderEvents(reordered.map((ev, i) => ({ id: ev.id, orderIndex: i })), tripId);
@@ -166,7 +178,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
     }
   }
 
-  const weekday = new Date(day.date).toLocaleDateString("en-US", { weekday: "long" });
+  const weekday = formatWeekday(day.date);
 
   return (
     <section ref={sectionRef} className={`day-block${collapsed ? " collapsed" : ""}${isToday ? " is-today" : ""}`}>
@@ -182,29 +194,6 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
           <h2 className="day-title">{weekday}</h2>
         </div>
         <span className="day-date">{formatDate(day.date)}</span>
-        <div
-          className="day-sort"
-          role="group"
-          aria-label="Event order"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className={`day-sort-btn${sortMode === "time" ? " on" : ""}`}
-            aria-pressed={sortMode === "time"}
-            onClick={() => setSortMode("time")}
-          >
-            By time
-          </button>
-          <button
-            type="button"
-            className={`day-sort-btn${sortMode === "manual" ? " on" : ""}`}
-            aria-pressed={sortMode === "manual"}
-            onClick={() => setSortMode("manual")}
-          >
-            Manual
-          </button>
-        </div>
         <span className="day-count">
           {events.length} event{events.length === 1 ? "" : "s"}
         </span>
@@ -214,21 +203,20 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
         <DayNotes dayId={day.id} tripId={tripId} initialNotes={day.notes} readOnly={readOnly} />
 
         <DndContext id={`dnd-day-${day.id}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={displayedEvents.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={visibleEvents.map((e) => e.id)} strategy={verticalListSortingStrategy}>
             <div className="timeline">
-              {displayedEvents.length === 0 && (
+              {visibleEvents.length === 0 && (
                 <p className="day-empty-note">
                   {readOnly ? "No events planned for this day yet." : "No events yet — add your first one below."}
                 </p>
               )}
-              {displayedEvents.map((event) => (
+              {visibleEvents.map((event) => (
                 <SortableEvent
                   key={event.id}
                   event={event}
                   tripId={tripId}
                   readOnly={readOnly}
                   timeFormat={timeFormat}
-                  dragDisabled={dragDisabled}
                   destination={destination}
                   overlapWith={overlaps.get(event.id)}
                 />
@@ -236,6 +224,25 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
             </div>
           </SortableContext>
         </DndContext>
+
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            className="day-more-toggle"
+            onClick={(e) => { e.stopPropagation(); setShowAllMobile(true); }}
+          >
+            Show {hiddenCount} more event{hiddenCount === 1 ? "" : "s"}
+          </button>
+        )}
+        {isMobile && showAllMobile && displayedEvents.length > MOBILE_VISIBLE_LIMIT && (
+          <button
+            type="button"
+            className="day-more-toggle"
+            onClick={(e) => { e.stopPropagation(); setShowAllMobile(false); }}
+          >
+            Show less
+          </button>
+        )}
 
         {!readOnly && (
           <div className="add-event-row">

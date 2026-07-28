@@ -168,6 +168,11 @@ export const Icons = {
       <path d="m20 20-4-4M11 8v6M8 11h6" />
     </Base>
   ),
+  menu: ({ size = 18 }: IconProps) => (
+    <Base size={size}>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </Base>
+  ),
 } as const;
 
 export type EventTypeKey = "flight" | "hotel" | "restaurant" | "activity" | "transport" | "misc";
