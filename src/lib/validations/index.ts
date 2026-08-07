@@ -59,21 +59,48 @@ export const createEventSchema = z.object({
 
 export const updateEventSchema = createEventSchema.partial().omit({ dayId: true, tripId: true });
 
-export const createExpenseSchema = z.object({
-  tripId: z.string().min(1),
-  eventId: z.string().optional().or(z.literal("")),
-  label: z.string().min(1, "Label is required").max(200),
-  amount: z.coerce.number().finite().min(0.01, "Amount must be greater than 0").max(10_000_000),
-  category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
+/** One person's resolved share of an expense (ODY-094). */
+const expenseShareSchema = z.object({
+  userId: z.string().min(1),
+  amountCents: z.number().int().min(0),
 });
 
+/** Shares (if provided) must reconcile to the expense total, to the cent. */
+function sharesReconcile(data: { amount: number; shares?: { amountCents: number }[] }) {
+  if (!data.shares) return true;
+  const totalCents = Math.round(data.amount * 100);
+  const sum = data.shares.reduce((s, x) => s + x.amountCents, 0);
+  return sum === totalCents;
+}
+const SHARES_RECONCILE_ISSUE = { message: "Split amounts must add up to the total", path: ["shares"] };
+
+export const createExpenseSchema = z
+  .object({
+    tripId: z.string().min(1),
+    eventId: z.string().optional().or(z.literal("")),
+    label: z.string().min(1, "Label is required").max(200),
+    amount: z.coerce.number().finite().min(0.01, "Amount must be greater than 0").max(10_000_000),
+    category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
+    /** Who actually paid (ODY-094) — defaults to the logger (addedBy) if omitted. */
+    paidBy: z.string().min(1).optional(),
+    splitMode: z.enum(["equal", "exact"]).optional(),
+    /** Resolved per-person amounts; omit to fall back to legacy trip-wide split. */
+    shares: z.array(expenseShareSchema).min(1).max(50).optional(),
+  })
+  .refine(sharesReconcile, SHARES_RECONCILE_ISSUE);
+
 /** Partial expense edit (ODY-054) — same money/category rules as create. */
-export const updateExpenseSchema = z.object({
-  label: z.string().min(1, "Label is required").max(200),
-  amount: z.coerce.number().finite().min(0.01, "Amount must be greater than 0").max(10_000_000),
-  category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
-  eventId: z.string().optional().or(z.literal("")),
-});
+export const updateExpenseSchema = z
+  .object({
+    label: z.string().min(1, "Label is required").max(200),
+    amount: z.coerce.number().finite().min(0.01, "Amount must be greater than 0").max(10_000_000),
+    category: z.enum(["flights", "lodging", "food", "transport", "activities", "misc"]),
+    eventId: z.string().optional().or(z.literal("")),
+    paidBy: z.string().min(1).optional(),
+    splitMode: z.enum(["equal", "exact"]).optional(),
+    shares: z.array(expenseShareSchema).min(1).max(50).optional(),
+  })
+  .refine(sharesReconcile, SHARES_RECONCILE_ISSUE);
 
 export const inviteCollaboratorSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -92,6 +119,17 @@ export const updateSplitSchema = z.object({
     )
     .min(1),
 });
+
+/** Record a settle-up payment outside the expense ledger (ODY-107). */
+export const recordSettlementSchema = z
+  .object({
+    tripId: z.string().min(1),
+    fromUserId: z.string().min(1),
+    toUserId: z.string().min(1),
+    amountCents: z.number().int().min(1).max(100_000_000),
+    note: z.string().max(200).optional(),
+  })
+  .refine((d) => d.fromUserId !== d.toUserId, { message: "Can't settle with yourself", path: ["toUserId"] });
 
 export const updateBudgetSchema = z.object({
   tripId: z.string().min(1),
@@ -188,6 +226,7 @@ export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
 export type InviteCollaboratorInput = z.infer<typeof inviteCollaboratorSchema>;
 export type UpdateSplitInput = z.infer<typeof updateSplitSchema>;
+export type RecordSettlementInput = z.infer<typeof recordSettlementSchema>;
 export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;

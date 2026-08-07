@@ -21,6 +21,8 @@ model User {
   expenses Expense[]
   notes    Note[]
   places   Place[]
+  paidExpenses  Expense[]      @relation("ExpensePaidBy")
+  expenseShares ExpenseShare[]
 
   availabilitySlots AvailabilitySlot[]
 }
@@ -37,15 +39,33 @@ model Trip {
   timeFormat    String   @default("12h") // "12h" | "24h" — display-only preference (ODY-041)
   createdAt     DateTime @default(now())
 
-  owner    User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  members  TripMember[]
-  days     Day[]
-  expenses Expense[]
-  note     Note?
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members     TripMember[]
+  days        Day[]
+  expenses    Expense[]
+  settlements Settlement[]
+  note        Note?
 
   availabilityPoll  AvailabilityPoll?
   availabilitySlots AvailabilitySlot[]
   places            Place[]
+}
+
+/** A recorded settle-up payment outside the expense ledger (ODY-107), e.g.
+ * "Sam Venmo'd Alex $30." No User relations — fromUserId/toUserId/createdBy
+ * are plain TripMember.userId values; the app already has the member list
+ * loaded wherever this is displayed. */
+model Settlement {
+  id          String   @id @default(uuid())
+  tripId      String
+  fromUserId  String
+  toUserId    String
+  amountCents Int
+  note        String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 }
 
 model TripMember {
@@ -108,11 +128,34 @@ model Expense {
   amount    Float
   category  String
   addedBy   String
+  /** Who actually paid (ODY-094) — distinct from addedBy, who logged it.
+   * Nullable; reads fall back to addedBy when null, so no backfill needed. */
+  paidBy    String?
+  /** "equal" | "exact" — cosmetic only, remembers which editor mode to
+   * reopen. The authoritative per-person amounts always live in ExpenseShare. */
+  splitMode String   @default("equal")
   createdAt DateTime @default(now())
 
-  trip  Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  user  User   @relation(fields: [addedBy], references: [id])
+  trip   Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  event  Event?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  user   User           @relation(fields: [addedBy], references: [id])
+  payer  User?          @relation("ExpensePaidBy", fields: [paidBy], references: [id])
+  shares ExpenseShare[]
+}
+
+/** Who's on the hook for an expense and how much (ODY-094). A row's
+ * existence means that person is included; amountCents is always the
+ * resolved amount owed (persisted explicitly, even for "equal" splits). */
+model ExpenseShare {
+  id          String @id @default(uuid())
+  expenseId   String
+  userId      String
+  amountCents Int
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, userId])
 }
 
 model Note {

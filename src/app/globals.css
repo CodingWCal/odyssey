@@ -1075,6 +1075,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
 }
 .btn:active { transform: scale(.98); }
+.btn.sm { height: 40px; padding: 0 14px; font-size: 12.5px; }
 .btn-primary {
   background: var(--ink);
   color: var(--paper);
@@ -1589,6 +1590,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-weight: 500;
   color: var(--teal);
 }
+.settle-list li .btn.sm { margin-left: 4px; }
+.settle-list li .icon-btn.sm { margin-left: 4px; color: var(--ink-3); }
+
+/* Settled history (ODY-107) — muted, distinct from still-outstanding transfers */
+.settle-list.settled { background: var(--paper-2); border-left-color: var(--rule-2); }
+.settle-list.settled .settle-amt { color: var(--ink-3); }
 
 @media (max-width: 768px) {
   .split-row {
@@ -3201,11 +3208,24 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 
 /* Small option-chip toggle (trip edit modal, ODY-041) */
 .opt-chips { display: flex; gap: 8px; }
+.opt-chips.wrap { flex-wrap: wrap; margin-bottom: 10px; }
 .opt-chip {
   padding: 8px 14px; font-size: 13px; border: 1px solid var(--rule-2);
   cursor: pointer; background: var(--paper); color: var(--ink-2);
 }
 .opt-chip.on { background: var(--ink); color: var(--paper); }
+
+/* Per-expense split — participant chips + exact-amount rows (ODY-094) */
+.exact-split-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.exact-split-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.exact-split-row .who { font-size: 13.5px; color: var(--ink-2); }
+.exact-split-row .input-with-prefix { width: 120px; }
+.exact-remaining {
+  font-size: 12.5px; font-weight: 600; margin-top: 4px;
+  padding: 8px 10px; border-radius: var(--radius-md);
+}
+.exact-remaining.ok { background: var(--teal-soft); color: var(--teal); }
+.exact-remaining.warn { background: var(--coral-soft); color: var(--coral); }
 
 /* Collections (ODY-045) */
 .collections-page { max-width: 720px; }

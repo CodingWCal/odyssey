@@ -6,12 +6,17 @@ import { Icons } from "@/components/shared/Icons";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { createExpense, updateExpense, deleteExpense } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
+import { equalSharesCents } from "@/lib/budget";
 
 export interface ExpenseInitial {
   id?: string;
   label?: string;
   amount?: number;
   category?: Category;
+  /** Who actually paid (ODY-094). */
+  paidBy?: string;
+  splitMode?: "equal" | "exact";
+  shares?: { userId: string; amountCents: number }[];
 }
 
 interface ExpenseModalProps {
@@ -19,11 +24,28 @@ interface ExpenseModalProps {
   tripId: string;
   mode: "add" | "edit";
   initial: ExpenseInitial | null;
+  /** Trip members, for "Paid by" and "Split between" (ODY-094). */
+  tripMembers: { userId: string; name: string }[];
+  /** The signed-in viewer — defaults "Paid by" on a new expense. */
+  currentUserId: string;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export function ExpenseModal({ open, tripId, mode, initial, onClose, onSuccess }: ExpenseModalProps) {
+function centsToStr(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+export function ExpenseModal({
+  open,
+  tripId,
+  mode,
+  initial,
+  tripMembers,
+  currentUserId,
+  onClose,
+  onSuccess,
+}: ExpenseModalProps) {
   const isEdit = mode === "edit";
   const [isPending, startTransition] = useTransition();
 
@@ -34,25 +56,107 @@ export function ExpenseModal({ open, tripId, mode, initial, onClose, onSuccess }
   });
   const [form, setForm] = useState(initialForm);
 
+  const allMemberIds = tripMembers.map((m) => m.userId);
+  const initialSelected = () =>
+    new Set(initial?.shares?.length ? initial.shares.map((s) => s.userId) : allMemberIds);
+  const initialExact = () =>
+    initial?.splitMode === "exact" && initial.shares
+      ? Object.fromEntries(initial.shares.map((s) => [s.userId, centsToStr(s.amountCents)]))
+      : {};
+
+  const [paidBy, setPaidBy] = useState(initial?.paidBy ?? currentUserId);
+  const [selected, setSelected] = useState<Set<string>>(initialSelected);
+  const [splitMode, setSplitMode] = useState<"equal" | "exact">(initial?.splitMode ?? "equal");
+  const [exactAmounts, setExactAmounts] = useState<Record<string, string>>(initialExact);
+  // Once the traveler touches participants/mode/amounts, we compute and send
+  // explicit shares; until then, saving reuses whatever was already correct
+  // (server's weighted default on add, or the untouched existing shares on
+  // edit) rather than guessing at a recomputation (ODY-094).
+  const [dirtiedSplit, setDirtiedSplit] = useState(false);
+
   // Re-seed the form each time the modal opens ("adjust state during render"
   // — the React-sanctioned replacement for a reset-on-open effect).
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
-    if (open) setForm(initialForm());
+    if (open) {
+      setForm(initialForm());
+      setPaidBy(initial?.paidBy ?? currentUserId);
+      setSelected(initialSelected());
+      setSplitMode(initial?.splitMode ?? "equal");
+      setExactAmounts(initialExact());
+      setDirtiedSplit(false);
+    }
   }
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }));
   }
 
-  const valid = form.label.trim() !== "" && form.amount !== "" && Number(form.amount) > 0;
+  function toggleParticipant(userId: string) {
+    setDirtiedSplit(true);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
+  function chooseMode(next: "equal" | "exact") {
+    setDirtiedSplit(true);
+    setSplitMode(next);
+    if (next === "exact" && Object.keys(exactAmounts).length === 0) {
+      // Seed with an equal starting point so the traveler adjusts numbers
+      // instead of typing every amount from a blank $0.00.
+      const totalCents = Math.round((Number(form.amount) || 0) * 100);
+      const seeded = equalSharesCents([...selected], totalCents);
+      setExactAmounts(Object.fromEntries(seeded.map((s) => [s.userId, centsToStr(s.amountCents)])));
+    }
+  }
+
+  function setExact(userId: string, v: string) {
+    setDirtiedSplit(true);
+    setExactAmounts((s) => ({ ...s, [userId]: v }));
+  }
+
+  const totalCents = Math.round((Number(form.amount) || 0) * 100);
+  const allocatedCents =
+    splitMode === "exact"
+      ? [...selected].reduce((s, id) => s + Math.round((Number(exactAmounts[id]) || 0) * 100), 0)
+      : totalCents;
+  const remainingCents = totalCents - allocatedCents;
+
+  const valid =
+    form.label.trim() !== "" &&
+    form.amount !== "" &&
+    Number(form.amount) > 0 &&
+    selected.size > 0 &&
+    (splitMode === "equal" || remainingCents === 0);
+
+  function sharesPayload(): { userId: string; amountCents: number }[] | undefined {
+    if (!dirtiedSplit) {
+      return isEdit ? initial?.shares : undefined; // undefined => server applies the weighted default
+    }
+    const ids = [...selected];
+    if (splitMode === "exact") {
+      return ids.map((id) => ({ userId: id, amountCents: Math.round((Number(exactAmounts[id]) || 0) * 100) }));
+    }
+    return equalSharesCents(ids, totalCents);
+  }
 
   function handleSave() {
     if (!valid) return;
     startTransition(async () => {
       try {
-        const payload = { label: form.label.trim(), amount: Number(form.amount), category: form.category };
+        const payload = {
+          label: form.label.trim(),
+          amount: Number(form.amount),
+          category: form.category,
+          paidBy,
+          splitMode,
+          shares: sharesPayload(),
+        };
         if (isEdit && initial?.id) {
           await updateExpense(initial.id, tripId, payload);
         } else {
@@ -138,6 +242,86 @@ export function ExpenseModal({ open, tripId, mode, initial, onClose, onSuccess }
             />
           </div>
         </div>
+
+        {tripMembers.length > 0 && (
+          <>
+            <div className="field">
+              <label htmlFor="exp-paidby">Paid by</label>
+              <select
+                id="exp-paidby"
+                className="input"
+                value={paidBy}
+                onChange={(e) => setPaidBy(e.target.value)}
+              >
+                {tripMembers.map((m) => (
+                  <option key={m.userId} value={m.userId}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Split between</label>
+              <div className="opt-chips wrap">
+                {tripMembers.map((m) => (
+                  <button
+                    key={m.userId}
+                    type="button"
+                    className={`rounded-xl opt-chip ${selected.has(m.userId) ? "on" : ""}`}
+                    onClick={() => toggleParticipant(m.userId)}
+                    aria-pressed={selected.has(m.userId)}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+              <div className="opt-chips" role="group" aria-label="Split mode">
+                <button
+                  type="button"
+                  className={`rounded-xl opt-chip ${splitMode === "equal" ? "on" : ""}`}
+                  onClick={() => chooseMode("equal")}
+                >
+                  Equal
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-xl opt-chip ${splitMode === "exact" ? "on" : ""}`}
+                  onClick={() => chooseMode("exact")}
+                >
+                  Exact amounts
+                </button>
+              </div>
+
+              {splitMode === "exact" && (
+                <div className="exact-split-rows">
+                  {tripMembers
+                    .filter((m) => selected.has(m.userId))
+                    .map((m) => (
+                      <div className="exact-split-row" key={m.userId}>
+                        <span className="who">{m.name}</span>
+                        <div className="input-with-prefix">
+                          <span className="prefix">$</span>
+                          <input
+                            className="input mono"
+                            inputMode="decimal"
+                            value={exactAmounts[m.userId] ?? ""}
+                            onChange={(e) => setExact(m.userId, e.target.value)}
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  <div className={`exact-remaining ${remainingCents === 0 ? "ok" : "warn"}`}>
+                    {remainingCents === 0
+                      ? "Fully allocated"
+                      : `${centsToStr(Math.abs(remainingCents))} ${remainingCents > 0 ? "left to allocate" : "over the total"}`}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="modal-foot">
