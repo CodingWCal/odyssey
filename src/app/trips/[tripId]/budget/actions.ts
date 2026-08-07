@@ -7,7 +7,9 @@ import {
   updateExpenseSchema,
   updateSplitSchema,
   updateBudgetSchema,
+  recordSettlementSchema,
   type UpdateSplitInput,
+  type RecordSettlementInput,
 } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 import { weightedSharesCents } from "@/lib/budget";
@@ -172,6 +174,46 @@ export async function updateTripBudget(tripId: string, totalBudget: number) {
   const validated = updateBudgetSchema.parse({ tripId, totalBudget });
 
   await db.trip.update({ where: { id: tripId }, data: { totalBudget: validated.totalBudget } });
+  revalidatePath(`/trips/${tripId}/budget`);
+}
+
+/** Record a settle-up payment made outside the expense ledger (ODY-107),
+ * e.g. "Sam Venmo'd Alex $30" — offsets balances without touching expenses. */
+export async function recordSettlement(data: RecordSettlementInput) {
+  const dbUser = await getDbUser();
+  await assertTripRole(data.tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
+
+  const validated = recordSettlementSchema.parse(data);
+
+  const memberIds = new Set(
+    (await db.tripMember.findMany({ where: { tripId: validated.tripId }, select: { userId: true } })).map(
+      (m: { userId: string }) => m.userId
+    )
+  );
+  if (!memberIds.has(validated.fromUserId) || !memberIds.has(validated.toUserId)) {
+    throw new Error("Not found");
+  }
+
+  await db.settlement.create({
+    data: {
+      tripId: validated.tripId,
+      fromUserId: validated.fromUserId,
+      toUserId: validated.toUserId,
+      amountCents: validated.amountCents,
+      note: validated.note,
+      createdBy: dbUser.id,
+    },
+  });
+
+  revalidatePath(`/trips/${validated.tripId}/budget`);
+}
+
+export async function deleteSettlement(settlementId: string, tripId: string) {
+  const dbUser = await getDbUser();
+  await assertTripRole(tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
+
+  // Scope to the trip so a settlement id from another trip can't be deleted.
+  await db.settlement.deleteMany({ where: { id: settlementId, tripId } });
   revalidatePath(`/trips/${tripId}/budget`);
 }
 

@@ -39,15 +39,33 @@ model Trip {
   timeFormat    String   @default("12h") // "12h" | "24h" — display-only preference (ODY-041)
   createdAt     DateTime @default(now())
 
-  owner    User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  members  TripMember[]
-  days     Day[]
-  expenses Expense[]
-  note     Note?
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members     TripMember[]
+  days        Day[]
+  expenses    Expense[]
+  settlements Settlement[]
+  note        Note?
 
   availabilityPoll  AvailabilityPoll?
   availabilitySlots AvailabilitySlot[]
   places            Place[]
+}
+
+/** A recorded settle-up payment outside the expense ledger (ODY-107), e.g.
+ * "Sam Venmo'd Alex $30." No User relations — fromUserId/toUserId/createdBy
+ * are plain TripMember.userId values; the app already has the member list
+ * loaded wherever this is displayed. */
+model Settlement {
+  id          String   @id @default(uuid())
+  tripId      String
+  fromUserId  String
+  toUserId    String
+  amountCents Int
+  note        String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 }
 
 model TripMember {

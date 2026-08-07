@@ -241,3 +241,63 @@ describe("aggregateBalances (ODY-094 Stage B)", () => {
     ]);
   });
 });
+
+describe("aggregateBalances with settlements (ODY-107)", () => {
+  it("a settlement clears the exact amount owed, moving both balances toward zero", () => {
+    // Sam owes Alex $30 from an expense; Sam pays Alex $30 outside the app.
+    const balances = aggregateBalances(
+      ["alex", "sam"],
+      [{ amountCents: 3000, paidByUserId: "alex", shares: [{ userId: "sam", amountCents: 3000 }] }],
+      [{ fromUserId: "sam", toUserId: "alex", amountCents: 3000 }]
+    );
+    const byId = Object.fromEntries(balances.map((b) => [b.userId, b]));
+    // paid/owed (pure expense figures) stay unchanged by the settlement.
+    expect(byId.alex).toMatchObject({ paidCents: 3000, owedCents: 0, balanceCents: 0 });
+    expect(byId.sam).toMatchObject({ paidCents: 0, owedCents: 3000, balanceCents: 0 });
+  });
+
+  it("a partial settlement leaves the remainder outstanding", () => {
+    const balances = aggregateBalances(
+      ["alex", "sam"],
+      [{ amountCents: 3000, paidByUserId: "alex", shares: [{ userId: "sam", amountCents: 3000 }] }],
+      [{ fromUserId: "sam", toUserId: "alex", amountCents: 1000 }]
+    );
+    const byId = Object.fromEntries(balances.map((b) => [b.userId, b]));
+    expect(byId.alex.balanceCents).toBe(2000);
+    expect(byId.sam.balanceCents).toBe(-2000);
+  });
+
+  it("a settlement between two people never touches an uninvolved third person's balance", () => {
+    const balances = aggregateBalances(
+      ["alex", "maya", "sam"],
+      [{ amountCents: 9000, paidByUserId: "alex", shares: [
+        { userId: "alex", amountCents: 3000 },
+        { userId: "maya", amountCents: 3000 },
+        { userId: "sam", amountCents: 3000 },
+      ] }],
+      [{ fromUserId: "maya", toUserId: "alex", amountCents: 3000 }]
+    );
+    const byId = Object.fromEntries(balances.map((b) => [b.userId, b]));
+    expect(byId.sam.balanceCents).toBe(-3000); // unaffected by the maya->alex settlement
+    expect(byId.maya.balanceCents).toBe(0);
+    expect(byId.alex.balanceCents).toBe(3000); // still owed by sam
+  });
+
+  it("drops a settlement referencing a userId no longer on the trip", () => {
+    const balances = aggregateBalances(
+      ["alex"],
+      [],
+      [{ fromUserId: "departed", toUserId: "alex", amountCents: 1000 }]
+    );
+    expect(balances).toEqual([{ userId: "alex", paidCents: 0, owedCents: 0, balanceCents: -1000 }]);
+  });
+
+  it("defaults to no settlements when the argument is omitted", () => {
+    const balances = aggregateBalances(
+      ["alex", "sam"],
+      [{ amountCents: 3000, paidByUserId: "alex", shares: [{ userId: "sam", amountCents: 3000 }] }]
+    );
+    const sam = balances.find((b) => b.userId === "sam")!;
+    expect(sam.balanceCents).toBe(-3000);
+  });
+});

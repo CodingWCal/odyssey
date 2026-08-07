@@ -1075,6 +1075,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
 }
 .btn:active { transform: scale(.98); }
+.btn.sm { height: 30px; padding: 0 12px; font-size: 12px; }
 .btn-primary {
   background: var(--ink);
   color: var(--paper);
@@ -1589,6 +1590,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-weight: 500;
   color: var(--teal);
 }
+.settle-list li .btn.sm { margin-left: 4px; }
+.settle-list li .icon-btn.sm { margin-left: 4px; color: var(--ink-3); }
+
+/* Settled history (ODY-107) — muted, distinct from still-outstanding transfers */
+.settle-list.settled { background: var(--paper-2); border-left-color: var(--rule-2); }
+.settle-list.settled .settle-amt { color: var(--ink-3); }
 
 @media (max-width: 768px) {
   .split-row {

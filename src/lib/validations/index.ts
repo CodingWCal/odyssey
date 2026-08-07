@@ -120,6 +120,17 @@ export const updateSplitSchema = z.object({
     .min(1),
 });
 
+/** Record a settle-up payment outside the expense ledger (ODY-107). */
+export const recordSettlementSchema = z
+  .object({
+    tripId: z.string().min(1),
+    fromUserId: z.string().min(1),
+    toUserId: z.string().min(1),
+    amountCents: z.number().int().min(1).max(100_000_000),
+    note: z.string().max(200).optional(),
+  })
+  .refine((d) => d.fromUserId !== d.toUserId, { message: "Can't settle with yourself", path: ["toUserId"] });
+
 export const updateBudgetSchema = z.object({
   tripId: z.string().min(1),
   totalBudget: z.coerce.number().finite().min(0).max(10_000_000),
@@ -215,6 +226,7 @@ export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
 export type InviteCollaboratorInput = z.infer<typeof inviteCollaboratorSchema>;
 export type UpdateSplitInput = z.infer<typeof updateSplitSchema>;
+export type RecordSettlementInput = z.infer<typeof recordSettlementSchema>;
 export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;

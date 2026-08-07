@@ -117,8 +117,16 @@ export interface MemberBalance {
   userId: string;
   paidCents: number;
   owedCents: number;
-  /** paid - owed: positive = owed money, negative = owes. */
+  /** paid - owed, adjusted for recorded settlements: positive = owed money, negative = owes. */
   balanceCents: number;
+}
+
+/** A recorded settle-up payment outside the expense ledger (ODY-107), e.g.
+ * "Sam Venmo'd Alex $30." */
+export interface ResolvedSettlement {
+  fromUserId: string;
+  toUserId: string;
+  amountCents: number;
 }
 
 /**
@@ -127,13 +135,20 @@ export interface MemberBalance {
  * pool split by trip-wide weight. Contributions referencing a userId no
  * longer on the trip are dropped (consistent with prior addedBy-keyed
  * behavior; departed-member attribution is out of scope here).
+ *
+ * `settlements` (ODY-107) adjust only the final balance, not paid/owed —
+ * those two stay pure expense figures for display. A settlement moves the
+ * payer's balance toward zero (their debt shrinks) and the receiver's
+ * balance toward zero (they've now collected what they were owed).
  */
 export function aggregateBalances(
   memberUserIds: string[],
-  expenses: ResolvedExpenseForBalances[]
+  expenses: ResolvedExpenseForBalances[],
+  settlements: ResolvedSettlement[] = []
 ): MemberBalance[] {
   const paid = new Map<string, number>(memberUserIds.map((id) => [id, 0]));
   const owed = new Map<string, number>(memberUserIds.map((id) => [id, 0]));
+  const settled = new Map<string, number>(memberUserIds.map((id) => [id, 0]));
 
   for (const exp of expenses) {
     if (paid.has(exp.paidByUserId)) {
@@ -146,10 +161,16 @@ export function aggregateBalances(
     }
   }
 
+  for (const s of settlements) {
+    if (settled.has(s.fromUserId)) settled.set(s.fromUserId, (settled.get(s.fromUserId) ?? 0) + s.amountCents);
+    if (settled.has(s.toUserId)) settled.set(s.toUserId, (settled.get(s.toUserId) ?? 0) - s.amountCents);
+  }
+
   return memberUserIds.map((userId) => {
     const paidCents = paid.get(userId) ?? 0;
     const owedCents = owed.get(userId) ?? 0;
-    return { userId, paidCents, owedCents, balanceCents: paidCents - owedCents };
+    const settledCents = settled.get(userId) ?? 0;
+    return { userId, paidCents, owedCents, balanceCents: paidCents - owedCents + settledCents };
   });
 }
 

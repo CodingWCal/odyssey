@@ -27,6 +27,11 @@ export default async function BudgetPage({ params }: Props) {
     },
   });
 
+  const settlementRows = await db.settlement.findMany({
+    where: { tripId },
+    orderBy: { createdAt: "desc" },
+  });
+
   const dateRange = `${new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   const members = trip.members.map((m: (typeof trip.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" }));
   const memberWeights = trip.members.map((m: (typeof trip.members)[number]) => ({ userId: m.userId, weight: m.splitWeight ?? 1 }));
@@ -55,8 +60,24 @@ export default async function BudgetPage({ params }: Props) {
         ? e.shares.map((s: (typeof e.shares)[number]) => ({ userId: s.userId, amountCents: s.amountCents }))
         : weightedSharesCents(memberWeights, Math.round(e.amount * 100)),
   }));
-  const balances = aggregateBalances(memberUserIds, resolved);
+  const resolvedSettlements = settlementRows.map((s: (typeof settlementRows)[number]) => ({
+    fromUserId: s.fromUserId,
+    toUserId: s.toUserId,
+    amountCents: s.amountCents,
+  }));
+  const balances = aggregateBalances(memberUserIds, resolved, resolvedSettlements);
   const balanceByUserId = new Map(balances.map((b) => [b.userId, b]));
+
+  const nameByUserId = new Map(trip.members.map((m: (typeof trip.members)[number]) => [m.userId, m.user?.name ?? "Traveler"]));
+  const settlements = settlementRows.map((s: (typeof settlementRows)[number]) => ({
+    id: s.id,
+    fromUserId: s.fromUserId,
+    fromName: nameByUserId.get(s.fromUserId) ?? "Traveler",
+    toUserId: s.toUserId,
+    toName: nameByUserId.get(s.toUserId) ?? "Traveler",
+    amount: s.amountCents / 100,
+    createdAt: s.createdAt.toISOString(),
+  }));
 
   const splitMembers = trip.members.map((m: (typeof trip.members)[number]) => {
     const bal = balanceByUserId.get(m.userId);
@@ -67,6 +88,7 @@ export default async function BudgetPage({ params }: Props) {
       weight: m.splitWeight ?? 1,
       paid: (bal?.paidCents ?? 0) / 100,
       owed: (bal?.owedCents ?? 0) / 100,
+      balance: (bal?.balanceCents ?? 0) / 100,
     };
   });
 
@@ -80,6 +102,7 @@ export default async function BudgetPage({ params }: Props) {
       currentUserId={dbUser.id}
       splitMembers={splitMembers}
       expenses={expenses}
+      settlements={settlements}
       readOnly={trip.myRole === "viewer"}
     />
   );
