@@ -1075,7 +1075,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
 }
 .btn:active { transform: scale(.98); }
-.btn.sm { height: 30px; padding: 0 12px; font-size: 12px; }
+.btn.sm { height: 40px; padding: 0 14px; font-size: 12.5px; }
 .btn-primary {
   background: var(--ink);
   color: var(--paper);
