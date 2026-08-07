@@ -7,7 +7,7 @@ import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
-import { computeSplit, suggestSettlements } from "@/lib/budget";
+import { suggestSettlements, type SplitRow } from "@/lib/budget";
 
 export interface BudgetExpense {
   id: string;
@@ -16,6 +16,10 @@ export interface BudgetExpense {
   category: Category;
   who: string;
   eventTitle: string | null;
+  /** Resolved payer userId (paidBy ?? addedBy) — ODY-094. */
+  paidBy: string;
+  splitMode: "equal" | "exact";
+  shares: { userId: string; amountCents: number }[];
 }
 
 export interface SplitMember {
@@ -23,7 +27,10 @@ export interface SplitMember {
   userId: string;
   name: string;
   weight: number;
+  /** Real amount paid, resolved from paidBy across every expense. */
   paid: number;
+  /** Real amount owed, aggregated from actual per-expense participation (ODY-094). */
+  owed: number;
 }
 
 interface BudgetClientProps {
@@ -31,6 +38,10 @@ interface BudgetClientProps {
   totalBudget: number | null;
   eyebrow: string;
   members: { id: string; name: string }[];
+  /** Trip members by userId, for the expense "who's involved" picker (ODY-094). */
+  tripMembers: { userId: string; name: string }[];
+  /** The signed-in viewer's userId — defaults "Paid by" on a new expense (ODY-094). */
+  currentUserId: string;
   splitMembers: SplitMember[];
   expenses: BudgetExpense[];
   /** Viewers get a read-only budget (ODY-001). */
@@ -131,22 +142,25 @@ function CategoryBlock({
 function SplitSection({
   tripId,
   members,
-  totalSpent,
 }: {
   tripId: string;
   members: SplitMember[];
-  totalSpent: number;
 }) {
   const [isPending, startTransition] = useTransition();
   const [weights, setWeights] = useState<Record<string, string>>(
     Object.fromEntries(members.map((m) => [m.id, String(m.weight)]))
   );
 
-  // Pure split math lives in lib/budget.ts (unit-tested, ODY-016).
-  const rows = computeSplit(
-    members.map((m) => ({ id: m.id, weight: Number(weights[m.id]) || 0, paid: m.paid })),
-    totalSpent
-  );
+  // Rows reflect real per-expense participation (ODY-094 Stage B), not a
+  // hypothetical even split of the trip total. `weights` here only sets the
+  // *default* for future uncustomized expenses (`pct` shown is that default,
+  // for context) — it no longer drives the displayed share/balance.
+  const sumWeights = members.reduce((s, m) => s + (Number(weights[m.id]) || 0), 0);
+  const rows: SplitRow[] = members.map((m) => {
+    const w = Number(weights[m.id]) || 0;
+    const pct = sumWeights > 0 ? w / sumWeights : 1 / (members.length || 1);
+    return { id: m.id, pct, share: m.owed, balance: m.paid - m.owed };
+  });
   const nameById = Object.fromEntries(members.map((m) => [m.id, m.name]));
   const settlements = suggestSettlements(rows);
 
@@ -179,7 +193,7 @@ function SplitSection({
       <div className="split-head">
         <div className="left">
           <div className="label">Split between travelers</div>
-          <div className="sub">Set each person&apos;s share. Balances show who paid more or less than their portion.</div>
+          <div className="sub">Balances reflect who&apos;s actually on each expense — weights below only set the default for new expenses you don&apos;t customize.</div>
         </div>
         <button className="btn btn-ghost" onClick={resetEqual} disabled={isPending} type="button">
           Reset to equal
@@ -241,7 +255,7 @@ function SplitSection({
   );
 }
 
-export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembers, expenses, readOnly = false }: BudgetClientProps) {
+export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMembers, currentUserId, splitMembers, expenses, readOnly = false }: BudgetClientProps) {
   const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; initial: ExpenseInitial | null }>({
     open: false,
     mode: "add",
@@ -272,7 +286,19 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
     setModal({ open: true, mode: "add", initial: category ? { category } : null });
   }
   function openEdit(e: BudgetExpense) {
-    setModal({ open: true, mode: "edit", initial: { id: e.id, label: e.label, amount: e.amount, category: e.category } });
+    setModal({
+      open: true,
+      mode: "edit",
+      initial: {
+        id: e.id,
+        label: e.label,
+        amount: e.amount,
+        category: e.category,
+        paidBy: e.paidBy,
+        splitMode: e.splitMode,
+        shares: e.shares,
+      },
+    });
   }
 
   async function saveBudget() {
@@ -360,7 +386,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
 
       {/* Split between travelers */}
       {splitMembers.length > 0 && !readOnly && (
-        <SplitSection tripId={tripId} members={splitMembers} totalSpent={totalSpent} />
+        <SplitSection tripId={tripId} members={splitMembers} />
       )}
 
       {/* Breakdown bar */}
@@ -431,6 +457,8 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, splitMembe
         tripId={tripId}
         mode={modal.mode}
         initial={modal.initial}
+        tripMembers={tripMembers}
+        currentUserId={currentUserId}
         onClose={() => setModal((m) => ({ ...m, open: false }))}
       />
     </div>

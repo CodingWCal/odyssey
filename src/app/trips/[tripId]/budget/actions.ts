@@ -10,6 +10,7 @@ import {
   type UpdateSplitInput,
 } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
+import { weightedSharesCents } from "@/lib/budget";
 
 const getDbUser = getOrCreateDbUser;
 
@@ -23,12 +24,38 @@ async function assertEventOnTrip(eventId: string | null | undefined, tripId: str
   if (!event) throw new Error("Not found");
 }
 
+/** Current trip members, for validating paidBy/shares reference real travelers (ODY-094). */
+async function tripMemberWeights(tripId: string): Promise<{ userId: string; weight: number }[]> {
+  const members = await db.tripMember.findMany({ where: { tripId }, select: { userId: true, splitWeight: true } });
+  return members.map((m: (typeof members)[number]) => ({ userId: m.userId, weight: m.splitWeight }));
+}
+
+type ExpenseShareInput = { userId: string; amountCents: number };
+
+/** Default shares for a fresh, uncustomized expense: everyone on the trip,
+ * weighted per the trip's existing splitWeight settings (ODY-094) — keeps
+ * "equal split is one-tap" true; identical dollar outcome to the old
+ * trip-wide split for anyone who doesn't touch the new controls. */
+function defaultShares(members: { userId: string; weight: number }[], amount: number): ExpenseShareInput[] {
+  return weightedSharesCents(members, Math.round(amount * 100));
+}
+
+/** Reject shares referencing a non-member (IDOR-style guard, ODY-094). */
+function assertSharesAreMembers(shares: ExpenseShareInput[], memberUserIds: Set<string>) {
+  if (shares.some((s) => !memberUserIds.has(s.userId))) {
+    throw new Error("Split includes someone no longer on this trip");
+  }
+}
+
 export async function createExpense(data: {
   tripId: string;
   eventId?: string;
   label: string;
   amount: number;
   category: string;
+  paidBy?: string;
+  splitMode?: "equal" | "exact";
+  shares?: ExpenseShareInput[];
 }) {
   const dbUser = await getDbUser();
   await assertTripRole(data.tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
@@ -37,15 +64,30 @@ export async function createExpense(data: {
   const eventId = validated.eventId || null;
   await assertEventOnTrip(eventId, validated.tripId);
 
-  const expense = await db.expense.create({
-    data: {
-      tripId: validated.tripId,
-      eventId,
-      label: validated.label,
-      amount: validated.amount,
-      category: validated.category,
-      addedBy: dbUser.id,
-    },
+  const members = await tripMemberWeights(validated.tripId);
+  const memberUserIds = new Set(members.map((m) => m.userId));
+
+  const paidBy = validated.paidBy && memberUserIds.has(validated.paidBy) ? validated.paidBy : dbUser.id;
+  const shares = validated.shares ?? defaultShares(members, validated.amount);
+  assertSharesAreMembers(shares, memberUserIds);
+
+  const expense = await db.$transaction(async (tx) => {
+    const created = await tx.expense.create({
+      data: {
+        tripId: validated.tripId,
+        eventId,
+        label: validated.label,
+        amount: validated.amount,
+        category: validated.category,
+        addedBy: dbUser.id,
+        paidBy,
+        splitMode: validated.splitMode ?? "equal",
+      },
+    });
+    await tx.expenseShare.createMany({
+      data: shares.map((s) => ({ expenseId: created.id, userId: s.userId, amountCents: s.amountCents })),
+    });
+    return created;
   });
 
   revalidatePath(`/trips/${validated.tripId}/budget`);
@@ -55,7 +97,15 @@ export async function createExpense(data: {
 export async function updateExpense(
   expenseId: string,
   tripId: string,
-  data: { label: string; amount: number; category: string; eventId?: string }
+  data: {
+    label: string;
+    amount: number;
+    category: string;
+    eventId?: string;
+    paidBy?: string;
+    splitMode?: "equal" | "exact";
+    shares?: ExpenseShareInput[];
+  }
 ) {
   const dbUser = await getDbUser();
   await assertTripRole(tripId, dbUser.id, "editor"); // viewers read-only (ODY-001)
@@ -67,6 +117,8 @@ export async function updateExpense(
     amount: number;
     category: string;
     eventId?: string | null;
+    paidBy?: string;
+    splitMode?: string;
   } = {
     label: validated.label,
     amount: validated.amount,
@@ -79,10 +131,25 @@ export async function updateExpense(
     patch.eventId = eventId;
   }
 
-  // Scope to the trip so an expense id from another trip can't be edited.
-  await db.expense.updateMany({
-    where: { id: expenseId, tripId },
-    data: patch,
+  const shares: ExpenseShareInput[] | undefined = validated.shares;
+  if (validated.paidBy || shares) {
+    const members = await tripMemberWeights(tripId);
+    const memberUserIds = new Set(members.map((m) => m.userId));
+    if (validated.paidBy && memberUserIds.has(validated.paidBy)) patch.paidBy = validated.paidBy;
+    if (shares) assertSharesAreMembers(shares, memberUserIds);
+  }
+  if (validated.splitMode) patch.splitMode = validated.splitMode;
+
+  // Scope to the trip so an expense id from another trip can't be edited —
+  // including the ExpenseShare replace, which has no tripId of its own.
+  await db.$transaction(async (tx) => {
+    const { count } = await tx.expense.updateMany({ where: { id: expenseId, tripId }, data: patch });
+    if (shares && count > 0) {
+      await tx.expenseShare.deleteMany({ where: { expenseId, expense: { tripId } } });
+      await tx.expenseShare.createMany({
+        data: shares.map((s) => ({ expenseId, userId: s.userId, amountCents: s.amountCents })),
+      });
+    }
   });
   revalidatePath(`/trips/${tripId}/budget`);
 }
