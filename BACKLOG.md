@@ -111,7 +111,7 @@ Editing trip dates via `TripEditModal` appears to save then revert or shift by o
 - Ensure `updateTrip` writes via `parseDateString` only (don't let string fields from Zod overwrite Date fields). Revalidate layout after save (already does).
 - Acceptance: set Jul 30–Aug 3 in any US TZ → save → reopen edit modal and sidebar still show Jul 30–Aug 3; itinerary day headers match; no off-by-one.
 
-### ODY-051 · TipTap Notes vs TripNotes clobber the same Note row — M, sonnet
+### ODY-051 · TipTap Notes vs TripNotes clobber the same Note row — M, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Rich notes and the itinerary's pinned notes fight over the same storage — saving one can wipe the other. This makes one shared notes system that doesn't erase itself.
 Two editors write incompatible shapes into `Note.content`: itinerary `TripNotes` saves `{ text }`; TipTap at `/trips/[id]/notes` saves ProseMirror JSON. Last write wins and can blank the other surface.
 - Pick one canonical format (prefer TipTap JSON with a plain-text projection, or separate fields).
@@ -120,7 +120,7 @@ Two editors write incompatible shapes into `Note.content`: itinerary `TripNotes`
 - Files: `src/components/itinerary/TripNotes.tsx`, `src/components/notes/TiptapEditor.tsx`, `src/app/trips/[tripId]/notes/actions.ts`, itinerary page note read path.
 - Acceptance: saving TipTap never blanks itinerary pinned notes (and vice versa); oversized payloads rejected.
 
-### ODY-052 · createEvent dayId/tripId IDOR — S, sonnet
+### ODY-052 · createEvent dayId/tripId IDOR — S, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** A sneaky request could attach an event to someone else's trip day. The server must confirm the day belongs to the trip you're editing.
 `createEvent` asserts membership on `tripId` only; it never checks that `dayId` belongs to that trip. An editor who knows another trip's day UUID can inject events onto it. Same risk via Explore → itinerary save.
 - Before create: `db.day.findFirst({ where: { id: dayId, tripId } })` or reject.
@@ -141,6 +141,16 @@ Two editors write incompatible shapes into `Note.content`: itinerary `TripNotes`
 `NewTripWizard.tsx` renders its own `.wizard` / `.wizard-body` / `.wizard-foot` classes instead of the `.modal-head` / `.modal-body` / `.modal-foot` convention `Modal.tsx` documents it expects callers to use (`src/components/shared/Modal.tsx:18`). On mobile, `Modal` renders the shadcn `Sheet` (`.sheet-panel`, `max-height: 90vh`), and only `.sheet-panel .modal-body { overflow-y: auto }` / `.sheet-panel .modal-foot { position: sticky; bottom: 0 }` (`globals.css:853-861`) get scroll + sticky-footer treatment. `.wizard-foot` (`globals.css:2597`) gets neither, so on a tall step (e.g. vibes/cover-mood picker) the submit button can sit past the visible sheet height with no guaranteed way to reach it.
 > Shipped: reusing `.modal-body`/`.modal-foot` directly would have double-applied desktop's `.modal-body` padding on top of `.wizard`'s own (breaking the desktop layout), so instead added scoped rules — `.sheet-panel .wizard { overflow-y: auto; max-height: 90vh }` and `.sheet-panel .wizard-foot { position: sticky; bottom: 0; ... }` — mirroring the same scroll + sticky-footer treatment without touching desktop. Verified with Playwright at 375×812: the submit button sits in a sticky bar at the bottom of the sheet after scrolling through all of step 3 (name, budget, invites, 8 cover moods).
 - Acceptance: at 375px, every wizard step's primary action ("Create trip ✨") stays reachable — sticky or scrollable within the sheet — no clipped/unreachable submit button on any step.
+
+### ODY-110 · Schedule "best window" reports an impossible number of free travelers — S, haiku
+> **In plain terms:** The Schedule tab's "Best window" card can claim more people are free than the trip even has — "12 travelers free" on a 4-person trip. It's adding up each day's headcount instead of counting the distinct people who are free across the window, so any poll with a desired trip length shows an inflated, nonsense number.
+`computeBestWindow` in `src/app/trips/[tripId]/schedule/actions.ts` builds `perDate[].availableCount` as a distinct-user `Set` per date (correct), then in the sliding-window loop does `availableCount += perDate[j].availableCount` across the window's days — summing per-day counts rather than unioning the users. `AvailabilityHeatmap.tsx` renders that value directly as `{bestWindow.availableCount} traveler(s) free`.
+- Only shows when `desiredLengthDays` is set: with it unset `windowLen = 1`, so the sum happens to equal the single day's distinct count and the bug is invisible. A 3-day window with 4 travelers all free reads "12 travelers free."
+- Fix: carry the per-date `Set<string>` of available users through to the window loop and union them (or intersect — **decide the intended meaning first**, and make the label match it). "Free at some point during the window" (union) and "free every day of the window" (intersection) are both defensible; intersection is the more useful planning signal, union is closer to today's per-day framing. Whichever is picked, the copy must say it ("4 of 6 travelers free all 3 days").
+- `score` (which weights `maybe` at 0.5) is a separate ranking signal and is fine as a sum — this ticket only changes the number that is *displayed*.
+- Files: `src/app/trips/[tripId]/schedule/actions.ts` (`computeBestWindow`, `BestWindow` type), `src/components/trips/AvailabilityHeatmap.tsx` (label copy).
+- Guardrails: no schema; unit-test `computeBestWindow` (currently untested) — multi-day window with overlapping and disjoint availability, `desiredLengthDays` unset, and a member free on only some days.
+- Acceptance: the displayed count can never exceed the trip's member count; the label states exactly what the number means; a case with `desiredLengthDays > 1` is covered by a test.
 
 ---
 
@@ -207,7 +217,7 @@ Zero tests, no CI. The riskiest logic is pure and cheap to test: split-balance m
 - Add Vitest (unit only, no E2E yet), extract split math into `src/lib/budget.ts` so it's testable, cover the listed units. GitHub Actions workflow: install → prisma generate → lint → typecheck (`tsc --noEmit`) → test → build.
 - Acceptance: `npm test` green locally and in CI on PRs.
 
-### ODY-043 · Event form gives no feedback on invalid/failed submit — S, haiku
+### ODY-043 · Event form gives no feedback on invalid/failed submit — S, haiku — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** If you try to add an event without a title, nothing happens and there's no explanation. This shows a clear reason, and warns you when a save actually fails.
 `handleSave` in `src/components/itinerary/AddEventModal.tsx` early-returns on
 `!form.title.trim()` with zero feedback (the submit button is merely disabled), and
@@ -239,42 +249,42 @@ with existing trips.
 - Deliverable: prioritized P0–P3 list with repro steps + suspected files; cross-reference existing tickets to avoid duplicates.
 - Acceptance: a findings report exists; each concrete defect is filed as a candidate ticket with a file path and repro.
 
-### ODY-053 · Pin invite email origin to allowlisted app URL — S, sonnet
+### ODY-053 · Pin invite email origin to allowlisted app URL — S, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Invite emails should always send people to *our* sign-up page, never a fake one. Right now the link can follow a spoofed request host.
 `getAppOrigin()` in members actions builds Clerk invite `redirectUrl` from the request `Host` / `x-forwarded-*` headers. A crafted invite request can point victims at an attacker-controlled "sign-up."
 - Prefer `NEXT_PUBLIC_APP_URL` (or a fixed production origin allowlist) for invite redirects; fall back to request host only in local dev.
 - Files: `src/app/trips/[tripId]/members/actions.ts`.
 - Acceptance: invite emails always use the configured app origin in staging/prod.
 
-### ODY-054 · Zod + trip-scope for updateExpense / eventId — S, haiku
+### ODY-054 · Zod + trip-scope for updateExpense / eventId — S, haiku — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Editing an expense still accepts nonsense numbers, and linking an expense to an event doesn't prove that event is on this trip.
 `createExpense` uses Zod; `updateExpense` does not (negative/non-finite amounts, arbitrary category). `eventId` is stored without verifying `event.tripId === expense.tripId`.
 - Reuse/extend expense schemas for update; verify event belongs to trip before link.
 - Files: `src/app/trips/[tripId]/budget/actions.ts`, `src/lib/validations/index.ts`.
 - Acceptance: invalid updates rejected; cross-trip `eventId` rejected.
 
-### ODY-055 · Rate-limit server-side geocode and Explore — M, sonnet
+### ODY-055 · Rate-limit server-side geocode and Explore — M, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Only the browser search box is throttled. Server Explore and event saves can still hammer the free map service and get the whole app banned.
 `/api/geocode` soft-limits per user; `exploreByVibe`, `createEvent`/`updateEvent`/`createPlace` call `searchPlaces`/`geocode` with no shared limiter.
 - Share the rate-limit helper from the geocode route into `src/lib/geocode.ts` (or a tiny limiter module) for all server Nominatim callers.
 - Files: `src/lib/geocode.ts`, `src/app/api/geocode/route.ts`, `explore/actions.ts`, itinerary/collections actions.
 - Acceptance: sustained Explore/event geocode abuse is soft-limited; normal UX unchanged.
 
-### ODY-056 · Place RLS + note payload size limit — S, sonnet
+### ODY-056 · Place RLS + note payload size limit — S, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Lock down the new Places table the same way as other tables, and stop notes from accepting huge unbounded JSON.
 `Place` (ODY-045) is missing from `prisma/rls.sql`. `upsertNote` accepts arbitrary `object` with no max size (storage DoS / integrity).
 - Add `Place` to RLS script (defense-in-depth; Prisma still primary). Zod-validate note content + reasonable byte/char cap.
 - Files: `prisma/rls.sql`, `src/app/trips/[tripId]/notes/actions.ts`.
 - Acceptance: Place listed in RLS script; oversized notes rejected.
 
-### ODY-057 · Toast remaining silent form failures — S, haiku
+### ODY-057 · Toast remaining silent form failures — S, haiku — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Some saves still fail quietly — trip create, expenses, schedule "apply window." Show the same clear toasts events already get.
 Residual of ODY-013 / sibling of ODY-043.
 - Wrap try/catch + `toast` in `NewTripWizard` create (and surface invite skip), `ExpenseModal`, `AvailabilityHeatmap` apply.
 - Files: those three components; reuse `src/components/shared/Toast`.
 - Acceptance: induced failures show branded toasts; success paths unchanged.
 
-### ODY-058 · Toast / sheet / map-card z-index above modals and mobile chrome — S, haiku
+### ODY-058 · Toast / sheet / map-card z-index above modals and mobile chrome — S, haiku — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Error messages and some mobile sheets hide under the bottom tab bar or behind modals — you never see them.
 `.toast-stack` is `z-index: 200`; desktop modal ~1000; mobile tab bar ~1200; Sheet often `z-50`. Map selected-event card sits at `bottom: 24px` under the tab bar.
 - Raise toast (and sheet) above modal + tab bar; pad map-card / toast bottom on mobile for safe-area + tab height.
@@ -305,7 +315,7 @@ scrolling back to the sidebar or menu. Forms are cramped; workflows interrupt fo
 - Fix `handleDragEnd` (`DayBlock.tsx:152-167`) to compute old/new index against `displayedEvents` (what's actually rendered/dragged), not the raw `events` state, then persist the resulting `orderIndex` values via `reorderEvents` as before.
 - Acceptance: events with start times always appear chronologically, with no way to turn that off; drag-and-drop still works (visibly reorders same-time/no-time events; timed events snap back to time order); no leftover "By time"/"Manual" UI.
 
-### ODY-047 · Cover "skin" doesn't carry to the itinerary page — S, sonnet
+### ODY-047 · Cover "skin" doesn't carry to the itinerary page — S, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** The cover look you pick when creating a trip shows on the dashboard card but the itinerary page ignores it and always goes purple. This makes the itinerary match your pick.
 `coverIndex` is stored as `"grad:<index>"` in `Trip.coverImageUrl` (`createTripWizard`
 in `src/app/trips/actions.ts`) and resolved via `resolveCover`
@@ -479,6 +489,52 @@ Both `TripNotes`' pinned textarea and `NoteSection`'s per-section textarea are p
 - Deduplicate `@/lib/utils` vs `@/lib/utils/index` (one export path); prefer UTC-aware date helpers from ODY-048.
 - Acceptance: no unused TripForm; single utils entry; `tsc`/lint clean.
 
+### ODY-108 · Full UI/UX design audit — every screen, every control, desktop + mobile — L, sonnet
+> **In plain terms:** The app has been built ticket by ticket over dozens of sessions, each one polishing its own corner. Nobody has recently sat down and looked at the *whole thing* as one product: is every button clean, legible, and pleasant? Does it still feel like the editorial "boarding pass + printed map" brand, or has it drifted into generic AI-generated-app styling? This is that pass — a systematic sweep of every screen at both desktop and 375px, producing a prioritized findings report and child tickets.
+Audit-first deliverable (findings report + candidate tickets), like ODY-046 — **not** a giant refactor PR. Small, obviously-safe fixes may ship in the same PR; anything structural becomes its own ticket.
+- **Surfaces to cover (every one, both widths):** landing → sign-in/sign-up → onboarding name → dashboard (empty + populated) → New Trip wizard (all 3 steps) → trip overview → itinerary (day blocks, event cards, add/edit modal, notes + sections, first-steps) → map (pins, filters, legend, selected-event card) → collections → explore → budget (summary, categories, expense modal, split card, settle-up, settled history) → schedule (poll setup, availability grid, heatmap, apply confirm) → members/invites → all toasts, sheets, drawers, empty states, loading skeletons and error states.
+- **Per surface, judge:** visual hierarchy and whether the eye lands on the right thing first; type scale, line length and contrast (DM Serif Display / DM Sans / JetBrains Mono used with intent, not at random); spacing rhythm and alignment; whether the control's affordance matches its importance (primary vs ghost vs icon-only); touch-target size ≥40px (the standard set in ODY-021/107); horizontal overflow at 375px; motion/transition consistency; **and the "does this look AI-generated?" test** — generic card-grid sameness, emoji-as-iconography, gradient-for-its-own-sake, over-rounded everything, filler microcopy.
+- **Brand fidelity check:** every screen against the original creative direction (README creative direction section, `PRD/Odyssey-MVP-PRD.md`, and the `--peri/--teal/--coral/--peach/--gold/--slate` + `--ink`/`--paper` token system). Flag any surface that reads as a generic SaaS dashboard rather than a calm editorial travel journal, and any color used outside its documented semantic role (see Event Type Colors in `CLAUDE.md`).
+- **Known seeds to fold in (found during the 2026-08-08 audit, don't re-discover them):**
+  - `LeaveTripButton.tsx:14` and `MemberActions.tsx:31` still use raw `window.confirm()` for destructive actions, while the schedule apply-window flow was upgraded to the branded `Modal` in ODY-090. Two destructive flows drop out of the design system entirely — inconsistent and off-brand.
+  - `globals.css` is 3,327 lines with layered `z-index` values from `-1` to `1400` assigned ad hoc across ODY-058 and later tickets; audit for a documented stacking order rather than more one-off numbers.
+  - `AvailabilityGrid`/`AvailabilityHeatmap` still mix raw Tailwind utility classes (`w-full`, `text-xs`, `inline-flex`) with the globals.css class system, unlike the rest of the app — a visible inconsistency in how the schedule tab is built (see ODY-109).
+  - Money renders through `fmtMoney` with a hardcoded `currency: "USD"` (`src/lib/utils/index.ts:31`) — see ODY-024 / ODY-111.
+- Deliverable: `docs/ody-108-design-audit.md` — prioritized P0–P3 findings, each with screen, width, screenshot/repro, suspected file, and a proposed fix; cross-referenced against open tickets (ODY-020/022/023/024/026/060/096/097) so nothing is filed twice.
+- Guardrails: audit only, no redesign-by-stealth; no new dependencies; any fix that does ship must use existing tokens and add no hardcoded hex outside globals.css.
+- Acceptance: every surface above has been visited at both widths and has a written verdict (pass or finding); every concrete defect is filed with a file path; the report explicitly answers "does it still match the editorial brand" per screen rather than in general.
+
+### ODY-109 · Scheduling poll UX — the vote is ambiguous and easy to lose — M, sonnet
+> **In plain terms:** The Schedule tab lets people tap cells to say when they're free, but the result is genuinely ambiguous: "I'm busy" looks exactly the same as "I haven't answered yet," and "maybe" is collected but then never shown to anyone. You also can't tell who still hasn't voted, there's no way to mark a whole week at once, and if a save fails the app says nothing — you think you voted when you didn't. This makes the poll trustworthy to read and quicker to fill in.
+Concrete defects found in the 2026-08-08 audit of `AvailabilityGrid.tsx` / `AvailabilityHeatmap.tsx` / `schedule/actions.ts`:
+- **"Busy" and "unset" are visually identical.** `cellClass()` returns `is-unset` for both `"unavailable"` and `undefined`, and the legend collapses them into one swatch labelled "Busy / unset". The four-state tap cycle (unset → free → maybe → busy → unset) therefore has only three visual states, and an explicit "I can't make it" is indistinguishable from silence — the single most important distinction in a scheduling poll. Give `unavailable` its own treatment (`--coral`-family, per the palette's alert role) and leave unset visually empty.
+- **"Maybe" never reaches the group.** The heatmap's `counts` only tallies `status === "available"`, so a maybe vote is collectable but invisible to everyone else. (`computeBestWindow` *does* weight it at 0.5 in `score`, so it silently influences the recommendation while never being shown — worse than ignoring it.) Surface maybes in the heatmap cell (e.g. "3 +2?") and in the legend.
+- **No "who hasn't voted."** The heatmap says "N of M free" but there's no roster of who has responded, so an empty column is unreadable — is everyone busy, or has nobody opened the tab? Add a quiet responded/not-responded member list (pairs with the ODY-034 nudge idea; the in-app badge is the cheap half).
+- **Failed saves are swallowed.** `persist()` in `AvailabilityGrid` catches and discards errors with `// swallow — optimistic state stays`, so a traveler can mark a whole week, have every write fail, and see no indication. Toast on failure and reconcile the optimistic state (ODY-057 did this for the other forms; the grid was missed).
+- **Every tap re-sends the entire slot map.** `persist()` serializes all of `statuses` on each click, so the payload grows with the poll's range × blocks and each cell tap rewrites every slot. Send just the changed cell (or debounce a batch).
+- **No bulk marking.** A 14-day poll with 3 blocks is 42 cells at up to 3 taps each. Add row ("this whole day"), column ("every morning") and "I'm free the whole range" shortcuts — this is the single biggest time cost in the current flow.
+- **Block semantics are unreconciled.** `all_day` defaults on and the other three default off, but nothing stops a poll enabling `all_day` *and* `morning`/`afternoon`/`evening`, leaving "free all day" and "busy in the evening" both true with no defined precedence in `computeBestWindow`. Either make `all_day` mutually exclusive with the granular blocks in `PollSetupForm`, or define and document the precedence.
+- **Mobile:** the grid is a `<table>` with `min-width: 80px` cells inside an `overflow-x: auto` container, so with 4 blocks enabled it side-scrolls at 375px with the day column scrolling out of view. Consider a sticky day column or a day-at-a-time mobile layout.
+- Files: `src/components/trips/AvailabilityGrid.tsx`, `src/components/trips/AvailabilityHeatmap.tsx`, `src/components/trips/PollSetupForm.tsx`, `src/components/trips/scheduleShared.ts`, `src/app/trips/[tripId]/schedule/actions.ts`, `globals.css` (`.av-*`).
+- Related: **ODY-110** (inflated best-window count) should land first or in the same PR — it's the same card. ODY-034 (Phase 2 polish) stays the home for calendar sync and email nudges.
+- Guardrails: no new deps; the schedule tab currently mixes raw Tailwind utilities with the globals.css class system — migrate the touched markup to `.av-*` classes rather than adding more utilities (ODY-011/012 posture); keep one-tap "free" as the fastest path.
+- Acceptance: busy, maybe, free and unanswered are four visually distinct states in both the personal grid and the group heatmap; the group view shows who hasn't responded; a failed save is visible; a traveler can mark a whole day or the whole range without tapping every cell; no horizontal scroll traps the day labels at 375px.
+
+### ODY-111 · Expense splitting vs Splitwise — competitive gap audit — M, sonnet
+> **In plain terms:** After ODY-094 and ODY-107 the money features are genuinely good: you can say who paid, who's on each expense, split unevenly, see who owes whom, and mark a transfer as settled. This ticket asks the honest next question — if someone already uses Splitwise for trips, what would still make them keep it open alongside Odyssey? Write that list down and decide which gaps are worth closing.
+Audit-first (findings + prioritized child tickets); ships code only for anything trivially small. **Do not re-litigate what already works** — `src/lib/budget.ts` (`weightedSharesCents`, `equalSharesCents`, `aggregateBalances`, `suggestSettlements`, 24 tests), `ExpenseShare`, `Settlement`, `paidBy`, and the `ExpenseModal` paid-by/participants/equal-vs-exact flow are all shipped and verified.
+- **Known gaps to assess (each: does a trip planner actually need it? cost? does it fit the calm editorial tone or drag us toward a spreadsheet?):**
+  - **Multi-currency.** `fmtMoney` hardcodes `currency: "USD"` (`src/lib/utils/index.ts:31`) and `Expense.amount` carries no currency. This is the biggest single gap for an *international travel* app — Splitwise does per-expense currency with a trip base currency and stored conversion rate. Overlaps ODY-024; this ticket should decide whether ODY-024 grows into that or stays formatting-only.
+  - **Percentage and share-based splits.** Today's modes are equal and exact-dollar only. Splitwise also offers %, shares/parts, and "adjustment" (+/− off an even split). `TripMember.splitWeight` already models trip-wide shares — the gap is per-expense.
+  - **Itemization + tax/tip** — already scoped as ODY-094 Stage C (`ExpenseLine`); confirm it's still the right shape and priority.
+  - **Per-event / per-meal split view** — already scoped as ODY-097 Stage D; cross-reference rather than duplicate.
+  - **Simplify debts across the group.** `suggestSettlements` already minimizes transfers; verify it behaves like Splitwise's "simplify debts" and document the difference if not.
+  - Others to weigh and explicitly accept or reject with a reason: expense comments/history ("why is this $80?"), an audit trail of edits, partial/uneven settlements (today "Mark as paid" records the exact suggested amount — a partial payment needs a custom amount), recurring expenses (low value for a trip), reminders/nudges to settle, per-person "you are owed / you owe" summary at the top of Budget, and export (CSV/PDF — pairs with ODY-032/072).
+  - **Receipt capture** — see **ODY-112**; do not scope it here beyond noting the dependency.
+- Deliverable: a gap table in the ticket (gap · does Odyssey need it · effort · verdict), plus child tickets only for the gaps that earn a yes.
+- Guardrails: Odyssey is a trip planner with money features, not a ledger app — the bar is "a group can settle a trip fairly without leaving," not feature parity. Equal split must stay one-tap (ODY-094's standing rule); advanced options stay behind progressive disclosure.
+- Acceptance: every gap above has a written verdict with a reason; the ones marked "yes" exist as scoped tickets with file paths; multi-currency has an explicit ship-or-defer decision recorded.
+
 ---
 
 ## P2 — User Journey (2026-07-25 UX audit)
@@ -499,7 +555,7 @@ Both `TripNotes`' pinned textarea and `NoteSection`'s per-section textarea are p
 - Files: `src/components/trips/navItems.ts`, `WorkspaceSidebar.tsx`, `MobileTabBar.tsx`.
 - Acceptance: a fresh trip presents a calm, minimal nav; advanced tabs appear as they gain purpose; nothing becomes unreachable.
 
-### ODY-076 · Jump to today / in-progress day on itinerary — S, haiku
+### ODY-076 · Jump to today / in-progress day on itinerary — S, haiku — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** When a trip is happening *now*, the itinerary opens at Day 1 and you have to scroll to find today. Auto-focus today's day and mark it.
 The dashboard already computes `live`/`upcoming`/`past`; the itinerary doesn't lean into "today."
 - For a live trip (today within start–end, UTC-safe via ODY-048 helpers), scroll the matching `DayBlock` into view on load and give it a quiet "Today" marker/accent. Non-live trips unchanged.
@@ -518,7 +574,7 @@ Collections are savable but can't be promoted to the plan (Explore already has `
 - Files: `src/app/trips/[tripId]/collections/actions.ts` (or reuse itinerary action), `src/components/` collections card + a small day-picker (reuse Explore's pattern).
 - Acceptance: a saved place becomes a real itinerary event on the chosen day; viewers can't; pins/costs behave like hand-entered events.
 
-### ODY-079 · Map honesty for saved-but-unpinned locations — S, sonnet
+### ODY-079 · Map honesty for saved-but-unpinned locations — S, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** If a location can't be geocoded (typed freehand, lookup failed), the event still saves but the map just says "No pins yet" with no explanation — it looks broken. Tell the truth.
 QA findings F18/F19: events/places without coordinates silently vanish from the map; autocomplete errors are invisible.
 - Map: when there are events/places but some lack `lat`/`lng`, show a small branded note ("N stops aren't pinned yet — add a location we can find"). Distinguish "no stops" from "stops but none mappable."
@@ -526,7 +582,7 @@ QA findings F18/F19: events/places without coordinates silently vanish from the 
 - Files: `src/app/trips/[tripId]/map/page.tsx`, `MapClient.tsx`, `src/components/itinerary/LocationAutocomplete.tsx`.
 - Acceptance: a trip with unpinned stops explains why on the map; failed lookups show a clear, calm message.
 
-### ODY-080 · Honest schedule apply-window copy + out-of-range day flag — S, sonnet
+### ODY-080 · Honest schedule apply-window copy + out-of-range day flag — S, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** The "Apply best window" confirm warns that events outside the new dates are "permanently removed," but the server actually keeps days that have events. The scary copy is a lie — fix it, and gently flag any kept-but-out-of-range days.
 QA finding F10: `applyWindow` only deletes *empty* out-of-range days (ODY-002 safety), but the confirm dialog claims event days are deleted.
 - Rewrite the confirm copy to match reality: empty days outside the new range are removed; days that hold events are kept and may now sit outside your dates.
@@ -534,7 +590,7 @@ QA finding F10: `applyWindow` only deletes *empty* out-of-range days (ODY-002 sa
 - Files: `src/components/trips/AvailabilityHeatmap.tsx`, `src/components/itinerary/DayBlock.tsx`, `src/app/trips/[tripId]/itinerary/page.tsx`.
 - Acceptance: confirm copy accurately describes what happens; no event data is implied to be destroyed when it isn't.
 
-### ODY-081 · Editors can open schedule polls (role parity) — S, haiku
+### ODY-081 · Editors can open schedule polls (role parity) — S, haiku — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Any editor can plan the whole trip, but only the owner can open a scheduling poll — editors just hit a dead-end empty state. Let editors open/edit polls too.
 QA finding F21: `upsertPoll` requires `role: "owner"`; the rest of planning is editor+ (ODY-001).
 - Change `upsertPoll` to allow editor+ (reuse `assertTripRole(..., "editor")`). Keep `applyWindow` owner-only for now, since it overwrites trip dates for everyone (document this split in the ticket/comment).
@@ -568,7 +624,7 @@ Invite deep-links land on the trip, but there's no first-visit context for a joi
 - Files: `src/app/trips/[tripId]/` layout or itinerary page, a small `JoinWelcome` component, `globals.css`.
 - Acceptance: a freshly joined collaborator sees a warm, dismissible orientation on the trip; returning members don't.
 
-### ODY-090 · Branded apply-window confirm + success toast — S, sonnet
+### ODY-090 · Branded apply-window confirm + success toast — S, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** Locking the schedule's best window into your trip dates currently uses the browser's plain grey pop-up, and there's no confirmation once it works. Swap it for Odyssey's own calm confirm and a "Trip dates updated" toast so the action feels finished and on-brand. (From testing feedback: "apply window works but would look better as a stylized notification.")
 `AvailabilityHeatmap.handleApply` uses `window.confirm(...)` and shows only a failure toast.
 - Replace `window.confirm` with the existing `Modal` shell (`src/components/shared/Modal.tsx`) as a small confirm dialog: title, the honest ODY-080 body copy, Cancel + "Apply dates" (loading state reuses `isPending`). Keep it owner-only (parity with ODY-081).
@@ -615,7 +671,7 @@ Today: `Place.category` is an event-type chip; `CollectionsClient` groups by tha
 
 ## P3 — New Features
 
-### ODY-045 · Place Collections shown on the map by category — L, sonnet
+### ODY-045 · Place Collections shown on the map by category — L, sonnet — ✅ DONE (verified in code 2026-08-08)
 > **In plain terms:** A place to save candidate spots — restaurants, attractions, maybes — that aren't on the day-by-day plan yet, labeled and shown on the map by label. Good while the itinerary is still a work in progress.
 A "possibilities" bucket separate from the itinerary, filterable on the Leaflet map by
 category label.
@@ -685,6 +741,25 @@ Depends on / pairs with **ODY-094** (needs `paidBy` / `ExpenseShare` for real pe
 - Prioritize title, time, type; keep edit/delete tappable; no clip/overlap/horizontal scroll; preserve desktop/tablet.
 - Files: `EventBlock.tsx`, `globals.css` (and map card if it mirrors the same meta).
 - Acceptance: long addresses at 375px stay inside the card; desktop unchanged.
+
+### ODY-112 · Receipt capture — photograph a receipt, split what's on it — L, sonnet (P3, quality of life)
+> **In plain terms:** After a group dinner, someone types "Dinner — $184.30" into the budget and everyone argues about who had the wine. This lets you photograph the receipt instead: the app reads it, proposes the line items and the total, and you assign each item to whoever ate it. The photo also stays attached to the expense so there's a record of what was actually charged.
+**Feasibility answer (2026-08-08 research) — what it actually needs.** This ticket was raised with open questions (OCR? chunking? Vercel Blob? an AI key?); those are answered here so the implementation session doesn't re-derive them.
+- **Capture — no library needed.** `<input type="file" accept="image/*" capture="environment">` opens the camera directly on iOS/Android and a file picker on desktop. No camera dependency, no new package.
+- **Storage — Supabase Storage, not Vercel Blob.** `@supabase/supabase-js` is already a dependency and ODY-031 already plans the bucket-upload pattern for trip covers; a second bucket (`receipts`) reuses that work. Vercel Blob would mean a new vendor, a new SDK, and a second storage story for no benefit. **Private bucket + signed URLs** — receipts carry names, partial card numbers, and addresses, so this must not be the public-read posture a cover image can use. Add to `prisma/rls.sql` alongside the rest.
+- **Reading the receipt — a vision model, not traditional OCR.** Tesseract-style OCR returns a bag of words and cannot tell an item line from the tax line, so it would need a hand-written parser per receipt format — the actual hard part, and the part that breaks on the next restaurant. A vision-capable LLM does layout + semantics in one call and returns the structured shape directly.
+- **"Chunking" is not needed** — that's a long-document/RAG concern. A receipt is a single image well under the model's limits. What *is* needed is **client-side downscaling before upload**: phone photos are 3–12MB, and the models cap at 2576px on the long edge (~4,784 image tokens). Resize to that on the client — it cuts upload time, storage, and per-call token cost at no accuracy loss.
+- **Yes, it needs an API key — this is the ticket's real cost.** `ANTHROPIC_API_KEY`, server-side only, never `NEXT_PUBLIC_`. Note this is the **first hard requirement for a provider key in the project**: ODY-049 shipped Explore on Nominatim specifically to avoid one, and "full LLM Explore ranking — optional once a provider key exists" already sits in Deferred/external. Getting a key unblocks both. **Decide and confirm the key with the user before building** — this is a recurring external cost, not a code decision.
+- **Cost is small but not zero.** One downscaled receipt is roughly 1.5k–4.8k input tokens plus a few hundred output. On `claude-opus-5` ($5/M in, $25/M out) that's ~$0.02–0.04 per receipt; on `claude-haiku-4-5` ($1/M in, $5/M out) ~$0.005–0.01. **Start on `claude-opus-5`** (messy real-world receipts — creased, angled, dim, handwritten tips — are exactly where the capable model earns its keep), then measure against `claude-haiku-4-5` on a real sample set before optimizing. Rate-limit per user by reusing the shared limiter from ODY-055 — an unmetered image endpoint is the obvious abuse target.
+- **Implementation shape:**
+  - Dependency: `@anthropic-ai/sdk` — a genuine exception to the no-new-deps guardrail; call it out in the PR. Do **not** hand-roll `fetch` against the API.
+  - New server action `parseReceipt(tripId, storagePath)` in `budget/actions.ts` — editor+ (ODY-001), trip-scoped, Zod-validated. Reads the image from Supabase, calls `client.messages.parse()` with `output_config: { format: zodOutputFormat(ReceiptSchema) }` so the model's reply is schema-validated rather than free text needing a regex. **Zod v4 is already a dependency** and `src/lib/validations/index.ts` is already the home for schemas — `ReceiptSchema` goes there: `{ merchant, purchasedAt, currency, lineItems: [{ label, amountCents, quantity }], subtotalCents, taxCents, tipCents, totalCents }`.
+  - Schema: `Expense.receiptUrl String?` (`prisma db push` — **confirm with the user before running against the shared Supabase instance**, per this repo's standing note).
+  - **The parse is always a proposal, never a commit.** Show an editable review sheet — every field pre-filled, every field correctable, the photo visible beside it — and only write the `Expense` when the user confirms. Models misread creased thermal paper; silently booking a wrong total into someone's balance is worse than not having the feature. Show the photo on the expense afterward too, so any later dispute is settled by looking rather than remembering.
+  - Failure paths must be calm and explicit (ODY-013/057): unreadable image, no key configured, rate-limited, model returned an implausible total (sanity-check that line items + tax + tip reconcile to the total, and flag rather than silently "fixing" a mismatch).
+- **Sequencing:** the *itemized* payoff needs somewhere to put line items — that's **ODY-094 Stage C (`ExpenseLine`)**. Without it this ticket can only prefill merchant + total, which is a much smaller win. **Do Stage C first, or ship this in the same epic.** Also pairs with ODY-097 (per-event/restaurant split view) — a scanned restaurant receipt is exactly its use case, and with ODY-094 Stage A+B already shipped, per-item assignment lands straight onto real `ExpenseShare` rows.
+- Guardrails: editorial aesthetic — a review sheet, not a scanner UI; no hardcoded hex; key stays server-side; private bucket; the model output is untrusted input, so Zod-validate it exactly as strictly as a user-submitted form.
+- Acceptance: a traveler can photograph a restaurant receipt on their phone, see the merchant/total/line items proposed, correct anything wrong, assign items to people, and save — producing an expense whose splits match what each person actually ordered; the photo stays viewable on that expense; a bad photo fails with a clear message and never writes a wrong expense.
 
 ### ODY-031 · Trip cover images via Supabase Storage — L, sonnet
 > **In plain terms:** Trips currently get pretty gradient covers, but you can't use your own photo. This adds photo upload, keeping the gradients as the default.
@@ -770,6 +845,22 @@ Ship in two stages so trip-level value lands first and event-scoped is additive.
 - Trip view shows trip-level items plus an optional "By activity" rollup grouping event-scoped items under their event title/day (read from existing itinerary data — no extra fetch shape).
 - Guardrails: editorial aesthetic; no new deps; keep it a checklist, not a todo manager. Assignee is optional and must not become a permissions system.
 - Acceptance: (A) any member can add/check/uncheck trip-level items, viewers read-only; (B) an event can carry its own list that shows on that event and rolls up in the trip view; deleting an event doesn't orphan stray items.
+
+**Status check + private/shared design decision (2026-08-08).** Asked directly: *is the packing list live?*
+> **Short answer: no — not as a feature.** What exists is a **notes section named "Packing List"** (`src/lib/tripNotes.ts:47`, `{ id: "default-packing", title: "Packing List" }`), created as one of ODY-104's default shared sections and made tickable by ODY-105's checklist syntax. So a trip today has a shared free-text box you can type items into and check off. That is genuinely useful and should not be torn out — but it is a text field, not a packing list: no assignee, no per-person scope, no counts, no rollup, no way to tell "who's bringing the tent." **This ticket (ODY-067) is still unstarted**, and it is what makes the feature real.
+**Answering the private-vs-shared question — the design decision this ticket was missing.**
+- **The framing to avoid** is "private lists *or* public lists" as a user-facing toggle. Packing genuinely has two different shapes, and asking a traveler to pick a mode per item is a question they'll get wrong:
+  1. **Group items** — exactly one person brings it *for everyone*: the tent, the bluetooth speaker, the first-aid kit, the car charger, the good camera. The whole value is that everyone can see it and that **nobody duplicates it** — two tents and no first-aid kit is the failure this feature exists to prevent. These need an **assignee** and must be visible to all.
+  2. **Personal items** — everyone brings their own: passport, meds, contacts, socks. Nobody else needs to see mine, and surfacing six travelers' underwear lists is pure noise that buries the group items that actually matter.
+- **So: one shared group list, plus a private personal list per member — and no visibility toggle at all.** Where an item lives is implied by where you added it, which is the thing users get right without thinking.
+- **Schema: this is one nullable column, and it mirrors the pattern the ticket already uses.** `ChecklistItem.eventId` is already "null = trip-level, set = scoped." Add `ownerId String?` with the same shape: **`null` = shared group item, set = private to that user.** No enum, no visibility flag, no second model.
+- **Privacy is a query invariant, not a UI concern.** Every read must filter `ownerId IS NULL OR ownerId = <current user>`; a personal item must never appear in another member's payload, including in the "By activity" rollup and any count. Add `ChecklistItem` to `prisma/rls.sql` as defence-in-depth (same posture as `Place`/`ExpenseShare`/`Settlement`). Getting this wrong leaks a named traveler's medication list to their trip mates — treat it as a P0-grade invariant inside a P3 feature and unit-test the filter directly.
+- **Counts read per-scope, not merged:** "6 of 11 group items claimed" and "4 of 20 packed" are different sentences answering different questions. Don't sum them into one number.
+- **Per-event lists (Stage B) are usually *personal*, and that changes the shape.** "Hike Cadillac Mountain → boots, 2L water, rain shell" is not one person bringing boots for the group — it's *everyone* bringing their own. So an event list is best modelled as a **prompt that fans out into each participant's personal list**, not as a shared checklist with one checkbox. Decide this explicitly in Stage B: shared-checkbox semantics on an event list will read as wrong the first time two people go on the same hike.
+- **What makes it practical rather than a chore** (the "fully functional" half of the question): seed the group list from a small template by trip type so it's never a blank box; let a member seed their personal list from a **"my usual" template that carries across trips** — that's the one piece with real repeat value and the strongest retention hook in this ticket; keep add-item to a single tap with an inline field, never a modal.
+- **Don't orphan the ODY-104 section.** Trips already have text in "Packing List". Either offer a one-time import (each line becomes an item — checklist lines already parse via `src/lib/checklist.ts`), or keep the section and point it at the real list. Silently shipping a second, better packing list beside the one people already typed into is the worst option.
+- Files (in addition to those above): `prisma/schema.prisma`, `prisma/rls.sql`, `src/lib/validations/index.ts`, `src/lib/tripNotes.ts` (migration/handoff from the default section).
+- Added acceptance: a personal item is invisible to every other member of the trip (asserted by a test against the query layer, not just the UI); a group item shows who's bringing it; group and personal counts are reported separately; existing "Packing List" notes-section content is either imported or explicitly handed off, never silently orphaned.
 
 ### ODY-068 · Offline read of itinerary / map — L, sonnet
 > **In plain terms:** Open the trip on a plane or abroad without signal and still see the plan (read-only first).
@@ -866,6 +957,12 @@ Collaboration feels static without realtime (ODY-070).
 4. **Journey depth (some schema):** ODY-074 → ODY-075/059/060/100 → ODY-084 → ODY-085 → ODY-077 → ODY-078 → ODY-083 → ODY-082 · ODY-093 (named collection lists)
 5. **Launch blockers (human + eng):** ODY-036 → ODY-037
 6. **P2 residual polish:** ODY-061 → ODY-020/022/023/024/026
-7. **P3 delight:** ODY-094 (Splitwise schema+UX) · ODY-097 (budget UX / per-event split view) · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 · ODY-096 (mobile commute overflow)
+7. **P3 delight:** ODY-094 (Splitwise schema+UX) · ODY-097 (budget UX / per-event split view) · ODY-032/072/087 · ODY-086 · ODY-088 · ODY-089 · ODY-065 · ODY-067 (packing — see the 2026-08-08 private/shared decision) · ODY-096 (mobile commute overflow)
 8. **Competitive / later:** ODY-066 · ODY-068–071
 9. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
+
+**Added by the 2026-08-08 review pass** (backlog reconciliation + four product questions):
+- **Fix first (small, concrete bug):** ODY-110 — the Schedule "best window" card can claim more travelers are free than the trip has members. One function, currently untested.
+- **Then the scheduling pass:** ODY-109 — busy vs unanswered are visually identical, "maybe" votes never reach the group, failed saves are silent. Land ODY-110 with it (same card).
+- **Audits, run before the polish they'd feed:** ODY-108 (whole-app UI/UX + brand-drift sweep, desktop and mobile — supersedes doing ODY-020/022/023/024/026 blind) · ODY-111 (expense splitting vs Splitwise, now that ODY-094 A+B and ODY-107 have shipped).
+- **Bigger swings, both with prerequisites:** ODY-067 (packing — now has a concrete private/shared design) · ODY-112 (receipt capture — needs a provider API key, and wants ODY-094 Stage C first for the itemized payoff).
