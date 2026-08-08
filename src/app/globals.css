@@ -2999,15 +2999,21 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   border: 1px solid var(--rule); color: var(--ink-3); font-size: 13px;
 }
 
-.av-legend { display: flex; gap: 16px; margin: 10px 0 16px; font-size: 12px; color: var(--ink-3); }
+.av-legend { display: flex; gap: 16px; margin: 10px 0 16px; font-size: 12px; color: var(--ink-3); flex-wrap: wrap; }
 .av-sw-free { background: var(--teal); }
 .av-sw-maybe { background: var(--peach); }
-.av-sw-busy { background: var(--paper-3); }
+.av-sw-busy { background: var(--coral); }
+.av-sw-unset { background: var(--paper-3); border: 1px solid var(--rule); }
 
 .av-cell-btn { height: 40px; min-width: 80px; border: 1px solid var(--rule); }
 .av-cell-btn.is-available { background: var(--teal); color: #fff; }
 .av-cell-btn.is-maybe { background: var(--peach); color: var(--ink); }
+.av-cell-btn.is-busy { background: var(--coral-soft); color: var(--coral); border-color: var(--coral); }
 .av-cell-btn.is-unset { background: var(--paper-3); color: var(--ink-3); }
+
+.av-not-responded { color: var(--ink-3); }
+.av-legend-note { font-size: 12px; color: var(--ink-3); margin: 0 0 10px; }
+.av-heat-maybe { margin-left: 3px; font-weight: 500; color: var(--peach); }
 
 /* ── Map client (ODY-011c — migrated from inline styles) ── */
 .map-loading { position: absolute; inset: 0; background: var(--paper-3); }

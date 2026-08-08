@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { setMySlots } from "@/app/trips/[tripId]/schedule/actions";
+import { toast } from "@/components/shared/Toast";
 import type { GetScheduleResult } from "@/app/trips/[tripId]/schedule/actions";
 import type { AvailabilityBlock, AvailabilityStatus } from "@/types";
 import { BLOCK_LABEL, eachDay, formatDayLabel, toDateKey } from "./scheduleShared";
@@ -23,10 +24,14 @@ const CYCLE: Record<string, AvailabilityStatus | undefined> = {
   unavailable: undefined, // back to empty
 };
 
-// Status → .av-cell-btn variant class in globals.css.
+// Status → .av-cell-btn variant class in globals.css. "unavailable" (busy)
+// and unset must render distinctly (ODY-109) — an explicit "I can't make
+// it" is the single most important signal in a scheduling poll, and it
+// used to be visually identical to silence.
 function cellClass(status: AvailabilityStatus | undefined): string {
   if (status === "available") return "is-available";
   if (status === "maybe") return "is-maybe";
+  if (status === "unavailable") return "is-busy";
   return "is-unset";
 }
 
@@ -53,29 +58,47 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
 
   const [, startTransition] = useTransition();
 
-  function persist(next: Record<string, AvailabilityStatus>) {
-    const payload = Object.entries(next).map(([key, status]) => {
-      const [date, block] = key.split("|");
-      return { date, block: block as AvailabilityBlock, status };
-    });
+  // Persist just the cell that changed (ODY-109) — the previous version
+  // resent the whole slot map on every tap, so a poll with a wide range or
+  // several blocks rewrote every slot on each click.
+  function persist(dateKey: string, block: AvailabilityBlock, status: AvailabilityStatus, revert: () => void) {
     startTransition(async () => {
       try {
-        await setMySlots({ tripId: poll.tripId, slots: payload });
+        await setMySlots({ tripId: poll.tripId, slots: [{ date: dateKey, block, status }] });
       } catch {
-        // swallow — optimistic state stays; revalidation will reconcile.
+        toast("Couldn't save that — try again.");
+        revert();
       }
     });
   }
 
   function cycle(dateKey: string, block: AvailabilityBlock) {
     const key = `${dateKey}|${block}`;
-    const current = statuses[key];
-    const nextStatus = CYCLE[current ?? "empty"];
+    const previous = statuses[key];
+    const nextStatus = CYCLE[previous ?? "empty"];
     const next = { ...statuses };
     if (nextStatus === undefined) delete next[key];
     else next[key] = nextStatus;
     setStatuses(next);
-    persist(next);
+
+    if (nextStatus === undefined) {
+      // Clearing back to "unset" has no server-side effect yet — the
+      // backend only upserts, it never deletes a slot row (ODY-113). We
+      // still update local state above so the UI reflects the tap, but
+      // there's nothing to persist here until that's fixed.
+      return;
+    }
+
+    function revert() {
+      setStatuses((s) => {
+        const reverted = { ...s };
+        if (previous === undefined) delete reverted[key];
+        else reverted[key] = previous;
+        return reverted;
+      });
+    }
+
+    persist(dateKey, block, nextStatus, revert);
   }
 
   return (
@@ -96,7 +119,10 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
             <span className="inline-block w-3 h-3 rounded av-sw-maybe" /> Maybe
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded av-sw-busy" /> Busy / unset
+            <span className="inline-block w-3 h-3 rounded av-sw-busy" /> Busy
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded av-sw-unset" /> Unset
           </span>
         </div>
 

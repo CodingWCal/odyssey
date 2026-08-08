@@ -11,6 +11,7 @@ import {
   type SetSlotsInput,
 } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
+import { computeBestWindow, type BestWindow } from "@/lib/scheduleWindow";
 import type {
   AvailabilityBlock,
   AvailabilityStatus,
@@ -54,13 +55,6 @@ type SchedulePoll = {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
-};
-
-type BestWindow = {
-  startDate: string;
-  endDate: string;
-  score: number;
-  availableCount: number;
 };
 
 export type GetScheduleResult = {
@@ -148,86 +142,6 @@ export async function getSchedule(tripId: string): Promise<GetScheduleResult> {
     : null;
 
   return { poll, slots, members, bestWindow };
-}
-
-function computeBestWindow(
-  poll: SchedulePoll,
-  slots: ScheduleSlot[]
-): BestWindow | null {
-  const enabledBlocks = poll.enabledBlocks;
-  if (enabledBlocks.length === 0) return null;
-
-  // Build the list of calendar dates in [rangeStart..rangeEnd].
-  const dates: Date[] = [];
-  const current = new Date(poll.rangeStart);
-  current.setUTCHours(0, 0, 0, 0);
-  const end = new Date(poll.rangeEnd);
-  end.setUTCHours(0, 0, 0, 0);
-  while (current <= end) {
-    dates.push(new Date(current));
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
-  if (dates.length === 0) return null;
-
-  // Index slots by dateKey -> block -> { available:Set, maybe:Set } of userIds.
-  type BlockTally = { available: Set<string>; maybe: Set<string> };
-  const byDate = new Map<string, Map<string, BlockTally>>();
-  for (const slot of slots) {
-    const dateKey = toDateKey(slot.date);
-    if (!enabledBlocks.includes(slot.block)) continue;
-    let blockMap = byDate.get(dateKey);
-    if (!blockMap) {
-      blockMap = new Map();
-      byDate.set(dateKey, blockMap);
-    }
-    let tally = blockMap.get(slot.block);
-    if (!tally) {
-      tally = { available: new Set(), maybe: new Set() };
-      blockMap.set(slot.block, tally);
-    }
-    if (slot.status === "available") tally.available.add(slot.userId);
-    else if (slot.status === "maybe") tally.maybe.add(slot.userId);
-  }
-
-  // Per-date score and distinct "available" headcount across enabled blocks.
-  const perDate = dates.map((d) => {
-    const dateKey = toDateKey(d);
-    const blockMap = byDate.get(dateKey);
-    let score = 0;
-    const availableUsers = new Set<string>();
-    if (blockMap) {
-      for (const block of enabledBlocks) {
-        const tally = blockMap.get(block);
-        if (!tally) continue;
-        score += tally.available.size + 0.5 * tally.maybe.size;
-        for (const u of tally.available) availableUsers.add(u);
-      }
-    }
-    return { date: d, score, availableCount: availableUsers.size };
-  });
-
-  const windowLen = Math.max(1, poll.desiredLengthDays ?? 1);
-  if (windowLen > perDate.length) return null;
-
-  let best: BestWindow | null = null;
-  for (let i = 0; i + windowLen <= perDate.length; i++) {
-    let score = 0;
-    let availableCount = 0;
-    for (let j = i; j < i + windowLen; j++) {
-      score += perDate[j].score;
-      availableCount += perDate[j].availableCount;
-    }
-    if (best === null || score > best.score) {
-      best = {
-        startDate: toDateKey(perDate[i].date),
-        endDate: toDateKey(perDate[i + windowLen - 1].date),
-        score,
-        availableCount,
-      };
-    }
-  }
-
-  return best;
 }
 
 export async function upsertPoll(data: CreatePollInput) {

@@ -23,8 +23,20 @@ export function PollSetupForm({ tripId }: PollSetupFormProps) {
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  // "All day" and the granular blocks are mutually exclusive (ODY-109) —
+  // otherwise "free all day" and "busy in the evening" could both be true
+  // for the same slot with no defined precedence in computeBestWindow.
   function toggleBlock(block: AvailabilityBlock) {
-    setBlocks((prev) => ({ ...prev, [block]: !prev[block] }));
+    setBlocks((prev) => {
+      const turningOn = !prev[block];
+      if (block === "all_day" && turningOn) {
+        return { all_day: true, morning: false, afternoon: false, evening: false };
+      }
+      if (block !== "all_day" && turningOn) {
+        return { ...prev, [block]: true, all_day: false };
+      }
+      return { ...prev, [block]: !prev[block] };
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {

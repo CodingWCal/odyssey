@@ -37,24 +37,49 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Count distinct members marked "available" per date+block (dedupe per member).
-  const counts = useMemo(() => {
+  // Count distinct members marked "available" and "maybe" per date+block
+  // (ODY-109 — maybe was collected and silently weighted into the best-window
+  // score but never shown to the group; that's worse than ignoring it).
+  const { available: counts, maybe: maybeCounts } = useMemo(() => {
     const byCell = new Map<string, Set<string>>();
+    const maybeByCell = new Map<string, Set<string>>();
     for (const s of slots) {
-      if (s.status !== "available") continue;
       if (!blocks.includes(s.block)) continue;
       const key = `${toDateKey(s.date)}|${s.block}`;
-      let set = byCell.get(key);
+      const target = s.status === "available" ? byCell : s.status === "maybe" ? maybeByCell : null;
+      if (!target) continue;
+      let set = target.get(key);
       if (!set) {
         set = new Set();
-        byCell.set(key, set);
+        target.set(key, set);
       }
       set.add(s.userId);
     }
-    const out: Record<string, number> = {};
-    for (const [key, set] of byCell) out[key] = set.size;
-    return out;
+    const toCounts = (m: Map<string, Set<string>>) => {
+      const out: Record<string, number> = {};
+      for (const [key, set] of m) out[key] = set.size;
+      return out;
+    };
+    return { available: toCounts(byCell), maybe: toCounts(maybeByCell) };
   }, [slots, blocks]);
+
+  // Who hasn't marked anything yet, in the poll's date range (ODY-109) — an
+  // empty column is unreadable otherwise: is everyone busy, or has nobody
+  // opened the tab?
+  const respondedUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of slots) ids.add(s.userId);
+    return ids;
+  }, [slots]);
+  const notResponded = members.filter((m) => !respondedUserIds.has(m.userId));
+
+  const windowDays = bestWindow
+    ? Math.round(
+        (new Date(bestWindow.endDate + "T00:00:00Z").getTime() -
+          new Date(bestWindow.startDate + "T00:00:00Z").getTime()) /
+          86400000
+      ) + 1
+    : 0;
 
   // Per-cell intensity passed as CSS custom properties (the documented
   // dynamic-value exception) — consumed by .av-heat in globals.css.
@@ -96,6 +121,11 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
           <div className="cat-meta">
             How many of {totalMembers} traveler{totalMembers === 1 ? "" : "s"} are free in each block.
           </div>
+          {notResponded.length > 0 && (
+            <div className="cat-meta av-not-responded">
+              Waiting on {notResponded.map((m) => m.user.name).join(", ")}.
+            </div>
+          )}
         </div>
       </header>
 
@@ -109,7 +139,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
                 {formatWindowDate(bestWindow.startDate)} – {formatWindowDate(bestWindow.endDate)}
               </div>
               <div className="av-best-count">
-                {bestWindow.availableCount} traveler{bestWindow.availableCount === 1 ? "" : "s"} free
+                {bestWindow.availableCount} of {totalMembers} traveler{totalMembers === 1 ? "" : "s"} free
+                {windowDays > 1 ? ` all ${windowDays} days` : ""}
               </div>
             </div>
             {isOwner && (
@@ -121,6 +152,8 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
         ) : (
           <div className="av-empty">No availability marked yet.</div>
         )}
+
+        <div className="av-legend-note">Numbers show travelers free; <strong>+N?</strong> shows travelers who said maybe.</div>
 
         <table className="w-full border-separate av-table">
           <thead>
@@ -144,15 +177,18 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
                     <span className="block text-sm font-medium">{day}</span>
                   </th>
                   {blocks.map((block: AvailabilityBlock) => {
-                    const count = counts[`${dateKey}|${block}`] ?? 0;
+                    const cellKey = `${dateKey}|${block}`;
+                    const count = counts[cellKey] ?? 0;
+                    const maybeCount = maybeCounts[cellKey] ?? 0;
                     return (
                       <td key={block} className="text-center">
                         <div
                           className="w-full rounded-lg text-xs font-semibold flex items-center justify-center av-cell av-heat"
                           style={intensityVars(count)}
-                          title={`${count} of ${totalMembers} free`}
+                          title={`${count} of ${totalMembers} free${maybeCount > 0 ? `, ${maybeCount} maybe` : ""}`}
                         >
                           {count > 0 ? count : ""}
+                          {maybeCount > 0 && <span className="av-heat-maybe">+{maybeCount}?</span>}
                         </div>
                       </td>
                     );
