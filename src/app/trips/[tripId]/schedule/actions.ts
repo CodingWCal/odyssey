@@ -5,9 +5,11 @@ import { db } from "@/lib/prisma/db";
 import {
   applyWindowSchema,
   createPollSchema,
+  deleteSlotSchema,
   setSlotsSchema,
   type ApplyWindowInput,
   type CreatePollInput,
+  type DeleteSlotInput,
   type SetSlotsInput,
 } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
@@ -214,6 +216,32 @@ export async function setMySlots(data: SetSlotsInput) {
       });
     })
   );
+
+  revalidatePath(`/trips/${validated.tripId}/schedule`);
+}
+
+/** Clear a single availability slot back to "unset" (ODY-113). Previously
+ * there was no delete path at all — setMySlots only upserted, so cycling a
+ * cell back to "unset" client-side never removed the underlying row, and
+ * the "cleared" answer reappeared on next load. Always scoped to the
+ * caller's own userId; deleteMany is a safe no-op if the row is already gone. */
+export async function deleteMySlot(data: DeleteSlotInput) {
+  const dbUser = await getDbUser();
+  const member = await db.tripMember.findFirst({
+    where: { tripId: data.tripId, userId: dbUser.id },
+  });
+  if (!member) throw new Error("Unauthorized");
+
+  const validated = deleteSlotSchema.parse(data);
+
+  await db.availabilitySlot.deleteMany({
+    where: {
+      tripId: validated.tripId,
+      userId: dbUser.id,
+      date: new Date(validated.date),
+      block: validated.block,
+    },
+  });
 
   revalidatePath(`/trips/${validated.tripId}/schedule`);
 }

@@ -160,6 +160,14 @@ export const setSlotsSchema = z.object({
     .max(2000),
 });
 
+// Clear a single availability slot back to "unset" (ODY-113). Always scoped
+// to the caller's own userId server-side — never accepted from the client.
+export const deleteSlotSchema = z.object({
+  tripId: z.string().min(1),
+  date: dateString,
+  block: z.enum(["all_day", "morning", "afternoon", "evening"]),
+});
+
 export const applyWindowSchema = z.object({
   tripId: z.string().min(1),
   startDate: dateString,
@@ -230,6 +238,7 @@ export type RecordSettlementInput = z.infer<typeof recordSettlementSchema>;
 export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;
+export type DeleteSlotInput = z.infer<typeof deleteSlotSchema>;
 export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;
 export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;

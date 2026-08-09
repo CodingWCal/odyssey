@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { setMySlots } from "@/app/trips/[tripId]/schedule/actions";
+import { deleteMySlot, setMySlots } from "@/app/trips/[tripId]/schedule/actions";
 import { toast } from "@/components/shared/Toast";
 import type { GetScheduleResult } from "@/app/trips/[tripId]/schedule/actions";
 import type { AvailabilityBlock, AvailabilityStatus } from "@/types";
@@ -72,6 +72,20 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
     });
   }
 
+  // Clearing back to "unset" deletes the row rather than just dropping it
+  // from local state (ODY-113) — otherwise the last real answer reappeared
+  // on next load, since the backend only ever upserted.
+  function clear(dateKey: string, block: AvailabilityBlock, revert: () => void) {
+    startTransition(async () => {
+      try {
+        await deleteMySlot({ tripId: poll.tripId, date: dateKey, block });
+      } catch {
+        toast("Couldn't clear that — try again.");
+        revert();
+      }
+    });
+  }
+
   function cycle(dateKey: string, block: AvailabilityBlock) {
     const key = `${dateKey}|${block}`;
     const previous = statuses[key];
@@ -80,14 +94,6 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
     if (nextStatus === undefined) delete next[key];
     else next[key] = nextStatus;
     setStatuses(next);
-
-    if (nextStatus === undefined) {
-      // Clearing back to "unset" has no server-side effect yet — the
-      // backend only upserts, it never deletes a slot row (ODY-113). We
-      // still update local state above so the UI reflects the tap, but
-      // there's nothing to persist here until that's fixed.
-      return;
-    }
 
     function revert() {
       setStatuses((s) => {
@@ -98,7 +104,8 @@ export function AvailabilityGrid({ poll, slots, currentUserId }: AvailabilityGri
       });
     }
 
-    persist(dateKey, block, nextStatus, revert);
+    if (nextStatus === undefined) clear(dateKey, block, revert);
+    else persist(dateKey, block, nextStatus, revert);
   }
 
   return (

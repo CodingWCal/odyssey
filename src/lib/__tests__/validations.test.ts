@@ -7,6 +7,7 @@ import {
   updateBudgetSchema,
   updateSplitSchema,
   setSlotsSchema,
+  deleteSlotSchema,
 } from "@/lib/validations";
 
 const validTrip = {
@@ -97,6 +98,39 @@ describe("availability slots (audit DoS cap)", () => {
     expect(
       setSlotsSchema.safeParse({ tripId: "t", slots: [{ ...slot, date: "garbage" }] }).success
     ).toBe(false);
+  });
+});
+
+describe("deleteSlotSchema (ODY-113)", () => {
+  it("accepts a single date+block clear", () => {
+    expect(
+      deleteSlotSchema.safeParse({ tripId: "t", date: "2026-07-10", block: "morning" }).success
+    ).toBe(true);
+  });
+
+  it("rejects a malformed date", () => {
+    expect(
+      deleteSlotSchema.safeParse({ tripId: "t", date: "garbage", block: "morning" }).success
+    ).toBe(false);
+  });
+
+  it("rejects an unknown block", () => {
+    expect(
+      deleteSlotSchema.safeParse({ tripId: "t", date: "2026-07-10", block: "brunch" }).success
+    ).toBe(false);
+  });
+
+  it("does not accept a userId — deletion is always scoped to the caller server-side", () => {
+    const parsed = deleteSlotSchema.safeParse({
+      tripId: "t",
+      date: "2026-07-10",
+      block: "morning",
+      userId: "someone-elses-id",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect("userId" in parsed.data).toBe(false);
+    }
   });
 });
 
