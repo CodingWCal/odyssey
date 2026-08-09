@@ -25,13 +25,6 @@ export function formatShortDate(date: Date | string): string {
   });
 }
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
-
 export function generateDaysArray(startDate: Date, endDate: Date): Date[] {
   const days: Date[] = [];
   const current = new Date(startDate);

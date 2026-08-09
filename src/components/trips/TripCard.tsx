@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AvatarStack } from "@/components/shared/AvatarStack";
+import { formatMoney } from "@/lib/money";
 import { COVER_ACCENT } from "./cover";
 
 export interface DashTrip {
@@ -11,14 +12,11 @@ export interface DashTrip {
   days: number;
   spent: number;
   cost: number;
+  currency: string;
   status: "live" | "upcoming" | "past";
   countdown: string;
   cover: string;
   members: { id: string; name: string }[];
-}
-
-function fmtMoney(n: number) {
-  return "$" + Math.round(Number(n) || 0).toLocaleString("en-US");
 }
 
 function titleParts(title: string): { head: string; tail: string } {
@@ -50,10 +48,10 @@ export function TripCard({ trip }: { trip: DashTrip }) {
           <AvatarStack members={trip.members} />
           <span className="cost">
             {isPast
-              ? <>{fmtMoney(trip.spent)} <span className="muted-spent">spent</span></>
+              ? <>{formatMoney(trip.spent, trip.currency)} <span className="muted-spent">spent</span></>
               : trip.spent > 0
-                ? <>{fmtMoney(trip.spent)} / {fmtMoney(trip.cost)}</>
-                : <>{fmtMoney(trip.cost)} budget</>}
+                ? <>{formatMoney(trip.spent, trip.currency)} / {formatMoney(trip.cost, trip.currency)}</>
+                : <>{formatMoney(trip.cost, trip.currency)} budget</>}
           </span>
         </div>
       </div>

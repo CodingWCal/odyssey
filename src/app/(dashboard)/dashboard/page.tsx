@@ -64,6 +64,7 @@ export default async function DashboardPage() {
       days: daysBetween(start, end),
       spent: spentByTrip.get(t.id) ?? 0,
       cost: t.totalBudget ?? 0,
+      currency: t.currency ?? "USD",
       status,
       countdown,
       cover: resolveCover(t.coverImageUrl, t.id),

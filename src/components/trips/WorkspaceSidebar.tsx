@@ -30,6 +30,7 @@ interface WorkspaceSidebarProps {
     startDate: Date;
     endDate: Date;
     timeFormat?: string;
+    currency?: string;
     coverImageUrl?: string | null;
   };
   /** Viewers can't edit trip details (ODY-001). */
@@ -105,6 +106,7 @@ export function WorkspaceSidebar({ trip, canEdit = true, navState }: WorkspaceSi
         initialEndDate={trip.endDate}
         initialTimeFormat={trip.timeFormat as "12h" | "24h" | undefined}
         initialCoverIndex={coverIndex}
+        initialCurrency={trip.currency}
         onClose={() => setEditOpen(false)}
       />
 

@@ -104,6 +104,7 @@ export default async function BudgetPage({ params }: Props) {
       expenses={expenses}
       settlements={settlements}
       readOnly={trip.myRole === "viewer"}
+      currency={trip.currency ?? "USD"}
     />
   );
 }

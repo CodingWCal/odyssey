@@ -9,10 +9,7 @@ import { TripCard, type DashTrip } from "./TripCard";
 import { NewTripWizard } from "./NewTripWizard";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-
-function fmtMoney(n: number) {
-  return "$" + Math.round(Number(n) || 0).toLocaleString("en-US");
-}
+import { formatMoney } from "@/lib/money";
 
 function greeting() {
   const h = new Date().getHours();
@@ -76,7 +73,7 @@ function LiveCard({ trip }: { trip: DashTrip }) {
           </div>
           <div className="footer">
             <AvatarStack members={trip.members} max={5} />
-            <span>{fmtMoney(trip.spent)} of {fmtMoney(trip.cost)} · {trip.members.length} travelers</span>
+            <span>{formatMoney(trip.spent, trip.currency)} of {formatMoney(trip.cost, trip.currency)} · {trip.members.length} travelers</span>
           </div>
         </div>
       </div>

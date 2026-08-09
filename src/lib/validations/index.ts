@@ -28,6 +28,10 @@ export const updateTripSchema = createTripSchema.partial().extend({
   timeFormat: z.enum(["12h", "24h"]).optional(),
   // Cover mood index stored as "grad:<n>" (ODY-047).
   coverIndex: z.coerce.number().int().min(0).max(7).optional(),
+  // Trip base currency, ISO 4217 (ODY-024). 3 uppercase letters; formatting
+  // only, no FX. Kept as a format check rather than a hardcoded enum so the
+  // picker's list can grow without a schema edit.
+  currency: z.string().regex(/^[A-Z]{3}$/, "Expected a 3-letter currency code").optional(),
 });
 
 export const createTripWizardSchema = z.object({

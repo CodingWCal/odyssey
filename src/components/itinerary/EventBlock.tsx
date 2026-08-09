@@ -9,6 +9,7 @@ import { toast } from "@/components/shared/Toast";
 import type { TripEvent } from "@/types";
 import { parseNoteChunks } from "@/lib/notes";
 import { formatTime, type TimeFormat } from "@/lib/utils";
+import { formatMoney } from "@/lib/money";
 
 const TYPE_VAR: Record<string, string> = {
   flight: "coral",
@@ -86,13 +87,15 @@ interface EventBlockProps {
   readOnly?: boolean;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
+  /** Trip base currency for cost display (ODY-024). */
+  currency?: string;
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
   /** Soft overlap titles for this event (ODY-077). */
   overlapWith?: string[];
 }
 
-export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h", destination, overlapWith }: EventBlockProps) {
+export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h", currency = "USD", destination, overlapWith }: EventBlockProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
@@ -149,7 +152,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
                     </span>
                   )}
                   {event.cost != null && (
-                    <span className="cost">${Number(event.cost).toLocaleString("en-US")}</span>
+                    <span className="cost">{formatMoney(event.cost, currency)}</span>
                   )}
                 </div>
               )}

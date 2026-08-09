@@ -38,6 +38,7 @@ function SortableEvent({
   tripId,
   readOnly,
   timeFormat,
+  currency,
   destination,
   overlapWith,
 }: {
@@ -45,6 +46,7 @@ function SortableEvent({
   tripId: string;
   readOnly?: boolean;
   timeFormat?: TimeFormat;
+  currency?: string;
   destination?: string;
   overlapWith?: string[];
 }) {
@@ -63,6 +65,7 @@ function SortableEvent({
         isDragging={isDragging}
         readOnly={readOnly}
         timeFormat={timeFormat}
+        currency={currency}
         destination={destination}
         overlapWith={overlapWith}
         dragHandle={
@@ -85,11 +88,13 @@ interface DayBlockProps {
   readOnly?: boolean;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
+  /** Trip base currency for cost display (ODY-024). */
+  currency?: string;
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
 }
 
-export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", destination }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", currency = "USD", destination }: DayBlockProps) {
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -229,6 +234,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
                   tripId={tripId}
                   readOnly={readOnly}
                   timeFormat={timeFormat}
+                  currency={currency}
                   destination={destination}
                   overlapWith={overlaps.get(event.id)}
                 />

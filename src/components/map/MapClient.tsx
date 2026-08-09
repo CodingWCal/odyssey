@@ -6,6 +6,7 @@ import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
 import { PLACE_CATEGORIES, TYPE_HEX, type MapDay, type MapEvent, type MapPlace } from "./mapTypes";
 import { formatTime, type TimeFormat } from "@/lib/utils";
+import { formatMoney } from "@/lib/money";
 import type { EventType } from "@/types";
 
 const LeafletMap = dynamic(() => import("./LeafletMap").then((m) => m.LeafletMap), {
@@ -21,6 +22,8 @@ interface MapClientProps {
   dayCount: number;
   /** Trip-level 12h/24h display preference (ODY-041). */
   timeFormat?: TimeFormat;
+  /** Trip base currency for cost display (ODY-024). */
+  currency?: string;
   /** Stops with a written location that couldn't be geocoded (ODY-079). */
   unpinnedCount?: number;
 }
@@ -32,6 +35,7 @@ export function MapClient({
   eyebrow,
   dayCount,
   timeFormat = "12h",
+  currency = "USD",
   unpinnedCount = 0,
 }: MapClientProps) {
   const [activeDay, setActiveDay] = useState<string>("all");
@@ -260,7 +264,7 @@ export function MapClient({
                 {selectedEvent.dayLabel} · {selectedEvent.dayDate}
               </span>
               {selectedEvent.cost != null && (
-                <span className="row"><span className="cost">${Number(selectedEvent.cost).toLocaleString("en-US")}</span></span>
+                <span className="row"><span className="cost">{formatMoney(selectedEvent.cost, currency)}</span></span>
               )}
             </div>
             {selectedEvent.notes && <div className="note">&ldquo;{selectedEvent.notes}&rdquo;</div>}

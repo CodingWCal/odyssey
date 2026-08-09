@@ -8,6 +8,7 @@ import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights, recordSettlement, deleteSettlement } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
 import { suggestSettlements, type SplitRow } from "@/lib/budget";
+import { formatMoney } from "@/lib/money";
 
 /** A recorded settle-up payment outside the expense ledger (ODY-107). */
 export interface RecordedSettlement {
@@ -62,10 +63,8 @@ interface BudgetClientProps {
   settlements: RecordedSettlement[];
   /** Viewers get a read-only budget (ODY-001). */
   readOnly?: boolean;
-}
-
-function fmtMoney(n: number) {
-  return "$" + Math.round(Number(n) || 0).toLocaleString("en-US");
+  /** Trip base currency for all money display (ODY-024). */
+  currency: string;
 }
 
 function CategoryBlock({
@@ -76,6 +75,7 @@ function CategoryBlock({
   onAdd,
   onEdit,
   readOnly,
+  currency,
 }: {
   category: Category;
   expenses: BudgetExpense[];
@@ -84,7 +84,9 @@ function CategoryBlock({
   onAdd: (c: Category) => void;
   onEdit: (e: BudgetExpense) => void;
   readOnly?: boolean;
+  currency: string;
 }) {
+  const fmtMoney = (n: number) => formatMoney(n, currency);
   const [collapsed, setCollapsed] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -159,11 +161,14 @@ function SplitSection({
   tripId,
   members,
   recordedSettlements,
+  currency,
 }: {
   tripId: string;
   members: SplitMember[];
   recordedSettlements: RecordedSettlement[];
+  currency: string;
 }) {
+  const fmtMoney = (n: number) => formatMoney(n, currency);
   const [isPending, startTransition] = useTransition();
   const [isSettling, startSettling] = useTransition();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -343,7 +348,8 @@ function SplitSection({
   );
 }
 
-export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMembers, currentUserId, splitMembers, expenses, settlements, readOnly = false }: BudgetClientProps) {
+export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMembers, currentUserId, splitMembers, expenses, settlements, readOnly = false, currency }: BudgetClientProps) {
+  const fmtMoney = (n: number) => formatMoney(n, currency);
   const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; initial: ExpenseInitial | null }>({
     open: false,
     mode: "add",
@@ -474,7 +480,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
 
       {/* Split between travelers */}
       {splitMembers.length > 0 && !readOnly && (
-        <SplitSection tripId={tripId} members={splitMembers} recordedSettlements={settlements} />
+        <SplitSection tripId={tripId} members={splitMembers} recordedSettlements={settlements} currency={currency} />
       )}
 
       {/* Breakdown bar */}
@@ -536,6 +542,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
             onAdd={openAdd}
             onEdit={openEdit}
             readOnly={readOnly}
+            currency={currency}
           />
         ))
       )}

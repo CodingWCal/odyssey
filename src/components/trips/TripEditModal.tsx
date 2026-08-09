@@ -5,6 +5,7 @@ import { Modal } from "@/components/shared/Modal";
 import { Icons } from "@/components/shared/Icons";
 import { updateTrip } from "@/app/trips/actions";
 import { COVER_GRADIENTS } from "@/components/trips/cover";
+import { TRIP_CURRENCIES } from "@/lib/money";
 import { toDateInputValue } from "@/lib/dates";
 import { toast } from "@/components/shared/Toast";
 
@@ -19,6 +20,8 @@ interface TripEditModalProps {
   initialTimeFormat?: "12h" | "24h";
   /** Cover mood index (ODY-047). */
   initialCoverIndex?: number;
+  /** Trip base currency, ISO 4217 (ODY-024). */
+  initialCurrency?: string;
   onClose: () => void;
 }
 
@@ -32,6 +35,7 @@ function TripEditForm({
   initialEndDate,
   initialTimeFormat = "12h",
   initialCoverIndex = 0,
+  initialCurrency = "USD",
   onClose,
 }: Omit<TripEditModalProps, "open">) {
   const [isPending, startTransition] = useTransition();
@@ -41,6 +45,7 @@ function TripEditForm({
   const [endDate, setEndDate] = useState(initialEndDate ? toDateInputValue(initialEndDate) : "");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h">(initialTimeFormat);
   const [coverIndex, setCoverIndex] = useState(initialCoverIndex);
+  const [currency, setCurrency] = useState(initialCurrency);
 
   function handleSave() {
     if (!title.trim()) return;
@@ -55,6 +60,7 @@ function TripEditForm({
     if (endDate) fd.set("endDate", endDate);
     fd.set("timeFormat", timeFormat);
     fd.set("coverIndex", String(coverIndex));
+    fd.set("currency", currency);
     startTransition(async () => {
       try {
         await updateTrip(tripId, fd);
@@ -146,6 +152,20 @@ function TripEditForm({
         </div>
 
         <div className="field">
+          <label htmlFor="trip-currency">Currency</label>
+          <select
+            id="trip-currency"
+            className="input"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+          >
+            {TRIP_CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
           <label>Cover mood</label>
           <div className="wz-moods">
             {COVER_GRADIENTS.map((g, i) => (
@@ -182,6 +202,7 @@ export function TripEditModal({
   initialEndDate,
   initialTimeFormat,
   initialCoverIndex,
+  initialCurrency,
   onClose,
 }: TripEditModalProps) {
   return (
@@ -194,6 +215,7 @@ export function TripEditModal({
         initialEndDate={initialEndDate}
         initialTimeFormat={initialTimeFormat}
         initialCoverIndex={initialCoverIndex}
+        initialCurrency={initialCurrency}
         onClose={onClose}
       />
     </Modal>

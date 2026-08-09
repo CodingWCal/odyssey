@@ -111,6 +111,7 @@ export default async function MapPage({ params }: Props) {
       eyebrow={`${trip.destination} · ${dateRange}`}
       dayCount={trip.days.length}
       timeFormat={trip.timeFormat as "12h" | "24h"}
+      currency={trip.currency ?? "USD"}
       unpinnedCount={unpinnedCount}
     />
   );

@@ -164,6 +164,7 @@ export async function updateTrip(tripId: string, formData: FormData) {
     totalBudget: formData.get("totalBudget") || undefined,
     timeFormat: formData.get("timeFormat") || undefined,
     coverIndex: formData.get("coverIndex") || undefined,
+    currency: formData.get("currency") || undefined,
   };
 
   const validated = updateTripSchema.parse(raw);

@@ -45,10 +45,6 @@ export function formatTime(hhmm: string, format: TimeFormat = "12h"): string {
   return `${h12}:${min} ${period}`;
 }
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
-}
-
 export function generateDaysArray(startDate: Date, endDate: Date): Date[] {
   const days: Date[] = [];
   const current = new Date(startDate);

@@ -37,6 +37,7 @@ model Trip {
   coverImageUrl String?
   totalBudget   Float?
   timeFormat    String   @default("12h") // "12h" | "24h" — display-only preference (ODY-041)
+  currency      String   @default("USD") // ISO 4217 code — trip base currency for all money display (ODY-024). Stage 1: symbol/format only, no FX conversion.
   createdAt     DateTime @default(now())
 
   owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)

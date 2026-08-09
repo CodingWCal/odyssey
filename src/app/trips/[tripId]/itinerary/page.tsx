@@ -79,6 +79,7 @@ export default async function ItineraryPage({ params }: Props) {
             dayNumber={index + 1}
             readOnly={readOnly}
             timeFormat={trip.timeFormat as "12h" | "24h"}
+            currency={trip.currency ?? "USD"}
             destination={trip.destination}
           />
         ))
