@@ -42,6 +42,24 @@
 
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 18px; --radius-xl: 22px;
 
+  /* Fixed white for text on a saturated fill (ODY-117 / ODY-108 F06) —
+     distinct from the --paper-* tokens, which are theme backgrounds and
+     aren't always pure white, so reusing one would change the color. */
+  --on-fill: #fff;
+
+  /* Documented stacking order (ODY-117) — was 9 undocumented literal
+     values assigned ad hoc per feature (ODY-108 audit F05). Same numeric
+     values, now named so the next overlay doesn't have to guess a number. */
+  --z-recede: -1;      /* decorative background layers */
+  --z-sticky: 5;       /* in-flow sticky headers within a scroll region */
+  --z-sticky-2: 50;    /* a second, higher-priority sticky layer */
+  --z-dropdown: 60;    /* menus/suggestions popping over sticky content */
+  --z-panel: 500;      /* side panels/drawers */
+  --z-overlay: 999;    /* modal/sheet backdrop scrims */
+  --z-modal: 1000;     /* modal/sheet content */
+  --z-modal-2: 1200;   /* content that must sit above another modal layer */
+  --z-toast: 1400;     /* toasts — always topmost */
+
   --shadow-1: 0 1px 0 rgba(255,255,255,.6) inset, 0 1px 2px rgba(31,34,56,.04);
   --shadow-2: 0 1px 0 rgba(255,255,255,.6) inset, 0 6px 18px -8px rgba(31,34,56,.12), 0 2px 6px rgba(31,34,56,.05);
   --shadow-hover: 0 1px 0 rgba(255,255,255,.7) inset, 0 14px 36px -16px rgba(31,34,56,.22), 0 4px 12px rgba(31,34,56,.06);
@@ -341,7 +359,7 @@
     radial-gradient(60% 80% at 80% 30%, rgba(255,255,255,.18) 0%, transparent 60%),
     radial-gradient(50% 60% at 20% 90%, rgba(0,0,0,.15) 0%, transparent 60%);
   pointer-events: none;
-  z-index: -1;
+  z-index: var(--z-recede);
 }
 .hero-top {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -639,7 +657,7 @@
   padding: 4px 0 14px;
   cursor: pointer;
   user-select: none;
-  position: sticky; top: 0; z-index: 5;
+  position: sticky; top: 0; z-index: var(--z-sticky);
   background: linear-gradient(180deg, var(--paper) 70%, rgba(247,241,230,0) 100%);
   backdrop-filter: blur(4px);
 }
@@ -921,7 +939,7 @@
   background: rgba(20, 22, 38, 0.42);
   backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
   padding: 24px;
   animation: fade-in .2s ease;
 }
@@ -1151,7 +1169,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   .mobile-trip-header {
     display: flex; align-items: center; gap: 10px;
     position: fixed; top: 0; left: 0; right: 0;
-    z-index: 1200;
+    z-index: var(--z-modal-2);
     height: calc(52px + env(safe-area-inset-top));
     padding: env(safe-area-inset-top) 8px 0 4px;
     background: var(--paper-2);
@@ -1204,7 +1222,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     display: flex;
     position: fixed;
     left: 0; right: 0; bottom: 0;
-    z-index: 1200;
+    z-index: var(--z-modal-2);
     background: var(--paper-2);
     border-top: 1px solid var(--rule);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
@@ -1843,7 +1861,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .od-marker.active {
   transform: rotate(-45deg) scale(1.25);
   box-shadow: 0 8px 22px rgba(0,0,0,.36), 0 2px 6px rgba(0,0,0,.24), 0 0 0 4px rgba(255,255,255,.85);
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 
 /* Flight arrival endpoint: smaller hollow pin tinted to the flight color. */
@@ -1882,7 +1900,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 60px -20px rgba(31,34,56,.35), 0 4px 12px rgba(31,34,56,.1);
   padding: 20px 22px;
-  z-index: 999;
+  z-index: var(--z-overlay);
   animation: card-in .25s cubic-bezier(.16,1,.3,1);
 }
 @keyframes card-in {
@@ -1921,7 +1939,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .map-controls {
   position: absolute;
   top: 18px; right: 18px;
-  z-index: 500;
+  z-index: var(--z-panel);
   display: flex; gap: 8px;
   background: var(--paper-2);
   border: 1px solid var(--rule);
@@ -1947,7 +1965,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .map-overview-link {
   position: absolute;
   top: 18px; left: 18px;
-  z-index: 500;
+  z-index: var(--z-panel);
   background: var(--paper-2);
   border: 1px solid var(--rule);
   border-radius: 999px;
@@ -2172,7 +2190,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding: 22px 48px;
   border-bottom: 1px solid var(--rule);
   background: var(--paper);
-  position: sticky; top: 0; z-index: 50;
+  position: sticky; top: 0; z-index: var(--z-sticky-2);
   backdrop-filter: blur(8px);
 }
 .dash-top .brand {
@@ -2329,7 +2347,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .live-card .cover::after {
   content: ""; position: absolute; inset: 0;
   background: radial-gradient(80% 80% at 20% 80%, rgba(0,0,0,.18) 0%, transparent 60%);
-  z-index: -1;
+  z-index: var(--z-recede);
 }
 .live-pill {
   display: inline-flex; align-items: center; gap: 8px;
@@ -2453,7 +2471,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .trip-card .cover::after {
   content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(0,0,0,.0) 35%, rgba(0,0,0,.28) 100%);
-  z-index: -1;
+  z-index: var(--z-recede);
 }
 .trip-card .countdown {
   align-self: flex-start;
@@ -2695,7 +2713,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 /* ─── Location autocomplete (itinerary event modal) ─────────────────── */
 .ac-wrap { position: relative; }
 .ac-menu {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 60;
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: var(--z-dropdown);
   background: var(--paper-2);
   border: 1px solid var(--rule-2);
   border-radius: 12px;
@@ -2839,7 +2857,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; gap: 8px;
   /* Above modal (1000), mobile tab bar (1200), and sheets (1300). */
-  z-index: 1400;
+  z-index: var(--z-toast);
   pointer-events: none;
 }
 .toast {
@@ -2912,7 +2930,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-nav {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 48px; border-bottom: 1px solid var(--rule);
-  background: var(--paper-2); position: sticky; top: 0; z-index: 50;
+  background: var(--paper-2); position: sticky; top: 0; z-index: var(--z-sticky-2);
 }
 .ld-nav-links { display: flex; align-items: center; gap: 16px; }
 .ld-nav-signin { font-size: 13.5px; color: var(--ink-2); }

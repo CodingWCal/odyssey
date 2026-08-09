@@ -92,7 +92,7 @@ export function AvailabilityHeatmap({ poll, slots, members, bestWindow, isOwner 
     const opacity = 0.2 + 0.8 * ratio;
     return {
       "--cell-bg": `color-mix(in srgb, var(--teal) ${Math.round(opacity * 100)}%, var(--paper-2))`,
-      "--cell-fg": ratio > 0.5 ? "#fff" : "var(--ink)",
+      "--cell-fg": ratio > 0.5 ? "var(--on-fill)" : "var(--ink)",
     } as React.CSSProperties;
   }
 
