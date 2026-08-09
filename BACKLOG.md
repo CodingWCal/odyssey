@@ -584,13 +584,14 @@ Filed from the ODY-111 audit (gap #4). Today `ExpenseModal` offers exactly two m
 - Guardrails: equal stays one tap (ODY-094's standing rule) — adjust is progressive disclosure inside the split section, not a third top-level chip competing with it.
 - Acceptance: a 4-person $100 dinner where one person adds $14 yields 14/28.67/28.67/28.66 (or equivalent cent-reconciled split) without typing four numbers; shares sum to the total to the cent.
 
-### ODY-115 · Partial settle-up — record a custom amount — S, haiku
+### ODY-115 · Partial settle-up — record a custom amount — S, haiku — ✅ DONE
 > **In plain terms:** "Mark as paid" is all-or-nothing: it records exactly the amount Odyssey suggested. If you hand someone $40 of the $67 you owe, there's no way to say so.
 Filed from the ODY-111 audit (gap #10). `markPaid` (`src/components/budget/BudgetClient.tsx:212`) hardcodes `amountCents: Math.round(t.amount * 100)` from the suggested transfer.
 - Let the settle-up row record a custom amount (inline amount input, or the branded `Modal` used by the schedule apply-window flow — not `window.confirm`). Default to the suggested figure so the common case stays one tap.
 - **No schema or action change needed:** `Settlement.amountCents` is a free `Int` and `recordSettlementSchema` already validates `1..100_000_000` (`src/lib/validations/index.ts`). Server-side is done; this is UI only.
 - Balances already re-derive from settlements via `aggregateBalances`, so a partial payment should simply leave a smaller remaining suggestion — verify that and add the case to the budget tests.
 - Acceptance: paying $40 against a $67 debt records $40 and the settle-up list then suggests the remaining $27; the existing one-tap full-amount path is unchanged.
+> **Shipped (2026-08-09).** Each settle-up row now has a small pencil icon (`Icons.edit`) next to "Mark as paid" that swaps the row into an inline amount field + Record/Cancel — no modal, since a single-field inline edit is lighter than the branded `Modal` for this. Confirming calls the same `recordSettlement` server action with the typed amount instead of the suggested one; the untouched "Mark as paid" button still calls it with no override, so the one-tap full-amount path is byte-identical to before. Confirmed **server-side already handled this correctly** — `recordSettlementSchema` and `Settlement.amountCents` needed zero changes, exactly as the ticket predicted. The $67→$40→$27 worked example from the acceptance criterion is now a named test in `budget.test.ts` (`aggregateBalances` + `suggestSettlements` chained), on top of the pre-existing generic "partial settlement leaves the remainder outstanding" case. tsc / eslint / **185 tests** / build all clean. No schema change.
 
 ### ODY-116 · "You owe / you're owed" — the personal answer, at the top — S, sonnet — ✅ DONE
 > **In plain terms:** The Budget page opens with what the *trip* spent. The thing every traveler actually came to find out — "what do I owe, and to whom?" — is buried in a table of everyone's rows further down. Put their own number where their eye lands first.
@@ -1037,6 +1038,7 @@ Collaboration feels static without realtime (ODY-070).
 - ~~**Next up:** ODY-075~~ — ✅ done (2026-08-09): desktop sidebar now reveals tabs progressively (fresh trip shows 4, not 7) with a "More" disclosure; state-driven, no user toggle. Directly addressed the nav-bloat/information-overload concern.
 - ~~**Next up:** ODY-024~~ — ✅ done (2026-08-09): one cents-honest `formatMoney` + trip currency across all 5 money surfaces. `prisma db push` already run against Supabase — deploy step complete.
 - ~~**Next up:** ODY-116~~ — ✅ done (2026-08-09): personal "you owe / you're owed" line in the budget hero + settle-up honesty caption.
-- **Next up:** the rest of the money queue — **ODY-115** (partial settle-up, S) → **ODY-114** (adjustment split, S). Or run **ODY-108**, the last remaining audit.
+- ~~**Next up:** ODY-115~~ — ✅ done (2026-08-09): partial settle-up amount, inline edit next to "Mark as paid."
+- **Next up:** **ODY-114** (adjustment split, S) — the last of the ODY-111 money queue. Or run **ODY-108**, the last remaining audit.
 - **Audits, run before the polish they'd feed:** ODY-108 (whole-app UI/UX + brand-drift sweep, desktop and mobile — supersedes doing ODY-020/022/023/026 blind) · ~~ODY-111~~ ✅ done 2026-08-09 (gap table + verdicts in-ticket; spawned ODY-114/115/116, promoted ODY-024, deferred per-expense FX).
 - **Bigger swings, both with prerequisites:** ODY-067 (packing — now has a concrete private/shared design) · ODY-112 (receipt capture — needs a provider API key, and wants ODY-094 Stage C first for the itemized payoff).

@@ -172,6 +172,11 @@ function SplitSection({
   const [isPending, startTransition] = useTransition();
   const [isSettling, startSettling] = useTransition();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  // Which suggested transfer (if any) has its inline "pay a different
+  // amount" field open (ODY-115), and what's typed into it. Keyed the same
+  // way as pendingKey so at most one row edits at a time.
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [customAmount, setCustomAmount] = useState("");
   const [weights, setWeights] = useState<Record<string, string>>(
     Object.fromEntries(members.map((m) => [m.id, String(m.weight)]))
   );
@@ -214,8 +219,13 @@ function SplitSection({
     });
   }
 
-  function markPaid(t: { fromId: string; toId: string; amount: number }) {
+  // amountOverride lets a settle-up row record less (or more) than the
+  // suggested transfer (ODY-115) — e.g. "I handed over $40 of the $67 now."
+  // Defaults to the suggested amount so the one-tap full-amount path (the
+  // common case, per the ticket) is unchanged.
+  function markPaid(t: { fromId: string; toId: string; amount: number }, amountOverride?: number) {
     const key = `${t.fromId}-${t.toId}-${t.amount}`;
+    const amount = amountOverride ?? t.amount;
     setPendingKey(key);
     startSettling(async () => {
       try {
@@ -223,15 +233,30 @@ function SplitSection({
           tripId,
           fromUserId: userIdById[t.fromId],
           toUserId: userIdById[t.toId],
-          amountCents: Math.round(t.amount * 100),
+          amountCents: Math.round(amount * 100),
         });
-        toast("Marked as paid.", "success");
+        toast(amountOverride != null ? `Recorded ${fmtMoney(amount)}.` : "Marked as paid.", "success");
+        setEditingKey(null);
       } catch {
         toast("Couldn't mark that as paid — try again.");
       } finally {
         setPendingKey(null);
       }
     });
+  }
+
+  function startEditing(key: string, suggested: number) {
+    setEditingKey(key);
+    setCustomAmount(suggested.toFixed(2));
+  }
+
+  function confirmCustomAmount(t: { fromId: string; toId: string; amount: number }) {
+    const n = Number(customAmount);
+    if (!(n > 0)) {
+      toast("Enter an amount greater than 0.");
+      return;
+    }
+    markPaid(t, n);
   }
 
   function undoSettlement(id: string) {
@@ -299,20 +324,69 @@ function SplitSection({
           <ul>
             {suggested.map((t) => {
               const key = `${t.fromId}-${t.toId}-${t.amount}`;
+              const isEditing = editingKey === key;
               return (
-                <li key={key}>
+                <li key={key} className={isEditing ? "editing" : ""}>
                   <strong>{nameById[t.fromId] ?? "Traveler"}</strong>
                   {" pays "}
                   <strong>{nameById[t.toId] ?? "Traveler"}</strong>
-                  <span className="settle-amt">{fmtMoney(t.amount)}</span>
-                  <button
-                    type="button"
-                    className="btn btn-ghost sm"
-                    onClick={() => markPaid(t)}
-                    disabled={isSettling}
-                  >
-                    {isSettling && pendingKey === key ? "Marking…" : "Mark as paid"}
-                  </button>
+                  {isEditing ? (
+                    <span className="settle-edit">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0.01"
+                        step="0.01"
+                        className="input mono sm"
+                        aria-label={`Custom amount ${nameById[t.fromId] ?? "traveler"} pays ${nameById[t.toId] ?? "traveler"}`}
+                        value={customAmount}
+                        onChange={(e) => setCustomAmount(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") confirmCustomAmount(t); }}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary sm"
+                        onClick={() => confirmCustomAmount(t)}
+                        disabled={isSettling}
+                      >
+                        {isSettling && pendingKey === key ? "Recording…" : "Record"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost sm"
+                        onClick={() => setEditingKey(null)}
+                        disabled={isSettling}
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <>
+                      <span className="settle-amt">{fmtMoney(t.amount)}</span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost sm"
+                        onClick={() => markPaid(t)}
+                        disabled={isSettling}
+                      >
+                        {isSettling && pendingKey === key ? "Marking…" : "Mark as paid"}
+                      </button>
+                      {/* Partial settle-up (ODY-115) — the common case stays the
+                          one-tap button above; this reveals a custom-amount
+                          field for "I only paid part of it." */}
+                      <button
+                        type="button"
+                        className="icon-btn sm"
+                        onClick={() => startEditing(key, t.amount)}
+                        disabled={isSettling}
+                        aria-label={`Record a different amount than ${fmtMoney(t.amount)}`}
+                        title="Pay a different amount"
+                      >
+                        <Icons.edit size={12} />
+                      </button>
+                    </>
+                  )}
                 </li>
               );
             })}

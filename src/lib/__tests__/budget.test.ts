@@ -6,6 +6,7 @@ import {
   equalSharesCents,
   aggregateBalances,
   classifyBalance,
+  type SplitRow,
 } from "@/lib/budget";
 
 describe("classifyBalance (ODY-116)", () => {
@@ -290,6 +291,23 @@ describe("aggregateBalances with settlements (ODY-107)", () => {
     const byId = Object.fromEntries(balances.map((b) => [b.userId, b]));
     expect(byId.alex.balanceCents).toBe(2000);
     expect(byId.sam.balanceCents).toBe(-2000);
+  });
+
+  it("ODY-115 acceptance case: paying $40 of a $67 debt leaves $27 outstanding", () => {
+    const balances = aggregateBalances(
+      ["alex", "sam"],
+      [{ amountCents: 6700, paidByUserId: "alex", shares: [{ userId: "sam", amountCents: 6700 }] }],
+      [{ fromUserId: "sam", toUserId: "alex", amountCents: 4000 }]
+    );
+    const byId = Object.fromEntries(balances.map((b) => [b.userId, b]));
+    expect(byId.alex.balanceCents).toBe(2700);
+    expect(byId.sam.balanceCents).toBe(-2700);
+    // suggestSettlements should then propose exactly the $27 remainder.
+    const rows: SplitRow[] = [
+      { id: "alex", pct: 0.5, share: 0, balance: byId.alex.balanceCents / 100 },
+      { id: "sam", pct: 0.5, share: 0, balance: byId.sam.balanceCents / 100 },
+    ];
+    expect(suggestSettlements(rows)).toEqual([{ fromId: "sam", toId: "alex", amount: 27 }]);
   });
 
   it("a settlement between two people never touches an uninvolved third person's balance", () => {

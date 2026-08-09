@@ -1643,6 +1643,15 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .settle-list li .btn.sm { margin-left: 4px; }
 .settle-list li .icon-btn.sm { margin-left: 4px; color: var(--ink-3); }
 
+/* Partial settle-up inline editor (ODY-115) — replaces the amount + "Mark as
+   paid" pair with a custom-amount field when a traveler paid less (or more)
+   than the suggested transfer. */
+.settle-edit {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 6px;
+}
+.settle-edit .input.sm { width: 84px; height: 32px; padding: 0 8px; font-size: 13px; }
+
 /* Settled history (ODY-107) — muted, distinct from still-outstanding transfers */
 .settle-list.settled { background: var(--paper-2); border-left-color: var(--rule-2); }
 .settle-list.settled .settle-amt { color: var(--ink-3); }
