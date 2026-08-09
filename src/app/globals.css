@@ -871,7 +871,10 @@
 }
 .event-card:hover .event-actions { opacity: 1; }
 .icon-btn {
-  width: 28px; height: 28px;
+  /* 40px per ODY-021's touch-target standard (ODY-108 F02) — this class
+     backs every modal close button and several frequent row actions
+     (edit event, edit expense), so 28px undershot the app's own bar. */
+  width: 40px; height: 40px;
   display: inline-flex; align-items: center; justify-content: center;
   background: transparent; border: 0;
   color: var(--ink-3);
@@ -3275,6 +3278,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .opt-chips { display: flex; gap: 8px; }
 .opt-chips.wrap { flex-wrap: wrap; margin-bottom: 10px; }
 .opt-chip {
+  /* min-height (not height) keeps padding/font untouched — this only
+     closes the gap against ODY-021's 40px touch-target bar (ODY-108 F03)
+     for category/split-mode/participant/time-format chips, all tapped as
+     a primary choice rather than a secondary action. */
+  min-height: 40px;
+  display: inline-flex; align-items: center;
   padding: 8px 14px; font-size: 13px; border: 1px solid var(--rule-2);
   cursor: pointer; background: var(--paper); color: var(--ink-2);
 }
