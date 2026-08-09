@@ -53,6 +53,10 @@ export async function getTripById(tripId: string) {
         orderBy: { date: "asc" },
       },
       note: true,
+      // Lightweight signals for progressive nav reveal (ODY-075) — just
+      // existence, not the rows themselves.
+      availabilityPoll: { select: { id: true } },
+      _count: { select: { places: true } },
     },
   });
 

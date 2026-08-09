@@ -19,9 +19,17 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   const trip = await getTripById(tripId);
   if (!trip) notFound();
 
+  // Trip-state signals that decide which non-core tabs the desktop sidebar
+  // reveals up front vs. tucks under "More" (ODY-075).
+  const navState = {
+    hasPoll: trip.availabilityPoll !== null,
+    hasPlaces: trip._count.places > 0,
+    memberCount: trip.members.length,
+  };
+
   return (
     <div className="app-shell">
-      <WorkspaceSidebar trip={trip} canEdit={trip.myRole !== "viewer"} />
+      <WorkspaceSidebar trip={trip} canEdit={trip.myRole !== "viewer"} navState={navState} />
       <MobileTripHeader title={trip.title} tripId={trip.id} />
       <main className="main">{children}</main>
       <MobileTabBar tripId={trip.id} />

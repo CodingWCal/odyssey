@@ -259,6 +259,26 @@
 .nav .icon { width: 16px; display: inline-flex; color: var(--ink-3); }
 .nav a.active .icon { color: var(--peri); }
 
+/* "More" disclosure for tabs that haven't earned a primary slot yet (ODY-075).
+   Reads as a quieter sibling of a nav link, not a destination itself. */
+.nav-more-toggle {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--ink-3);
+  background: none; border: 0; width: 100%;
+  text-align: left; cursor: pointer;
+  border-radius: 10px;
+  transition: background .15s ease, color .15s ease;
+  font-family: inherit;
+}
+.nav-more-toggle:hover { background: rgba(31,34,56,.04); color: var(--ink-2); }
+.nav-more-toggle .icon {
+  width: 16px; display: inline-flex; color: var(--ink-3);
+  transition: transform .15s ease;
+}
+.nav-more-toggle.open .icon { transform: rotate(180deg); }
+
 .sidebar-foot {
   margin-top: auto;
   padding-top: 18px;
