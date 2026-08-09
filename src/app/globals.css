@@ -3292,6 +3292,10 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .exact-remaining.ok { background: var(--teal-soft); color: var(--teal); }
 .exact-remaining.warn { background: var(--coral-soft); color: var(--coral); }
 
+/* Adjustment split (ODY-114) — explains the "type just the ones that
+   differ" mechanic once, above the per-person rows it shares with exact mode. */
+.adjust-hint { font-size: 12.5px; color: var(--ink-3); margin: 0 0 2px; }
+
 /* Collections (ODY-045) */
 .collections-page { max-width: 720px; }
 .collections-head {

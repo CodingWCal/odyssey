@@ -6,7 +6,7 @@ import { Icons } from "@/components/shared/Icons";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { createExpense, updateExpense, deleteExpense } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
-import { equalSharesCents } from "@/lib/budget";
+import { equalSharesCents, adjustmentSharesCents } from "@/lib/budget";
 
 export interface ExpenseInitial {
   id?: string;
@@ -66,8 +66,15 @@ export function ExpenseModal({
 
   const [paidBy, setPaidBy] = useState(initial?.paidBy ?? currentUserId);
   const [selected, setSelected] = useState<Set<string>>(initialSelected);
-  const [splitMode, setSplitMode] = useState<"equal" | "exact">(initial?.splitMode ?? "equal");
+  // UI has three modes; the schema only knows two ("equal" | "exact" —
+  // splitMode is cosmetic, ExpenseShare.amountCents is authoritative). Adjust
+  // mode persists as "exact" (ODY-114), same as exact mode already does.
+  const [uiMode, setUiMode] = useState<"equal" | "exact" | "adjust">(initial?.splitMode ?? "equal");
+  const splitMode: "equal" | "exact" = uiMode === "equal" ? "equal" : "exact";
   const [exactAmounts, setExactAmounts] = useState<Record<string, string>>(initialExact);
+  // Per-participant override for adjust mode (ODY-114) — blank/absent means
+  // "auto-split the remainder evenly," matching adjustmentSharesCents.
+  const [adjustAmounts, setAdjustAmounts] = useState<Record<string, string>>({});
   // Once the traveler touches participants/mode/amounts, we compute and send
   // explicit shares; until then, saving reuses whatever was already correct
   // (server's weighted default on add, or the untouched existing shares on
@@ -83,8 +90,9 @@ export function ExpenseModal({
       setForm(initialForm());
       setPaidBy(initial?.paidBy ?? currentUserId);
       setSelected(initialSelected());
-      setSplitMode(initial?.splitMode ?? "equal");
+      setUiMode(initial?.splitMode ?? "equal");
       setExactAmounts(initialExact());
+      setAdjustAmounts({});
       setDirtiedSplit(false);
     }
   }
@@ -97,15 +105,24 @@ export function ExpenseModal({
     setDirtiedSplit(true);
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
+      if (next.has(userId)) {
+        next.delete(userId);
+        setAdjustAmounts((a) => {
+          if (!(userId in a)) return a;
+          const rest = { ...a };
+          delete rest[userId];
+          return rest;
+        });
+      } else {
+        next.add(userId);
+      }
       return next;
     });
   }
 
-  function chooseMode(next: "equal" | "exact") {
+  function chooseMode(next: "equal" | "exact" | "adjust") {
     setDirtiedSplit(true);
-    setSplitMode(next);
+    setUiMode(next);
     if (next === "exact" && Object.keys(exactAmounts).length === 0) {
       // Seed with an equal starting point so the traveler adjusts numbers
       // instead of typing every amount from a blank $0.00.
@@ -113,6 +130,8 @@ export function ExpenseModal({
       const seeded = equalSharesCents([...selected], totalCents);
       setExactAmounts(Object.fromEntries(seeded.map((s) => [s.userId, centsToStr(s.amountCents)])));
     }
+    // Adjust mode starts fully "auto" (everyone splits evenly) — no seeding
+    // needed. That's the point: type a number only for who's different.
   }
 
   function setExact(userId: string, v: string) {
@@ -120,25 +139,56 @@ export function ExpenseModal({
     setExactAmounts((s) => ({ ...s, [userId]: v }));
   }
 
+  function setAdjust(userId: string, v: string) {
+    setDirtiedSplit(true);
+    setAdjustAmounts((s) => ({ ...s, [userId]: v }));
+  }
+
   const totalCents = Math.round((Number(form.amount) || 0) * 100);
+
+  // Adjust mode: participants with a typed override get exactly that
+  // amount; everyone else auto-splits whatever's left (ODY-114).
+  const adjustOverriddenIds = [...selected].filter((id) => (adjustAmounts[id] ?? "").trim() !== "");
+  const adjustAutoIds = [...selected].filter((id) => !adjustOverriddenIds.includes(id));
+  const adjustOverriddenCents = adjustOverriddenIds.reduce(
+    (s, id) => s + Math.round((Number(adjustAmounts[id]) || 0) * 100),
+    0
+  );
+  const adjustRemainingCents = totalCents - adjustOverriddenCents;
+
   const allocatedCents =
-    splitMode === "exact"
+    uiMode === "exact"
       ? [...selected].reduce((s, id) => s + Math.round((Number(exactAmounts[id]) || 0) * 100), 0)
       : totalCents;
   const remainingCents = totalCents - allocatedCents;
+
+  const adjustValid =
+    uiMode !== "adjust" ||
+    (adjustRemainingCents >= 0 && (adjustAutoIds.length > 0 || adjustRemainingCents === 0));
 
   const valid =
     form.label.trim() !== "" &&
     form.amount !== "" &&
     Number(form.amount) > 0 &&
     selected.size > 0 &&
-    (splitMode === "equal" || remainingCents === 0);
+    (uiMode === "equal" || (uiMode === "exact" && remainingCents === 0) || (uiMode === "adjust" && adjustValid));
 
   function sharesPayload(): { userId: string; amountCents: number }[] | undefined {
     if (!dirtiedSplit) {
       return isEdit ? initial?.shares : undefined; // undefined => server applies the weighted default
     }
     const ids = [...selected];
+    if (uiMode === "adjust") {
+      return adjustmentSharesCents(
+        ids.map((id) => ({
+          userId: id,
+          overrideCents: adjustOverriddenIds.includes(id)
+            ? Math.round((Number(adjustAmounts[id]) || 0) * 100)
+            : null,
+        })),
+        totalCents
+      );
+    }
     if (splitMode === "exact") {
       return ids.map((id) => ({ userId: id, amountCents: Math.round((Number(exactAmounts[id]) || 0) * 100) }));
     }
@@ -279,21 +329,61 @@ export function ExpenseModal({
               <div className="opt-chips" role="group" aria-label="Split mode">
                 <button
                   type="button"
-                  className={`rounded-xl opt-chip ${splitMode === "equal" ? "on" : ""}`}
+                  className={`rounded-xl opt-chip ${uiMode === "equal" ? "on" : ""}`}
                   onClick={() => chooseMode("equal")}
                 >
                   Equal
                 </button>
+                {/* Adjust (ODY-114): "everyone's even except this one person" —
+                    the common case stays one-tap Equal; this and Exact are both
+                    progressive disclosure, not competing with it. */}
                 <button
                   type="button"
-                  className={`rounded-xl opt-chip ${splitMode === "exact" ? "on" : ""}`}
+                  className={`rounded-xl opt-chip ${uiMode === "adjust" ? "on" : ""}`}
+                  onClick={() => chooseMode("adjust")}
+                >
+                  Adjust one person
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-xl opt-chip ${uiMode === "exact" ? "on" : ""}`}
                   onClick={() => chooseMode("exact")}
                 >
                   Exact amounts
                 </button>
               </div>
 
-              {splitMode === "exact" && (
+              {uiMode === "adjust" && (
+                <div className="exact-split-rows">
+                  <p className="adjust-hint">Type an amount for anyone who owes something different — everyone else splits the rest evenly.</p>
+                  {tripMembers
+                    .filter((m) => selected.has(m.userId))
+                    .map((m) => (
+                      <div className="exact-split-row" key={m.userId}>
+                        <span className="who">{m.name}</span>
+                        <div className="input-with-prefix">
+                          <span className="prefix">$</span>
+                          <input
+                            className="input mono"
+                            inputMode="decimal"
+                            value={adjustAmounts[m.userId] ?? ""}
+                            onChange={(e) => setAdjust(m.userId, e.target.value)}
+                            placeholder="auto"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  <div className={`exact-remaining ${adjustValid ? "ok" : "warn"}`}>
+                    {adjustAutoIds.length > 0
+                      ? `${centsToStr(Math.max(0, adjustRemainingCents))} splits evenly among ${adjustAutoIds.length} ${adjustAutoIds.length === 1 ? "person" : "people"}`
+                      : adjustRemainingCents === 0
+                        ? "Fully allocated"
+                        : `${centsToStr(Math.abs(adjustRemainingCents))} ${adjustRemainingCents > 0 ? "left to allocate" : "over the total"}`}
+                  </div>
+                </div>
+              )}
+
+              {uiMode === "exact" && (
                 <div className="exact-split-rows">
                   {tripMembers
                     .filter((m) => selected.has(m.userId))

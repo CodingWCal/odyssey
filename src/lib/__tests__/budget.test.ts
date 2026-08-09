@@ -6,8 +6,76 @@ import {
   equalSharesCents,
   aggregateBalances,
   classifyBalance,
+  adjustmentSharesCents,
   type SplitRow,
 } from "@/lib/budget";
+
+describe("adjustmentSharesCents (ODY-114)", () => {
+  it("ODY-114 acceptance case: $100 among 4, one person set to $14, rest auto-split the remainder", () => {
+    const shares = adjustmentSharesCents(
+      [
+        { userId: "a", overrideCents: 1400 },
+        { userId: "b" },
+        { userId: "c" },
+        { userId: "d" },
+      ],
+      10_000
+    );
+    const byId = Object.fromEntries(shares.map((s) => [s.userId, s.amountCents]));
+    expect(byId).toEqual({ a: 1400, b: 2867, c: 2867, d: 2866 });
+    expect(shares.reduce((s, x) => s + x.amountCents, 0)).toBe(10_000);
+  });
+
+  it("with no overrides, behaves exactly like an equal split", () => {
+    const shares = adjustmentSharesCents([{ userId: "a" }, { userId: "b" }, { userId: "c" }], 1000);
+    expect(shares.reduce((s, x) => s + x.amountCents, 0)).toBe(1000);
+    expect(shares.every((s) => s.amountCents === 333 || s.amountCents === 334)).toBe(true);
+  });
+
+  it("a single auto participant absorbs the entire total", () => {
+    const shares = adjustmentSharesCents([{ userId: "solo" }], 4500);
+    expect(shares).toEqual([{ userId: "solo", amountCents: 4500 }]);
+  });
+
+  it("a single overridden participant with no one left to absorb slack returns their exact override, not the total", () => {
+    // Deliberately does not reconcile to totalCents — this is the state UI
+    // validation is expected to block before allowing a save.
+    const shares = adjustmentSharesCents([{ userId: "solo", overrideCents: 1000 }], 4500);
+    expect(shares).toEqual([{ userId: "solo", amountCents: 1000 }]);
+  });
+
+  it("still reconciles to the total when overrides exceed it, as long as an auto participant absorbs the (negative) slack", () => {
+    // "deltas summing past the total": a is overridden for more than the
+    // whole bill; b and c split what's left, which goes negative — the
+    // sum still reconciles exactly, which is what matters for storage
+    // even though a UI would flag this combination before saving.
+    const shares = adjustmentSharesCents(
+      [{ userId: "a", overrideCents: 8000 }, { userId: "b" }, { userId: "c" }],
+      5000
+    );
+    expect(shares.reduce((s, x) => s + x.amountCents, 0)).toBe(5000);
+    const byId = Object.fromEntries(shares.map((s) => [s.userId, s.amountCents]));
+    expect(byId.a).toBe(8000);
+    expect(byId.b + byId.c).toBe(-3000);
+  });
+
+  it("multiple overrides combine and the rest split what remains", () => {
+    const shares = adjustmentSharesCents(
+      [
+        { userId: "a", overrideCents: 500 },
+        { userId: "b", overrideCents: 300 },
+        { userId: "c" },
+        { userId: "d" },
+      ],
+      2000
+    );
+    const byId = Object.fromEntries(shares.map((s) => [s.userId, s.amountCents]));
+    expect(byId.a).toBe(500);
+    expect(byId.b).toBe(300);
+    expect(byId.c + byId.d).toBe(1200);
+    expect(shares.reduce((s, x) => s + x.amountCents, 0)).toBe(2000);
+  });
+});
 
 describe("classifyBalance (ODY-116)", () => {
   it("classifies a positive balance as owed", () => {

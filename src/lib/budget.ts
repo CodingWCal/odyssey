@@ -104,6 +104,42 @@ export function equalSharesCents(userIds: string[], totalCents: number): { userI
   return weightedSharesCents(userIds.map((userId) => ({ userId, weight: 1 })), totalCents);
 }
 
+/** One participant in an "adjustment" split (ODY-114) — either a fixed
+ * dollar amount ("I had the wine, my share is $14") or `null`/`undefined`
+ * to auto-split whatever's left evenly with the other un-overridden people. */
+export interface AdjustmentParticipant {
+  userId: string;
+  overrideCents?: number | null;
+}
+
+/**
+ * Adjustment split (ODY-114): the common case is still one-tap equal — this
+ * mode exists for "everyone's even except this one person." Participants
+ * with an explicit override get exactly that amount; the remainder (total
+ * minus every override) splits evenly among the rest via `equalSharesCents`,
+ * so cent reconciliation stays in the one place that already does it.
+ *
+ * This does not itself guard against overrides exceeding the total — a
+ * caller with no un-overridden participants left to absorb the remainder
+ * gets shares that don't sum to `totalCents`. UI validation is expected to
+ * block saving that state (mirroring exact mode's "over the total" warning);
+ * the function stays a pure calculator, not a validator.
+ */
+export function adjustmentSharesCents(
+  participants: AdjustmentParticipant[],
+  totalCents: number
+): { userId: string; amountCents: number }[] {
+  const overridden = participants.filter((p) => p.overrideCents != null);
+  const autoIds = participants.filter((p) => p.overrideCents == null).map((p) => p.userId);
+  const overriddenTotalCents = overridden.reduce((s, p) => s + (p.overrideCents ?? 0), 0);
+  const remainderCents = totalCents - overriddenTotalCents;
+  const autoShares = autoIds.length > 0 ? equalSharesCents(autoIds, remainderCents) : [];
+  return [
+    ...overridden.map((p) => ({ userId: p.userId, amountCents: p.overrideCents as number })),
+    ...autoShares,
+  ];
+}
+
 export interface ResolvedExpenseForBalances {
   amountCents: number;
   /** Resolved payer — Expense.paidBy ?? addedBy. */
