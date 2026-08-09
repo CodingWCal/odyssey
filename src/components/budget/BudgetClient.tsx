@@ -7,7 +7,7 @@ import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights, recordSettlement, deleteSettlement } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
-import { suggestSettlements, type SplitRow } from "@/lib/budget";
+import { suggestSettlements, classifyBalance, type SplitRow } from "@/lib/budget";
 import { formatMoney } from "@/lib/money";
 
 /** A recorded settle-up payment outside the expense ledger (ODY-107). */
@@ -288,7 +288,14 @@ function SplitSection({
 
       {suggested.length > 0 && (
         <div className="settle-list" aria-label="Settle up">
-          <div className="settle-label">Settle up</div>
+          <div className="settle-label">
+            Settle up
+            {/* Honesty fix (ODY-111 gap #7 / ODY-116): suggestSettlements minimizes
+                transfer count, so it can pair a debtor with a creditor they never
+                shared an actual expense with. Label it, rather than let the
+                fewest-transfer route read as "the" pairwise truth. */}
+            <span className="settle-note">Fewest transfers — may not match who you actually split with</span>
+          </div>
           <ul>
             {suggested.map((t) => {
               const key = `${t.fromId}-${t.toId}-${t.amount}`;
@@ -363,6 +370,12 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
   const pct = budget > 0 ? Math.min(100, (totalSpent / budget) * 100) : 0;
   const perPerson = members.length ? totalSpent / members.length : totalSpent;
 
+  // "What do I owe?" (ODY-116) — the same balance that already drives each
+  // row in the split table below, just surfaced for the current viewer at
+  // the top of the page instead of making them find their own name in a list.
+  const myBalance = splitMembers.find((m) => m.userId === currentUserId)?.balance ?? 0;
+  const myBalanceState = classifyBalance(myBalance);
+
   // Is the budget shared equally, or has a custom split been set? Drives the
   // hero summary so it stays in sync with the "Split between travelers" card.
   const splitIsEqual = splitMembers.every((m) => m.weight === (splitMembers[0]?.weight ?? 1));
@@ -427,6 +440,17 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
           <span className="figure-spent">{fmtMoney(totalSpent)}</span>
           {budget > 0 && <span className="figure-of">spent of {fmtMoney(budget)}</span>}
         </div>
+
+        {splitMembers.some((m) => m.userId === currentUserId) && (
+          <div className={`hero-mine ${myBalanceState}`}>
+            {myBalanceState === "owed"
+              ? <>You&apos;re owed <strong>{fmtMoney(myBalance)}</strong></>
+              : myBalanceState === "owe"
+                ? <>You owe <strong>{fmtMoney(Math.abs(myBalance))}</strong></>
+                : <>You&apos;re settled up</>}
+          </div>
+        )}
+
         {budget > 0 && (
           <div className="progress" aria-label={`${pct.toFixed(0)} percent of budget spent`}>
             <div className="progress-fill fill-w" style={{ "--w": pct + "%" } as React.CSSProperties} />

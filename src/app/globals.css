@@ -1257,6 +1257,24 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   color: rgba(255,255,255,.7);
   font-variant-numeric: tabular-nums;
 }
+/* Personal "you owe / you're owed" line (ODY-116) — the answer every
+   traveler actually opens Budget to find, surfaced above the fold instead
+   of buried in the split table further down the page. Teal/coral per the
+   documented semantic roles (owed vs. alert); solid on the dark hero
+   background rather than the light-mode *-soft fills. */
+.hero-mine {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  margin-bottom: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.hero-mine strong { font-family: var(--font-mono); font-weight: 500; }
+.hero-mine.owed { color: var(--teal); }
+.hero-mine.owe { color: var(--coral); }
+.hero-mine.settled { color: rgba(255,255,255,.75); }
 .budget-hero .progress {
   height: 6px;
   border-radius: 999px;
@@ -1598,6 +1616,18 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   color: var(--ink-2);
   margin-bottom: 8px;
   font-family: var(--font-mono);
+}
+/* Honesty note (ODY-116 / ODY-111 gap #7): suggestSettlements minimizes
+   transfer count, not "who split with whom" — this says so instead of
+   letting the fewest-transfer route read as the literal pairwise truth. */
+.settle-note {
+  display: block;
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
 }
 .settle-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .settle-list li {

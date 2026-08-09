@@ -5,7 +5,32 @@ import {
   weightedSharesCents,
   equalSharesCents,
   aggregateBalances,
+  classifyBalance,
 } from "@/lib/budget";
+
+describe("classifyBalance (ODY-116)", () => {
+  it("classifies a positive balance as owed", () => {
+    expect(classifyBalance(47.5)).toBe("owed");
+  });
+
+  it("classifies a negative balance as owe", () => {
+    expect(classifyBalance(-32)).toBe("owe");
+  });
+
+  it("classifies exact zero as settled", () => {
+    expect(classifyBalance(0)).toBe("settled");
+  });
+
+  it("treats rounding dust as settled, matching suggestSettlements' epsilon", () => {
+    expect(classifyBalance(0.003)).toBe("settled");
+    expect(classifyBalance(-0.003)).toBe("settled");
+  });
+
+  it("does not treat a genuine small balance as dust", () => {
+    expect(classifyBalance(0.01)).toBe("owed");
+    expect(classifyBalance(-0.01)).toBe("owe");
+  });
+});
 
 describe("computeSplit", () => {
   it("splits equally with equal weights", () => {

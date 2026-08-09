@@ -203,3 +203,14 @@ export function suggestSettlements(rows: SplitRow[]): Settlement[] {
   }
   return out;
 }
+
+/** Classifies a member balance for the personal "you owe / you're owed" line
+ * (ODY-116). Same 0.4¢ epsilon `suggestSettlements` uses for "effectively
+ * zero," so a rounding-dust balance reads as settled rather than owing $0.00. */
+export type PersonalBalanceState = "owed" | "owe" | "settled";
+
+export function classifyBalance(balance: number): PersonalBalanceState {
+  if (balance > 0.004) return "owed";
+  if (balance < -0.004) return "owe";
+  return "settled";
+}
