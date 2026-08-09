@@ -359,12 +359,13 @@ nothing, and mid-trip it still shows the start date's weather.
 - Clamp the request window to [today, today+15] ∩ trip range; if trip is outside the forecast horizon, show a quiet seasonal placeholder line instead of vanishing ("Forecast opens closer to departure"). °F stays default; optional: unit by locale.
 - Acceptance: banner renders something sensible for past, current, near-future, and far-future trips.
 
-### ODY-024 · Money formatting & currency field — M, sonnet
+### ODY-024 · Money formatting & currency field — M, sonnet — ⬆️ PROMOTED (ODY-111 audit: top money priority)
 > **In plain terms:** Enter $12.50 and the app shows $13 — cents are hidden and rounding drifts. This shows exact amounts and lets a trip choose its currency symbol.
 Amounts are `Float` in Prisma and `fmtMoney` rounds to whole dollars — cents are
 entered but silently hidden, and floats accumulate drift.
 - Display cents when present (`Intl.NumberFormat`), keep JetBrains Mono for figures. Schema: add `currency String @default("USD")` on Trip (db push per Supabase workflow — no migrations dir); format with the trip currency across budget/itinerary. (Full multi-currency conversion is out of scope.)
 - Acceptance: $1,234.56 round-trips intact everywhere; trips can set a currency symbol that all money UI respects.
+> **Amended by the ODY-111 audit (2026-08-09).** This is now the single highest-value money ticket, and it has one more job: there is no shared money formatter to fix — `fmtMoney` is copy-pasted verbatim into `BudgetClient.tsx:67`, `TripCard.tsx:20` and `DashboardClient.tsx:13`, while a correct `formatCurrency` sits unused in *both* `src/lib/utils.ts:48` and `src/lib/utils/index.ts:28` (dupe overlaps ODY-064). Land one formatter, cents-honest and trip-currency-aware, and delete the three copies. Worked example of the current bug: a $30.50 settle-up is stored correctly as `3050` cents and displayed as "$31" in both the settle-up row and settled history. Scope stays stage 1 — trip base currency only; per-expense foreign currency + stored FX rate is explicitly deferred (ODY-111 gap #1).
 
 ### ODY-025 · Optimistic UI for reorder & quick edits — M, sonnet
 > **In plain terms:** Dragging events feels laggy because the app waits for the server before settling. This makes it feel instant, quietly undoing only if the server disagrees.
@@ -532,7 +533,7 @@ Found incidentally while implementing ODY-109. `setMySlots` (`src/app/trips/[tri
 - Acceptance: cycling a cell back to "unset" and reloading the page shows it as genuinely unset, for both the traveler who cleared it and everyone else viewing the poll; clearing a cell that was already unset server-side doesn't error.
 > Shipped as planned (2026-08-08), with one deliberate deviation from the draft: any trip member can clear their own slot, not editor+ only — matching `setMySlots`'s existing membership-only check (marking your own availability is personal input, not trip-plan editing; only creating/editing the poll and applying the window are editor+/owner-gated). New `deleteSlotSchema` in `src/lib/validations/index.ts` (no `userId` field — deletion is always scoped server-side to the caller via `dbUser.id`, never client-supplied, verified by a schema test that a passed-in `userId` is silently stripped). New `deleteMySlot({ tripId, date, block })` action uses `db.availabilitySlot.deleteMany(...)` rather than `.delete(...)` — `deleteMany` no-ops on zero matches instead of throwing, satisfying "missing-row delete shouldn't error" without a try/catch. `AvailabilityGrid`'s cycle handler now calls it on the clear path instead of the ODY-109-era stopgap that skipped the network call entirely; the existing optimistic-revert plumbing (added in ODY-109) covers a failed clear the same way it covers a failed set. 4 new schema tests in `validations.test.ts`. RLS already covers deletes (`prisma/rls.sql` enables table-level RLS with no per-operation policies, so no changes needed there).
 
-### ODY-111 · Expense splitting vs Splitwise — competitive gap audit — M, sonnet
+### ODY-111 · Expense splitting vs Splitwise — competitive gap audit — M, sonnet — ✅ DONE
 > **In plain terms:** After ODY-094 and ODY-107 the money features are genuinely good: you can say who paid, who's on each expense, split unevenly, see who owes whom, and mark a transfer as settled. This ticket asks the honest next question — if someone already uses Splitwise for trips, what would still make them keep it open alongside Odyssey? Write that list down and decide which gaps are worth closing.
 Audit-first (findings + prioritized child tickets); ships code only for anything trivially small. **Do not re-litigate what already works** — `src/lib/budget.ts` (`weightedSharesCents`, `equalSharesCents`, `aggregateBalances`, `suggestSettlements`, 24 tests), `ExpenseShare`, `Settlement`, `paidBy`, and the `ExpenseModal` paid-by/participants/equal-vs-exact flow are all shipped and verified.
 - **Known gaps to assess (each: does a trip planner actually need it? cost? does it fit the calm editorial tone or drag us toward a spreadsheet?):**
@@ -546,6 +547,56 @@ Audit-first (findings + prioritized child tickets); ships code only for anything
 - Deliverable: a gap table in the ticket (gap · does Odyssey need it · effort · verdict), plus child tickets only for the gaps that earn a yes.
 - Guardrails: Odyssey is a trip planner with money features, not a ledger app — the bar is "a group can settle a trip fairly without leaving," not feature parity. Equal split must stay one-tap (ODY-094's standing rule); advanced options stay behind progressive disclosure.
 - Acceptance: every gap above has a written verdict with a reason; the ones marked "yes" exist as scoped tickets with file paths; multi-currency has an explicit ship-or-defer decision recorded.
+
+> **Audit findings (2026-08-09).** Read: `src/lib/budget.ts` (205 lines), `src/components/budget/BudgetClient.tsx`, `ExpenseModal.tsx`, `src/app/trips/[tripId]/budget/actions.ts`, `prisma/schema.prisma` (`Expense`/`ExpenseShare`/`Settlement`/`TripMember`), `src/lib/utils/index.ts`.
+> **Headline:** the *math* is at parity — `weightedSharesCents`/`equalSharesCents` are cent-reconciled by largest-remainder, `aggregateBalances` works off real per-expense participants (not a trip-total pool), and `suggestSettlements` already produces a minimal transfer set. What would keep someone on Splitwise is **not** the engine; it's currency, one missing split affordance, and the fact that the answer to "what do *I* owe?" is nowhere on the page.
+
+| # | Gap | Does a trip planner need it? | Effort | Verdict |
+|---|---|---|---|---|
+| 1 | Multi-currency | **Yes — biggest gap.** An international trip app that prints `$` on a ¥ amount is wrong, not merely unlocalized. | M (display + trip field) / L (per-expense FX) | **Ship stage 1 via ODY-024** (cents + `Trip.currency`, promoted to the top of the money queue). **Defer stage 2** (per-expense currency + stored rate) — needs an FX-rate source and a dependency we don't have; a trip base currency covers the common case where everyone spends in one place. |
+| 2 | Percentage splits | No — exact-dollar mode already expresses any percentage of a known total. A `%` mode is a calculator, not a plan. | — | **Reject.** |
+| 3 | Shares / parts per expense | No — `TripMember.splitWeight` already carries "she's travelling with her kid" trip-wide, and it *is* the default for every uncustomized expense. A third per-expense mode fights ODY-094's one-tap rule. | — | **Reject.** |
+| 4 | Adjustment (+/− off an even split) | **Yes.** "I had the wine, add $14 to me" is the most common real trip case, and today it forces exact mode and retyping *everyone's* number. | S | **Ship — ODY-114.** |
+| 5 | Itemization + tax/tip | Shape still right (`ExpenseLine`, ODY-094 Stage C), but it only pays off with receipt capture (ODY-112). | L | **Keep as scoped, priority unchanged (P3).** No re-scope needed. |
+| 6 | Per-event / per-meal split view | Already ODY-097 Stage D. | — | **Cross-referenced, not duplicated.** |
+| 7 | Simplify debts across the group | Already equivalent: `suggestSettlements` is greedy largest-debtor→largest-creditor, same minimal-transfer result as Splitwise's "simplify debts". **Difference worth documenting:** ours is always on and unlabelled, so it can tell you to pay someone you never shared an expense with, with no way to see the raw pairwise picture. | S (label only) | **Parity confirmed; honesty fix folded into ODY-116.** |
+| 8 | Expense comments / "why is this $80?" | No — a comment thread per expense is chat-app creep; the Notes tab (ODY-104) is where trip talk lives. | — | **Reject.** |
+| 9 | Audit trail of edits | No — full history is ledger-app territory. **Accepted risk, recorded:** editing an expense silently rewrites every participant's share with no trace, so a settled-looking balance can move under someone. Revisit only if that bites in real use. | — | **Reject (with the risk noted).** |
+| 10 | Partial / custom settle-up amount | **Yes.** `markPaid` (`BudgetClient.tsx:212`) can only record the exact suggested amount; "I'll give you $40 of the $67 now" is unrecordable. `Settlement.amountCents` already accepts any value — this is UI-only. | S | **Ship — ODY-115.** |
+| 11 | Recurring expenses | No — a trip is bounded; nothing recurs within it. | — | **Reject.** |
+| 12 | Reminders / nudges to settle | Not here — needs the same delivery path as the availability nudge. | — | **Reject; belongs to ODY-034.** |
+| 13 | Per-person "you owe / you're owed" summary | **Yes — cheapest, highest-value item found.** `currentUserId` is already a `BudgetClient` prop but is passed straight through to the modal and never used for a personal figure; the hero shows only trip totals, so every traveler must find their own row in the split table to learn their number. | S | **Ship — ODY-116.** |
+| 14 | Export (CSV / PDF) | Yes eventually, but it's an export feature, not a splitting gap. | — | **Deferred to ODY-032 / ODY-072**, no new ticket. |
+| 15 | Receipt capture | Dependency only, per this ticket's guardrail. | — | **Out of scope — see ODY-112.** |
+>
+> **Defect found while auditing (file paths, not a gap):** `fmtMoney` is copy-pasted verbatim into three components — `BudgetClient.tsx:67`, `TripCard.tsx:20`, `DashboardClient.tsx:13` — and every copy is `"$" + Math.round(n)`, so **cents are invisible app-wide**. Concretely: `markPaid` records a $30.50 transfer as `3050` cents correctly, and the UI then renders it as "$31" in both the settle-up row and the settled history. Meanwhile `formatCurrency` (a correct `Intl.NumberFormat`) exists **twice** — `src/lib/utils.ts:48` and `src/lib/utils/index.ts:28` — and neither copy is used by any money surface. Folded into **ODY-024** (one formatter, cents-honest, trip-currency-aware) and overlaps **ODY-064**'s utils dedupe.
+>
+> **Ship-or-defer, recorded as required:** multi-currency **ships as ODY-024 stage 1 only** (cents + a `Trip.currency` symbol respected everywhere); per-expense foreign currency with a stored conversion rate is **explicitly deferred**, not rejected — revisit when a trip actually spans two currencies in practice.
+> No code shipped with this audit: the only candidate small fix (unifying `fmtMoney`) changes money display on every surface and belongs in ODY-024 with the currency field, not smuggled into an audit PR.
+
+### ODY-114 · Adjustment split — "I had the wine, add $14 to me" — S, sonnet
+> **In plain terms:** Splitting a restaurant bill where one person ordered something extra currently means switching to exact-dollar mode and retyping what *everyone* owes. This adds the one thing you actually want: bump one person up (or down) and let the rest of the bill stay even.
+Filed from the ODY-111 audit (gap #4). Today `ExpenseModal` offers exactly two modes, `equal` and `exact` (`src/components/budget/ExpenseModal.tsx:69`, `chooseMode` at :106).
+- Add an "Adjust" affordance on top of the equal split: a per-participant +/− delta in dollars; the remainder splits evenly among everyone after deltas are applied. Resolve to explicit `ExpenseShare` rows exactly as exact mode does — **no schema change** (`splitMode` stays cosmetic; `ExpenseShare.amountCents` remains authoritative), so `splitMode: "exact"` is what's persisted.
+- Reuse `equalSharesCents` for the post-delta remainder so cent reconciliation stays in one place (`src/lib/budget.ts`); add unit tests alongside the existing 24 (deltas summing past the total, negative result, single participant).
+- Guardrails: equal stays one tap (ODY-094's standing rule) — adjust is progressive disclosure inside the split section, not a third top-level chip competing with it.
+- Acceptance: a 4-person $100 dinner where one person adds $14 yields 14/28.67/28.67/28.66 (or equivalent cent-reconciled split) without typing four numbers; shares sum to the total to the cent.
+
+### ODY-115 · Partial settle-up — record a custom amount — S, haiku
+> **In plain terms:** "Mark as paid" is all-or-nothing: it records exactly the amount Odyssey suggested. If you hand someone $40 of the $67 you owe, there's no way to say so.
+Filed from the ODY-111 audit (gap #10). `markPaid` (`src/components/budget/BudgetClient.tsx:212`) hardcodes `amountCents: Math.round(t.amount * 100)` from the suggested transfer.
+- Let the settle-up row record a custom amount (inline amount input, or the branded `Modal` used by the schedule apply-window flow — not `window.confirm`). Default to the suggested figure so the common case stays one tap.
+- **No schema or action change needed:** `Settlement.amountCents` is a free `Int` and `recordSettlementSchema` already validates `1..100_000_000` (`src/lib/validations/index.ts`). Server-side is done; this is UI only.
+- Balances already re-derive from settlements via `aggregateBalances`, so a partial payment should simply leave a smaller remaining suggestion — verify that and add the case to the budget tests.
+- Acceptance: paying $40 against a $67 debt records $40 and the settle-up list then suggests the remaining $27; the existing one-tap full-amount path is unchanged.
+
+### ODY-116 · "You owe / you're owed" — the personal answer, at the top — S, sonnet
+> **In plain terms:** The Budget page opens with what the *trip* spent. The thing every traveler actually came to find out — "what do I owe, and to whom?" — is buried in a table of everyone's rows further down. Put their own number where their eye lands first.
+Filed from the ODY-111 audit (gap #13, the cheapest high-value finding). `currentUserId` is already a `BudgetClient` prop (`src/components/budget/BudgetClient.tsx:346`) but is only forwarded to `ExpenseModal` — no personal figure is ever rendered.
+- Add a quiet personal line to the budget hero: "You're owed $48" / "You owe $32" / "You're settled", sourced from the same `aggregateBalances` row that already drives the split table — no new math, no new query.
+- Fold in the ODY-111 gap #7 honesty fix: label the settle-up list as *simplified* (e.g. "Fewest transfers"), since `suggestSettlements` can name a payee the debtor never shared an expense with. One line of microcopy — do **not** build a raw pairwise view unless someone asks for it.
+- Use `--teal` for owed-to-you and `--coral` for you-owe per the documented semantic roles; no new hex, no new tokens. Viewers see it too (it's read-only information).
+- Acceptance: opening Budget answers "what do I owe" without scrolling; the figure matches that traveler's row in the split table exactly; the settle-up list says it's showing the fewest-transfer route.
 
 ---
 
@@ -976,6 +1027,7 @@ Collaboration feels static without realtime (ODY-070).
 **Added by the 2026-08-08 review pass** (backlog reconciliation + four product questions):
 - ~~**Fix first (small, concrete bug):** ODY-110~~ — ✅ done (2026-08-08), landed with ODY-109.
 - ~~**Then the scheduling pass:** ODY-109~~ — 🟡 the correctness/clarity slice shipped (2026-08-08): busy/unset distinct, maybe surfaced, responded roster, failed-save toast, single-cell payload, block mutual-exclusivity. Bulk marking and the mobile sticky-day-column fix are still open — see the ticket's own status note. Incidentally surfaced **ODY-113** (clearing a slot doesn't delete the row) — filed, not fixed.
-- ~~**Next up:** ODY-113~~ — ✅ done (2026-08-08). Resume the numbered order above at step 3 (ODY-062/063), or pick up one of the audits/bigger swings below.
-- **Audits, run before the polish they'd feed:** ODY-108 (whole-app UI/UX + brand-drift sweep, desktop and mobile — supersedes doing ODY-020/022/023/024/026 blind) · ODY-111 (expense splitting vs Splitwise, now that ODY-094 A+B and ODY-107 have shipped).
+- ~~**Next up:** ODY-113~~ — ✅ done (2026-08-08). ~~Resume at step 3 (ODY-062/063)~~ — both were already ✅ DONE; step 3 of the numbered order is complete.
+- **Next up:** the money work ODY-111 just prioritized — **ODY-024** (one cents-honest formatter + trip currency; now the top money ticket) → **ODY-116** (personal "you owe" line, S) → **ODY-115** (partial settle-up, S) → **ODY-114** (adjustment split, S). Or run **ODY-108**, the last remaining audit.
+- **Audits, run before the polish they'd feed:** ODY-108 (whole-app UI/UX + brand-drift sweep, desktop and mobile — supersedes doing ODY-020/022/023/026 blind) · ~~ODY-111~~ ✅ done 2026-08-09 (gap table + verdicts in-ticket; spawned ODY-114/115/116, promoted ODY-024, deferred per-expense FX).
 - **Bigger swings, both with prerequisites:** ODY-067 (packing — now has a concrete private/shared design) · ODY-112 (receipt capture — needs a provider API key, and wants ODY-094 Stage C first for the itemized payoff).
