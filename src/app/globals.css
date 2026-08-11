@@ -42,6 +42,9 @@
 
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 18px; --radius-xl: 22px;
   --radius-pill: 999px; /* fully-rounded pills/dots (ODY-117) — was 23 literal 999px */
+  /* Deliberate compact radii: interaction affordances below the card scale. */
+  --radius-focus: 4px; --radius-inline: 6px; --radius-control: 7px;
+  --radius-field: 10px; --radius-icon: 11px; --radius-sheet: 20px;
 
   /* Fixed white for text on a saturated fill (ODY-117 / ODY-108 F06) —
      distinct from the --paper-* tokens, which are theme backgrounds and
@@ -139,7 +142,7 @@
   :focus-visible {
     outline: 2px solid var(--peri);
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: var(--radius-focus);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -262,7 +265,7 @@
   font-size: 13.5px;
   color: var(--ink-2);
   text-decoration: none;
-  border-radius: 10px;
+  border-radius: var(--radius-field);
   transition: background .15s ease, color .15s ease;
   position: relative;
 }
@@ -273,7 +276,7 @@
 }
 .nav a.active::before {
   content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
-  background: var(--peri); border-radius: 0 3px 3px 0;
+  background: var(--peri); border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
 }
 .nav .icon { width: 16px; display: inline-flex; color: var(--ink-3); }
 .nav a.active .icon { color: var(--peri); }
@@ -287,7 +290,7 @@
   color: var(--ink-3);
   background: none; border: 0; width: 100%;
   text-align: left; cursor: pointer;
-  border-radius: 10px;
+  border-radius: var(--radius-field);
   transition: background .15s ease, color .15s ease;
   font-family: inherit;
 }
@@ -517,7 +520,7 @@
   display: block;
   width: 100%; text-align: left;
   background: none; border: 0; padding: 3px 2px;
-  border-radius: 6px;
+  border-radius: var(--radius-inline);
   font: 15px/1.55 var(--font-body); color: var(--ink);
   cursor: pointer;
   transition: background .15s ease;
@@ -566,7 +569,7 @@
   border: 0; background: none; outline: none;
   font-size: 13px; font-weight: 600; color: var(--ink);
   padding: 4px 2px;
-  border-radius: 6px;
+  border-radius: var(--radius-inline);
   transition: background .15s ease;
 }
 .note-section-title:hover, .note-section-title:focus { background: var(--paper-3); }
@@ -825,7 +828,7 @@
   margin: 0;
   line-height: 1.2;
   cursor: text;
-  border-radius: 4px;
+  border-radius: var(--radius-focus);
   padding: 0 2px;
   margin-left: -2px;
   transition: background .15s ease;
@@ -897,7 +900,7 @@
   display: inline-flex; align-items: center; justify-content: center;
   background: transparent; border: 0;
   color: var(--ink-3);
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   transition: background .15s ease, color .15s ease;
 }
 .icon-btn:hover { background: rgba(31,34,56,.06); color: var(--ink); }
@@ -1001,7 +1004,7 @@
 
 .sheet-panel {
   background: var(--paper-2) !important;
-  border-radius: 20px 20px 0 0 !important;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0 !important;
   max-height: 90vh;
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -1039,7 +1042,7 @@
   padding: 0 14px;
   background: var(--paper);
   border: 1px solid var(--rule-2);
-  border-radius: 10px;
+  border-radius: var(--radius-field);
   font-size: 14px;
   color: var(--ink);
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
@@ -1109,7 +1112,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .btn {
   height: 42px;
   padding: 0 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-field);
   font-size: 13.5px;
   font-weight: 500;
   border: 1px solid transparent;
@@ -1139,7 +1142,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .drop-indicator {
   height: 2px;
   background: var(--peri);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   margin: 4px 0;
   opacity: 0;
   transition: opacity .15s ease;
@@ -1368,7 +1371,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   color: var(--ink-2);
 }
 .cat-legend .swatch {
-  width: 10px; height: 10px; border-radius: 3px;
+  width: 10px; height: 10px; border-radius: var(--radius-focus);
   background: var(--cat-color);
   align-self: center;
 }
@@ -1399,7 +1402,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .cat-block.collapsed .chev { transform: rotate(-90deg); }
 .cat-icon {
   width: 38px; height: 38px;
-  border-radius: 11px;
+  border-radius: var(--radius-icon);
   background: var(--cat-soft);
   color: var(--cat-color);
   display: inline-flex; align-items: center; justify-content: center;
@@ -1487,7 +1490,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10px;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: var(--radius-focus);
   background: var(--peri-soft);
   color: var(--peri);
   text-transform: uppercase;
@@ -1716,7 +1719,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   color: var(--paper);
   height: 40px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-field);
   font-size: 13px;
   font-weight: 500;
   border: 0;
@@ -1986,7 +1989,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   background: var(--ink);
   color: var(--paper);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-inline);
   padding: 4px 10px;
   font-family: var(--font-body);
   font-size: 12px;
@@ -2164,7 +2167,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding: 10px 14px;
   background: var(--teal-soft);
   color: var(--teal);
-  border-radius: 10px;
+  border-radius: var(--radius-field);
   font-size: 13px;
   display: inline-flex; align-items: center; gap: 8px;
   animation: card-in .25s ease;
@@ -2704,7 +2707,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 /* ─── Legacy compatibility (used by the out-of-scope landing page) ──── */
 .od-btn-cta {
   background: var(--ink); color: var(--paper); height: 40px;
-  padding: 0 16px; border-radius: 10px; font-size: 13px; font-weight: 500;
+  padding: 0 16px; border-radius: var(--radius-field); font-size: 13px; font-weight: 500;
   border: 0; display: inline-flex; align-items: center; gap: 8px;
   transition: background .15s ease, transform .1s ease;
 }
@@ -2991,12 +2994,20 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   border-radius: var(--radius-xl); padding: 24px 24px 22px;
 }
 .ld-card-icon {
-  width: 38px; height: 38px; border-radius: 11px; margin-bottom: 16px;
+  width: 38px; height: 38px; border-radius: var(--radius-icon); margin-bottom: 16px;
   background: color-mix(in srgb, var(--f-color) 12%, transparent);
   color: var(--f-color);
   display: flex; align-items: center; justify-content: center;
 }
 .ld-card h3 { font-family: var(--font-display); font-size: 22px; margin: 0 0 8px; color: var(--ink); }
+.packing-card { max-width: 720px; margin: 0 auto; }
+.packing-card > header { display:flex; gap:12px; align-items:flex-start; margin-bottom:28px; }
+.packing-card h1,.packing-card h2 { margin:0; font-family:var(--font-display); font-weight:400; }
+.packing-card h1 { font-size:36px; }.packing-card header p:not(.eyebrow),.packing-head p { margin:4px 0 0; color:var(--ink-2); font-size:13px; }
+.eyebrow { margin:0; color:var(--peri); font:11px var(--font-mono); text-transform:uppercase; letter-spacing:.08em; }
+.packing-section { border-top:1px solid var(--rule); padding:18px 0; }.packing-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }.packing-head h2 { font-size:23px; }.packing-head > span { font:12px var(--font-mono); color:var(--ink-3); }
+.packing-section ul { list-style:none; padding:0; margin:14px 0 0; }.packing-section li { display:flex; gap:8px; align-items:center; min-height:40px; }.packing-section li > button:first-child { flex:1; display:flex; align-items:center; gap:10px; border:0; background:none; text-align:left; color:var(--ink); padding:6px 0; }.packing-section li > button:first-child span { width:18px; height:18px; border:1px solid var(--rule-2); border-radius:var(--radius-focus); display:grid; place-items:center; color:var(--paper); background:var(--paper-2); }.packing-section li > button.done { color:var(--ink-3); text-decoration:line-through; }.packing-section li > button.done span { background:var(--teal); border-color:var(--teal); }.packing-section li > button:last-child { border:0; background:none; color:var(--ink-3); }.packing-empty { color:var(--ink-3); font-style:italic; }
+.packing-scope { display:flex; gap:8px; margin:10px 0; }.packing-scope button { border:1px solid var(--rule); background:var(--paper-2); color:var(--ink-2); border-radius:var(--radius-pill); padding:7px 11px; }.packing-scope button.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }.packing-add { display:flex; gap:8px; }.packing-add input { flex:1; min-width:0; height:42px; padding:0 12px; border:1px solid var(--rule-2); border-radius:var(--radius-field); background:var(--paper-2); }
 .ld-card p { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin: 0; }
 
 .ld-foot-cta {

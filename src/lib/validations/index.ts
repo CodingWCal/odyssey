@@ -205,6 +205,21 @@ export const exploreVibeSchema = z.object({
   vibe: z.string().trim().min(2, "Pick or type a vibe").max(80),
 });
 
+export const createChecklistItemSchema = z.object({
+  tripId: z.string().min(1),
+  label: z.string().trim().min(1, "Add an item first").max(160),
+  scope: z.enum(["group", "personal"]),
+});
+
+export const checklistItemIdSchema = z.object({
+  tripId: z.string().min(1),
+  itemId: z.string().min(1),
+});
+
+export const assignChecklistItemSchema = checklistItemIdSchema.extend({
+  assigneeId: z.string().min(1).nullable(),
+});
+
 /** Trip notes upsert patch (ODY-051) — plain OR TipTap doc, not both required. */
 const NOTE_TEXT_MAX = 20_000;
 /** Shared notes sections (ODY-104). */
@@ -248,4 +263,5 @@ export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
 export type UpdatePlaceInput = z.infer<typeof updatePlaceSchema>;
 export type ExploreVibeInput = z.infer<typeof exploreVibeSchema>;
+export type CreateChecklistItemInput = z.infer<typeof createChecklistItemSchema>;
 export type UpsertNotePatchInput = z.infer<typeof upsertNotePatchSchema>;

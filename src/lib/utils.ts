@@ -44,16 +44,3 @@ export function formatTime(hhmm: string, format: TimeFormat = "12h"): string {
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${min} ${period}`;
 }
-
-export function generateDaysArray(startDate: Date, endDate: Date): Date[] {
-  const days: Date[] = [];
-  const current = new Date(startDate);
-  current.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(0, 0, 0, 0);
-  while (current <= end) {
-    days.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-  return days;
-}

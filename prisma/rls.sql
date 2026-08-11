@@ -23,6 +23,7 @@ ALTER TABLE "Note"             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Place"            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "AvailabilityPoll" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "AvailabilitySlot" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ChecklistItem"     ENABLE ROW LEVEL SECURITY;
 
 -- Belt-and-suspenders: revoke any default table privileges from the public API roles
 -- so they can't reach the data even if a future policy is added by mistake.

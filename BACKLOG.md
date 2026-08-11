@@ -487,11 +487,16 @@ Both `TripNotes`' pinned textarea and `NoteSection`'s per-section textarea are p
 - ⌘K chip removed (ODY-092). Mobile zero-trip empty state + CTA added.
 - Acceptance: zero-trip mobile state is clear; ⌘K absent.
 
-### ODY-064 · Dead code and utils dedupe — S, haiku
+### ODY-064 · Dead code and utils dedupe — S, haiku — ✅ DONE (2026-08-11)
 > **In plain terms:** Leftover unused trip form code and two copies of the same date/money helpers make the house harder to keep tidy.
 - Delete or wire unused `TripForm.tsx`; clarify `/trips/new` (redirect-only) in comments or remove if obsolete.
 - Deduplicate `@/lib/utils` vs `@/lib/utils/index` (one export path); prefer UTC-aware date helpers from ODY-048.
 - Acceptance: no unused TripForm; single utils entry; `tsc`/lint clean.
+> **Completed (2026-08-11).** Deleted the unused `TripForm` and duplicate
+> `src/lib/utils/index.ts`. `@/lib/utils` continues to resolve to the one
+> canonical, UTC-aware helper module; its unused local-date `generateDaysArray`
+> was removed as well. `/trips/new` already has a concise redirect comment, so
+> no route change was needed.
 
 ### ODY-108 · Full UI/UX design audit — every screen, every control, desktop + mobile — L, sonnet — ✅ DONE
 > **In plain terms:** The app has been built ticket by ticket over dozens of sessions, each one polishing its own corner. Nobody has recently sat down and looked at the *whole thing* as one product: is every button clean, legible, and pleasant? Does it still feel like the editorial "boarding pass + printed map" brand, or has it drifted into generic AI-generated-app styling? This is that pass — a systematic sweep of every screen at both desktop and 375px, producing a prioritized findings report and child tickets.
@@ -513,7 +518,7 @@ Audit-first deliverable (findings report + candidate tickets), like ODY-046 — 
 > **Two known seeds from the ticket, already resolved before this audit ran:** money formatting (ODY-024/111/114/115/116, shipped earlier this session) and the schedule tab's raw-Tailwind-vs-`.av-*` inconsistency (ODY-109, shipped 2026-08-08) — confirmed clean, removed from the open list rather than re-flagged.
 > **Not yet covered:** ODY-020/022/023/026 fall outside the section this pass prioritized and remain open on their own; nothing in this audit supersedes them.
 
-### ODY-117 · Design-token drift cleanup — border-radius, z-index scale, one hex leak — S, haiku — 🟡 PARTIAL
+### ODY-117 · Design-token drift cleanup — border-radius, z-index scale, one hex leak — S, haiku — ✅ DONE (2026-08-11)
 > **In plain terms:** The app has a documented set of corner-radius sizes and no documented stacking order for overlays — but several places quietly use their own numbers instead of reaching for what already exists. This finishes the migration onto the token system rather than adding another one-off.
 Filed from the ODY-108 audit (findings F04-F06) — three small, mechanical, same-shape fixes grouped into one ticket because bundling 15+ scattered edits into the audit PR itself would have made that diff unreviewable.
 - **`border-radius` drift:** `--radius-sm/md/lg/xl` (`8/12/18/22px`) is documented and mostly used, but `globals.css` also has literal `6px`, `4px`, `11px`, `7px`, `3px`, `2px`, and `20px` scattered across ~15 rules. Audit each: swap to the nearest existing token where visually equivalent; if a genuine fifth size is needed (e.g. a very tight `4px` for a dense inline element), add it to the token list rather than leaving a bare number.
@@ -521,7 +526,9 @@ Filed from the ODY-108 audit (findings F04-F06) — three small, mechanical, sam
 - **One hex leak:** `AvailabilityHeatmap.tsx:95` sets `"--cell-fg": ratio > 0.5 ? "#fff" : "var(--ink)"` inline — a plain React contrast decision, not a Leaflet-can't-read-CSS-vars case (that documented exception is `mapTypes.ts`'s `TYPE_HEX` only). Replace `"#fff"` with an existing paper token (or add one if none reads correctly against a saturated heat cell).
 - Guardrails: no visual redesign — every swap should render identically or near-identically; this is a token-hygiene pass, not a restyle. No new dependencies.
 - Acceptance: `grep` for literal `border-radius: <n>px` outside the documented token values returns nothing (or each remaining literal is a newly-added, deliberate token); every `z-index` in `globals.css` references a documented scale; the `AvailabilityHeatmap` hex leak is gone; visual diff at both widths is a no-op.
-> **Partially shipped (2026-08-09).** Done: all 9 `z-index` values now reference a documented `--z-*` scale (`--z-recede/sticky/sticky-2/dropdown/panel/overlay/modal/modal-2/toast` in `:root`) — identical numeric values, purely named, zero visual change. The `AvailabilityHeatmap.tsx:95` hex leak is fixed via a new `--on-fill: #fff` token (kept distinct from `--paper-*`, which are theme backgrounds that aren't always pure white — reusing one would have changed the color). **Not done: the `border-radius` literal sweep.** That piece genuinely needs sighted verification per its own acceptance bar ("visual diff is a no-op") — several of the literal values (2px/3px/4px/6px/7px/11px/20px) are below the smallest token (`--radius-sm: 8px`) and may be deliberate small decorative radii, not migration candidates; swapping them blind risked exactly the visual drift the ticket says to avoid, and this session had no way to render and check. Left for a follow-up pass with a browser. tsc / **191 tests** clean.
+> **Partially shipped (2026-08-09).** Done: all 9 `z-index` values now reference a documented `--z-*` scale (`--z-recede/sticky/sticky-2/dropdown/panel/overlay/modal/modal-2/toast` in `:root`) — identical numeric values, purely named, zero visual change. The `AvailabilityHeatmap.tsx:95` hex leak is fixed via a new `--on-fill: #fff` token (kept distinct from `--paper-*`, which are theme backgrounds that aren't always pure white — reusing one would have changed the color).
+>
+> **Completed (2026-08-11).** The remaining radius values are now named compact tokens (`--radius-focus/inline/control/field/icon/sheet`) and every literal `border-radius: <n>px` use was replaced without changing its numeric value. The 2px drop indicator now uses the existing pill token, which produces the same fully rounded shape. `eslint`, **191 tests**, and the production build all pass.
 
 ### ODY-109 · Scheduling poll UX — the vote is ambiguous and easy to lose — M, sonnet — 🟡 PARTIAL
 > **In plain terms:** The Schedule tab lets people tap cells to say when they're free, but the result is genuinely ambiguous: "I'm busy" looks exactly the same as "I haven't answered yet," and "maybe" is collected but then never shown to anyone. You also can't tell who still hasn't voted, there's no way to mark a whole week at once, and if a save fails the app says nothing — you think you voted when you didn't. This makes the poll trustworthy to read and quicker to fill in.
@@ -916,7 +923,7 @@ High-effort differentiator; explicitly product-gated.
 - Out of scope until ODY-036 production auth is stable; do not build without go-ahead.
 - Acceptance: documented spike or MVP: one confirmation type (e.g. flight) → editable draft event on a trip.
 
-### ODY-067 · Packing checklist — trip-level + optional per-event — M→L, sonnet
+### ODY-067 · Packing checklist — trip-level + optional per-event — M→L, sonnet — 🟡 STAGE A DONE (2026-08-11)
 > **In plain terms:** A shared packing list so the group knows who brings the charger — *and* the ability to attach a small list to a specific plan item. Example: a Day 3 "Hike Cadillac Mountain" event carries "hiking boots, 2L water, rain shell," while the trip-level list holds "passport, chargers, sunscreen." When you look at that event you see exactly what to bring for it; the trip view can optionally roll everything up so nothing's forgotten at the door.
 Ship in two stages so trip-level value lands first and event-scoped is additive.
 
@@ -949,6 +956,7 @@ Ship in two stages so trip-level value lands first and event-scoped is additive.
 - **Don't orphan the ODY-104 section.** Trips already have text in "Packing List". Either offer a one-time import (each line becomes an item — checklist lines already parse via `src/lib/checklist.ts`), or keep the section and point it at the real list. Silently shipping a second, better packing list beside the one people already typed into is the worst option.
 - Files (in addition to those above): `prisma/schema.prisma`, `prisma/rls.sql`, `src/lib/validations/index.ts`, `src/lib/tripNotes.ts` (migration/handoff from the default section).
 - Added acceptance: a personal item is invisible to every other member of the trip (asserted by a test against the query layer, not just the UI); a group item shows who's bringing it; group and personal counts are reported separately; existing "Packing List" notes-section content is either imported or explicitly handed off, never silently orphaned.
+> **Stage A completed (2026-08-11).** Added the dedicated Packing route with separate group and private personal lists, progress counts, a low-friction inline add field, group-item assignees, and a server-enforced shared-or-owner-only visibility filter. Viewers remain read-only. Existing free-text packing notes can be imported once into the new shared list; the original section is retained and marked imported. Event-scoped packing remains the Stage B follow-up.
 
 ### ODY-068 · Offline read of itinerary / map — L, sonnet
 > **In plain terms:** Open the trip on a plane or abroad without signal and still see the plan (read-only first).

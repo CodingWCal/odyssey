@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { splitDesktopNav, type TripNavState } from "@/components/trips/navItems";
 
-const FRESH: TripNavState = { hasPoll: false, hasPlaces: false, memberCount: 1 };
+const FRESH: TripNavState = { hasPoll: false, hasPlaces: false, memberCount: 1, hasPackingItems: false };
 const nothingActive = () => false;
 const hrefs = (items: { href: string }[]) => items.map((i) => i.href);
 
@@ -10,7 +10,7 @@ describe("splitDesktopNav (ODY-075 progressive reveal)", () => {
     const { primary, more } = splitDesktopNav(FRESH, nothingActive);
     // Core order is preserved from NAV_ITEMS.
     expect(hrefs(primary)).toEqual(["itinerary", "collections", "map", "budget"]);
-    expect(hrefs(more)).toEqual(["schedule", "explore", "members"]);
+    expect(hrefs(more)).toEqual(["schedule", "explore", "members", "packing"]);
   });
 
   it("keeps the four core tabs primary no matter what", () => {
@@ -40,6 +40,12 @@ describe("splitDesktopNav (ODY-075 progressive reveal)", () => {
     expect(hrefs(grouped.more)).not.toContain("members");
   });
 
+  it("reveals Packing once the trip has packing items", () => {
+    const packed = splitDesktopNav({ ...FRESH, hasPackingItems: true }, nothingActive);
+    expect(hrefs(packed.primary)).toContain("packing");
+    expect(hrefs(packed.more)).not.toContain("packing");
+  });
+
   it("never hides the active tab, even when its reveal condition is unmet", () => {
     // On the Schedule page with no poll yet — you must still see where you are.
     const onSchedule = (href: string) => href === "schedule";
@@ -49,10 +55,10 @@ describe("splitDesktopNav (ODY-075 progressive reveal)", () => {
   });
 
   it("a fully-engaged trip collapses More entirely", () => {
-    const engaged: TripNavState = { hasPoll: true, hasPlaces: true, memberCount: 3 };
+    const engaged: TripNavState = { hasPoll: true, hasPlaces: true, memberCount: 3, hasPackingItems: true };
     const { primary, more } = splitDesktopNav(engaged, nothingActive);
     expect(more).toHaveLength(0);
-    expect(primary).toHaveLength(7);
+    expect(primary).toHaveLength(8);
   });
 
   it("preserves NAV_ITEMS ordering within the primary group", () => {

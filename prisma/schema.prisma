@@ -50,6 +50,7 @@ model Trip {
   availabilityPoll  AvailabilityPoll?
   availabilitySlots AvailabilitySlot[]
   places            Place[]
+  checklistItems    ChecklistItem[]
 }
 
 /** A recorded settle-up payment outside the expense ledger (ODY-107), e.g.
@@ -219,4 +220,22 @@ model Place {
   creator User @relation(fields: [createdBy], references: [id])
 
   @@index([tripId])
+}
+
+/// Shared (ownerId null) or private (ownerId set) packing items (ODY-067).
+/// User ids stay scalar deliberately: privacy is enforced in the server query,
+/// while trip membership remains the authorization boundary.
+model ChecklistItem {
+  id         String   @id @default(uuid())
+  tripId     String
+  ownerId    String?
+  assigneeId String?
+  label      String
+  done       Boolean  @default(false)
+  orderIndex Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, ownerId, orderIndex])
 }

@@ -12,6 +12,7 @@ export const NAV_ITEMS = [
   { href: "map", label: "Map", Icon: Icons.map, core: true },
   { href: "budget", label: "Budget", Icon: Icons.budget, core: true },
   { href: "members", label: "Members", Icon: Icons.members, core: false },
+  { href: "packing", label: "Packing", Icon: Icons.note, core: false },
 ] as const;
 
 export const CORE_NAV_ITEMS = NAV_ITEMS.filter((i) => i.core);
@@ -33,6 +34,7 @@ export interface TripNavState {
   hasPlaces: boolean;
   /** More than the creator is on the trip — Members is worth surfacing. */
   memberCount: number;
+  hasPackingItems: boolean;
 }
 
 /** When each non-core tab graduates from the "More" group into the primary
@@ -41,6 +43,7 @@ const REVEAL: Record<string, (s: TripNavState) => boolean> = {
   schedule: (s) => s.hasPoll,
   explore: (s) => s.hasPlaces,
   members: (s) => s.memberCount > 1,
+  packing: (s) => s.hasPackingItems,
 };
 
 /**

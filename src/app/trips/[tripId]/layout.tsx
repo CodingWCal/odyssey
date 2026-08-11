@@ -25,6 +25,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     hasPoll: trip.availabilityPoll !== null,
     hasPlaces: trip._count.places > 0,
     memberCount: trip.members.length,
+    hasPackingItems: trip._count.checklistItems > 0,
   };
 
   return (
