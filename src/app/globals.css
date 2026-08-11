@@ -41,6 +41,7 @@
   --row-pad-y: 18px; --row-pad-x: 20px; --day-gap: 36px;
 
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 18px; --radius-xl: 22px;
+  --radius-pill: 999px; /* fully-rounded pills/dots (ODY-117) — was 23 literal 999px */
 
   /* Fixed white for text on a saturated fill (ODY-117 / ODY-108 F06) —
      distinct from the --paper-* tokens, which are theme backgrounds and
@@ -404,7 +405,7 @@
   padding: 6px 12px 6px 8px;
   background: rgba(255,255,255,.14);
   border: 1px solid rgba(255,255,255,.18);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
   backdrop-filter: blur(8px);
 }
@@ -415,7 +416,7 @@
   padding: 4px 4px 4px 12px;
   background: rgba(255,255,255,.12);
   border: 1px solid rgba(255,255,255,.18);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
   color: rgba(255,255,255,.9);
 }
@@ -462,7 +463,7 @@
   display: flex; align-items: center; gap: 10px;
 }
 .notes-pin {
-  width: 26px; height: 26px; border-radius: 8px;
+  width: 26px; height: 26px; border-radius: var(--radius-sm);
   background: var(--peri-soft); color: var(--peri);
   display: inline-flex; align-items: center; justify-content: center;
 }
@@ -680,7 +681,7 @@
 .day-today-badge {
   margin-left: 8px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--peri);
   color: var(--paper);
   font-family: var(--font-mono);
@@ -860,7 +861,7 @@
 .badge {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 9px 3px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: .02em;
@@ -1081,7 +1082,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding: 12px 8px;
   background: var(--paper);
   border: 1px solid var(--rule-2);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-size: 12px;
   color: var(--ink-2);
   text-transform: capitalize;
@@ -1180,7 +1181,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center;
     color: var(--ink-2);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
   }
   .mobile-trip-header .title {
     flex: 1; min-width: 0;
@@ -1194,7 +1195,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center;
     color: var(--ink-2);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: none; border: 0; cursor: pointer;
   }
   .mobile-trip-header .menu-trigger:hover { background: rgba(31,34,56,.04); color: var(--ink); }
@@ -1236,7 +1237,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     color: var(--ink-3);
     font-size: 10.5px;
     text-decoration: none;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
   }
   .mobile-tab-bar a.active { color: var(--peri); }
 
@@ -1287,7 +1288,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: inline-flex; align-items: baseline; gap: 5px;
   font-size: 14px;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(255,255,255,.12);
   margin-bottom: 14px;
   font-variant-numeric: tabular-nums;
@@ -1298,7 +1299,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .hero-mine.settled { color: rgba(255,255,255,.75); }
 .budget-hero .progress {
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(255,255,255,.18);
   overflow: hidden;
   position: relative;
@@ -1306,7 +1307,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .budget-hero .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #FFD9B8 0%, #F5B596 60%, #E68A6D 100%);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   transition: width .8s cubic-bezier(.4,0,.2,1);
 }
 .budget-hero .progress-meta {
@@ -1346,7 +1347,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .cat-bar {
   height: 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
   display: flex;
   background: var(--paper-3);
@@ -1773,7 +1774,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .chip {
   font-size: 11.5px; font-weight: 500;
   padding: 6px 11px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--paper-2);
   border: 1px solid var(--rule-2);
   color: var(--ink-2);
@@ -1805,7 +1806,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .map-pin {
   display: flex; gap: 12px; padding: 12px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: background .15s ease;
 }
@@ -1943,7 +1944,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: flex; gap: 8px;
   background: var(--paper-2);
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 4px;
   box-shadow: 0 4px 16px rgba(31,34,56,.18);
 }
@@ -1952,7 +1953,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding: 0 12px;
   background: transparent;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
   color: var(--ink-2);
   font-weight: 500;
@@ -1968,7 +1969,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   z-index: var(--z-panel);
   background: var(--paper-2);
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 6px 14px;
   font-size: 12px;
   color: var(--ink-2);
@@ -2058,7 +2059,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   text-transform: uppercase;
   font-weight: 600;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid currentColor;
 }
 .role-badge.owner { color: var(--teal); background: var(--teal-soft); }
@@ -2214,7 +2215,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--paper-2);
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0 14px;
   /* Match .btn-cta / .search-toggle so the header reads as one even row. */
   height: 40px;
@@ -2355,7 +2356,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   background: rgba(255,255,255,.18);
   border: 1px solid rgba(255,255,255,.3);
   backdrop-filter: blur(6px);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 6px 14px 6px 10px;
   font-size: 11.5px;
   color: white;
@@ -2427,10 +2428,10 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   margin-top: 6px;
 }
 .live-card .body .progress-trip .bar {
-  height: 4px; background: var(--paper-3); border-radius: 999px; overflow: hidden;
+  height: 4px; background: var(--paper-3); border-radius: var(--radius-pill); overflow: hidden;
 }
 .live-card .body .progress-trip .fill {
-  height: 100%; background: var(--peri); border-radius: 999px;
+  height: 100%; background: var(--peri); border-radius: var(--radius-pill);
   transition: width .8s cubic-bezier(.4,0,.2,1);
 }
 .live-card .body .progress-trip .pmeta {
@@ -2478,7 +2479,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   background: rgba(255,255,255,.18);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255,255,255,.28);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 4px 11px;
   font-size: 10.5px;
   color: white;
@@ -2716,7 +2717,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: var(--z-dropdown);
   background: var(--paper-2);
   border: 1px solid var(--rule-2);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-2);
   overflow: hidden;
   max-height: 240px; overflow-y: auto;
@@ -2741,7 +2742,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
 }
 .wizard-progress { display: flex; gap: 6px; margin: 16px 0 22px; }
-.wizard-progress .seg { flex: 1; height: 4px; border-radius: 999px; background: var(--paper-3); transition: background .25s ease; }
+.wizard-progress .seg { flex: 1; height: 4px; border-radius: var(--radius-pill); background: var(--paper-3); transition: background .25s ease; }
 .wizard-progress .seg.on { background: var(--ink); }
 .wizard-title { font-family: var(--font-display); font-size: 34px; line-height: 1.05; margin: 0 0 8px; color: var(--ink); }
 .wizard-title em { font-style: italic; color: var(--peri); }
@@ -2756,7 +2757,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .wz-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .wz-chip {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 13px; border: 1px solid var(--rule); border-radius: 999px;
+  padding: 8px 13px; border: 1px solid var(--rule); border-radius: var(--radius-pill);
   background: var(--paper); font-size: 12.5px; color: var(--ink); cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
 }
@@ -2792,7 +2793,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 /* Step 3 — budget chips, invites, cover moods */
 .wz-budget-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .wz-bchip {
-  padding: 6px 11px; border: 1px solid var(--rule); border-radius: 999px;
+  padding: 6px 11px; border: 1px solid var(--rule); border-radius: var(--radius-pill);
   background: var(--paper); font-family: var(--font-mono); font-size: 12px;
   color: var(--ink-2); cursor: pointer; transition: all .15s ease;
 }
@@ -2809,7 +2810,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .wz-invite-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .wz-tag {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px;
-  border-radius: 999px; background: var(--peri-soft); color: var(--peri); font-size: 12px;
+  border-radius: var(--radius-pill); background: var(--peri-soft); color: var(--peri); font-size: 12px;
 }
 .wz-tag button { display: inline-flex; align-items: center; border: 0; background: none; color: inherit; cursor: pointer; padding: 2px; }
 .wz-moods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -2942,7 +2943,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
   color: var(--peri); background: var(--peri-soft); padding: 6px 14px;
-  border-radius: 999px; margin: 8px 0 28px;
+  border-radius: var(--radius-pill); margin: 8px 0 28px;
 }
 .ld-badge-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--peri);
@@ -2964,14 +2965,14 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .ld-cta-primary {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 14px 28px; border-radius: 12px;
+  padding: 14px 28px; border-radius: var(--radius-md);
   background: var(--ink); color: var(--paper);
   font-weight: 600; font-size: 15px; text-decoration: none;
   transition: background .15s ease;
 }
 .ld-cta-ghost {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 14px 28px; border-radius: 12px;
+  padding: 14px 28px; border-radius: var(--radius-md);
   background: transparent; color: var(--ink-2);
   font-weight: 500; font-size: 15px; text-decoration: none;
   border: 1px solid var(--rule-2);
@@ -2982,7 +2983,6 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   margin-top: 20px; font-size: 12px; color: var(--ink-3);
   display: flex; align-items: center; justify-content: center; gap: 10px;
 }
-.ld-stars { letter-spacing: 2px; color: var(--gold); }
 
 .ld-features { max-width: 1040px; margin: 0 auto; padding: 0 48px 80px; }
 .ld-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
@@ -2998,16 +2998,6 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .ld-card h3 { font-family: var(--font-display); font-size: 22px; margin: 0 0 8px; color: var(--ink); }
 .ld-card p { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin: 0; }
-
-.ld-quote {
-  max-width: 680px; margin: 0 auto; padding: 60px 48px;
-  text-align: center; border-top: 1px solid var(--rule);
-}
-.ld-quote blockquote {
-  font-family: var(--font-display); font-size: 28px; font-weight: 400;
-  font-style: italic; color: var(--ink); margin: 0 0 16px; line-height: 1.3;
-}
-.ld-quote-attr { font-size: 13px; color: var(--ink-3); }
 
 .ld-foot-cta {
   text-align: center; padding: 60px 48px 80px;
@@ -3029,7 +3019,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-footer-links a { color: var(--ink-3); }
 
 @media (max-width: 768px) {
-  .ld-nav, .ld-hero, .ld-features, .ld-quote, .ld-foot-cta, .ld-footer {
+  .ld-nav, .ld-hero, .ld-features, .ld-foot-cta, .ld-footer {
     padding-left: 20px; padding-right: 20px;
   }
   .ld-nav { padding-top: 14px; padding-bottom: 14px; }
@@ -3158,7 +3148,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 /* Tiptap notes editor (011d) */
 .tt-toolbar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
 .tt-btn {
-  padding: 4px 12px; font-size: 13px; border-radius: 8px; cursor: pointer;
+  padding: 4px 12px; font-size: 13px; border-radius: var(--radius-sm); cursor: pointer;
   border: 1px solid var(--rule-2); font-family: var(--font-mono);
   background: var(--paper); color: var(--ink-2);
   transition: all .15s ease;

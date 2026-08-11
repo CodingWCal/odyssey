@@ -52,9 +52,6 @@ export function LandingPage() {
         </div>
 
         <div className="ld-social">
-          <span className="ld-stars">★★★★★</span>
-          <span>Loved by 4,200 travelers</span>
-          <span>·</span>
           <span>Free for solo trips</span>
         </div>
       </section>
@@ -81,14 +78,6 @@ export function LandingPage() {
             </div>
           ))}
         </div>
-      </section>
-
-      {/* Quote */}
-      <section className="ld-quote">
-        <blockquote>
-          &ldquo;It feels like holding a boarding pass and a printed map at the same time.&rdquo;
-        </blockquote>
-        <div className="ld-quote-attr">— Maya R., on her first Odyssey trip</div>
       </section>
 
       {/* Footer CTA */}
