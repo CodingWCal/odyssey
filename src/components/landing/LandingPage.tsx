@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icons } from "@/components/shared/Icons";
 import { Globe3D } from "./Globe3D";
 
 // Styles live in globals.css under the `ld-` prefix (ODY-011a). The only
@@ -60,18 +61,16 @@ export function LandingPage() {
       <section className="ld-features">
         <div className="ld-features-grid">
           {[
-            { color: "var(--peri)", title: "Day-by-day itinerary", body: "Drag, drop, expand, edit inline. Notes live where you'll actually find them." },
-            { color: "var(--teal)", title: "The route, mapped", body: "Every event becomes a pin. Filter by day. See the whole arc of your trip." },
-            { color: "var(--coral)", title: "Budget, tracked softly", body: "Categories, splits, per-person numbers. A soft ceiling — not a hard limit." },
-            { color: "var(--gold)", title: "The crew, in sync", body: "Invite by email. Everyone can plan; no one steps on each other's plans." },
-            { color: "var(--peach)", title: "Notes that breathe", body: "Pin a vibe at the top of the trip. Drop a thought under a day. They autosave." },
-            { color: "var(--slate)", title: "Weather, ambient", body: "Today's sky in your hero banner. A quiet reminder to pack the lighter jacket." },
+            { color: "var(--peri)", Icon: Icons.itinerary, title: "Day-by-day itinerary", body: "Drag, drop, expand, edit inline. Notes live where you'll actually find them." },
+            { color: "var(--teal)", Icon: Icons.map, title: "The route, mapped", body: "Every event becomes a pin. Filter by day. See the whole arc of your trip." },
+            { color: "var(--coral)", Icon: Icons.budget, title: "Budget, tracked softly", body: "Categories, splits, per-person numbers. A soft ceiling — not a hard limit." },
+            { color: "var(--gold)", Icon: Icons.members, title: "The crew, in sync", body: "Invite by email. Everyone can plan; no one steps on each other's plans." },
+            { color: "var(--peach)", Icon: Icons.note, title: "Notes that breathe", body: "Pin a vibe at the top of the trip. Drop a thought under a day. They autosave." },
+            { color: "var(--slate)", Icon: Icons.weather, title: "Weather, ambient", body: "Today's sky in your hero banner. A quiet reminder to pack the lighter jacket." },
           ].map((f) => (
             <div key={f.title} className="ld-card">
               <div className="ld-card-icon" style={{ "--f-color": f.color } as React.CSSProperties}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10" />
-                </svg>
+                <f.Icon size={18} />
               </div>
               <h3>{f.title}</h3>
               <p>{f.body}</p>

@@ -76,7 +76,9 @@ pass:
 
 ## P2 — Landing page generic-card-grid smell
 
-### ODY-108-F07 · All six feature cards share one repeated icon (a bare circle, recolored)
+### ODY-108-F07 · All six feature cards share one repeated icon (a bare circle, recolored) — ✅ FIXED (2026-08-09)
+> Resolved: each card now uses its matching purpose-built icon (`Icons.itinerary/map/budget/members/note`), and a new line-style `Icons.weather` sun was added for the sixth so it stays SVG rather than reaching for an emoji (which would have broken the app's no-emoji-iconography record this audit confirmed). Kept the per-card `--f-color` accent. No new dependencies.
+
 - **File:** `src/components/landing/LandingPage.tsx:65-82`
 - **What:** Six feature cards — itinerary, map, budget, members, notes, weather — each render the exact same `<circle cx="12" cy="12" r="10" />` SVG, distinguished only by `--f-color`. This is the textbook "does it look AI-generated" smell the ticket names directly: identical shapes standing in for six conceptually different features, when the app already has six distinct, purpose-built icons for exactly this taxonomy (`Icons.itinerary`, `Icons.map`, `Icons.budget`, `Icons.members`, `Icons.note`, and the weather glyph already used in `ItineraryHero`).
 - **Not fixed here** — swapping icons is a one-line-per-card change, genuinely safe, but it's a visible content/design decision on the highest-traffic marketing surface in the app; flagging with the exact fix rather than silently changing what a visitor sees felt like the more honest call for an audit PR.
