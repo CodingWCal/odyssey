@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Icons, type EventTypeKey } from "@/components/shared/Icons";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { formatDate, formatTime, type TimeFormat } from "@/lib/utils";
+import { googleMapsUrl } from "@/lib/mapsExport";
 
 // Event type → accent color token (mirrors EventBlock's TYPE_VAR / CLAUDE.md).
 const TYPE_VAR: Record<string, string> = {
@@ -53,7 +54,10 @@ export function DayAgenda({ tripId, days, selectedDayId, events, timeFormat }: D
   const current = idx >= 0 ? days[idx] : days[0];
   const prev = idx > 0 ? days[idx - 1] : null;
   const next = idx >= 0 && idx < days.length - 1 ? days[idx + 1] : null;
-  const pinned = events.filter((e) => e.lat != null && e.lng != null).length;
+  const pinnedEvents = events.filter((e) => e.lat != null && e.lng != null);
+  const pinned = pinnedEvents.length;
+  // Ordered stops → a Google Maps route for the day (ODY-072).
+  const mapsUrl = googleMapsUrl(pinnedEvents.map((e) => ({ lat: e.lat, lng: e.lng })));
 
   return (
     <div className="agenda">
@@ -120,6 +124,11 @@ export function DayAgenda({ tripId, days, selectedDayId, events, timeFormat }: D
         <Link href={`/trips/${tripId}/map`} className="btn btn-ghost">
           <Icons.map size={15} /> {pinned} pin{pinned !== 1 ? "s" : ""} on the map
         </Link>
+        {mapsUrl && (
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+            <Icons.pin size={15} /> Open in Google Maps
+          </a>
+        )}
       </div>
     </div>
   );

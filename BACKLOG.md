@@ -999,7 +999,8 @@ Competitive gap vs Wanderlog Chrome extension.
 - Depends on stable prod auth (ODY-036) and Collections (ODY-045 ✅).
 - Acceptance: from a travel article, save one place into a trip collection in ≤3 clicks.
 
-### ODY-072 · Export PDF / Google Maps — M, sonnet
+### ODY-072 · Export PDF / Google Maps — M, sonnet — ✅ DONE (2026-08-09)
+> **Both halves shipped.** **PDF/print:** delivered by ODY-032's `/trips/[tripId]/print` route — a `window.print()` "Print / Save PDF" over a paper-first stylesheet (see that ticket). **Google Maps:** new pure `googleMapsUrl(points)` helper in `src/lib/mapsExport.ts` (5 unit tests) — one located stop → a Maps search pin, two or more → turn-by-turn directions through them *in order* via the `maps/dir/A/B/C` path form, null when nothing's geolocated. Wired into `DayAgenda`'s footer: an "Open in Google Maps" link (`target=_blank rel=noopener`) built from that day's ordered, pinned events, shown only when there's at least one pin. Per-day (matches "a day's ordered pins"). No schema change, no new deps. tsc / eslint / 213 tests / build clean.
 > **In plain terms:** Hand someone a printable itinerary or open the day's pins in Google Maps.
 Adjacent to ODY-032 print view; can share implementation.
 - PDF or print-CSS export; "Open in Google Maps" for a day's ordered pins (URL scheme / directions).
