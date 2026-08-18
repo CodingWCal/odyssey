@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icons } from "@/components/shared/Icons";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { TripSearch } from "./TripSearch";
 
 interface MobileTripHeaderProps {
   title: string;
@@ -15,6 +16,7 @@ export function MobileTripHeader({ title, tripId }: MobileTripHeaderProps) {
         <Icons.arrowLeft size={18} />
       </Link>
       <span className="title">{title}</span>
+      <TripSearch tripId={tripId} variant="header" />
       <MobileNavDrawer tripId={tripId} />
     </div>
   );

@@ -3445,3 +3445,49 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
+
+/* ─── In-trip search (ODY-083) ───────────────────────────────────────── */
+/* Sidebar trigger — reads as a quiet search field above the nav. */
+.trip-search-trigger {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; margin: 4px 0 8px;
+  padding: 9px 12px;
+  font-size: 13px; color: var(--ink-3);
+  background: var(--paper-3); border: 1px solid var(--rule);
+  border-radius: var(--radius-md); cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.trip-search-trigger:hover { color: var(--ink-2); background: var(--paper-2); }
+.trip-search-trigger-icon { color: var(--ink-2); }
+
+/* Command box inside the shared Modal. */
+.trip-search { display: flex; flex-direction: column; min-height: 0; }
+.trip-search-input {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 4px 14px; border-bottom: 1px solid var(--rule); color: var(--ink-3);
+}
+.trip-search-input input {
+  flex: 1; border: 0; background: none; outline: none;
+  font: inherit; font-size: 16px; color: var(--ink);
+}
+.trip-search-results { margin-top: 10px; max-height: 60vh; overflow-y: auto; }
+.trip-search-hint { font-size: 13px; color: var(--ink-3); padding: 14px 4px; }
+.trip-search-results ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.trip-search-results li button {
+  display: flex; align-items: baseline; gap: 10px;
+  width: 100%; text-align: left; padding: 10px 10px;
+  background: none; border: 0; border-radius: var(--radius-md); cursor: pointer;
+  transition: background .12s ease;
+}
+.trip-search-results li button:hover { background: var(--paper-3); }
+.trip-search-kind {
+  flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  font-family: var(--font-mono); padding: 2px 7px; border-radius: var(--radius-pill);
+  color: var(--paper); line-height: 1.5;
+}
+.trip-search-kind.k-event { background: var(--peri); }
+.trip-search-kind.k-place { background: var(--teal); }
+.trip-search-kind.k-note { background: var(--slate); }
+.trip-search-body { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.trip-search-title { font-size: 14px; color: var(--ink); font-weight: 500; }
+.trip-search-sub { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; }

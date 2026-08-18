@@ -7,6 +7,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Icons } from "@/components/shared/Icons";
 import { TripEditModal } from "./TripEditModal";
 import { splitDesktopNav, type NavItem, type TripNavState } from "./navItems";
+import { TripSearch } from "./TripSearch";
 import { resolveCoverIndex } from "./cover";
 
 function formatRange(start: Date, end: Date): string {
@@ -109,6 +110,8 @@ export function WorkspaceSidebar({ trip, canEdit = true, navState }: WorkspaceSi
         initialCurrency={trip.currency}
         onClose={() => setEditOpen(false)}
       />
+
+      <TripSearch tripId={trip.id} />
 
       <nav className="nav" aria-label="Trip navigation">
         {primary.map(renderLink)}
