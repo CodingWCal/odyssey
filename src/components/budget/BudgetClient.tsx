@@ -111,7 +111,23 @@ function CategoryBlock({
 
   return (
     <section className={`cat-block c-${category} ${collapsed ? "collapsed" : ""}`}>
-      <header className="cat-head" onClick={() => setCollapsed((c) => !c)}>
+      {/* Keyboard-operable disclosure (ODY-022): role+tabIndex+aria-expanded
+          rather than a real <button>, since the row contains an <h2> which is
+          invalid inside a button. Enter/Space toggle; layout unchanged. */}
+      <header
+        className="cat-head"
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        aria-label={`${CAT_LABEL[category]} expenses, ${collapsed ? "collapsed" : "expanded"}`}
+        onClick={() => setCollapsed((c) => !c)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setCollapsed((c) => !c);
+          }
+        }}
+      >
         <svg className="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />
         </svg>

@@ -141,6 +141,13 @@ export function LocationAutocomplete({
     }
   }
 
+  // Complete combobox ARIA (ODY-022) — the listbox/option roles existed but
+  // the input wasn't wired as a combobox, so screen readers couldn't announce
+  // the expanded state or the active option.
+  const listboxId = `${id}-listbox`;
+  const optionId = (i: number) => `${id}-opt-${i}`;
+  const isOpen = open && (results.length > 0 || loading || searchError || noResults);
+
   return (
     <div className="ac-wrap" ref={wrapRef}>
       <input
@@ -150,12 +157,17 @@ export function LocationAutocomplete({
         autoFocus={autoFocus}
         placeholder={placeholder}
         autoComplete="off"
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={isOpen && active >= 0 ? optionId(active) : undefined}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
         onKeyDown={onKeyDown}
       />
-      {open && (results.length > 0 || loading || searchError || noResults) && (
-        <div className="ac-menu" role="listbox">
+      {isOpen && (
+        <div className="ac-menu" role="listbox" id={listboxId}>
           {loading && results.length === 0 && !searchError && (
             <div className="ac-hint">Searching…</div>
           )}
@@ -172,6 +184,7 @@ export function LocationAutocomplete({
           {results.map((s, i) => (
             <button
               key={`${s.lat},${s.lng},${i}`}
+              id={optionId(i)}
               type="button"
               role="option"
               aria-selected={i === active}

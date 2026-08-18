@@ -669,6 +669,12 @@
   background: linear-gradient(180deg, var(--paper) 70%, rgba(247,241,230,0) 100%);
   backdrop-filter: blur(4px);
 }
+/* Visible focus ring now that the day header is keyboard-focusable (ODY-022). */
+.day-head:focus-visible {
+  outline: 2px solid var(--peri);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
 .day-head .chev {
   width: 18px; height: 18px;
   color: var(--ink-3);
@@ -1397,6 +1403,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding: 8px 0 14px;
   cursor: pointer;
   user-select: none;
+}
+/* Visible focus ring now that the header is keyboard-focusable (ODY-022). */
+.cat-head:focus-visible {
+  outline: 2px solid var(--peri);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
 }
 .cat-head .chev {
   width: 18px; height: 18px;

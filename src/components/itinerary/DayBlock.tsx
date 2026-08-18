@@ -199,7 +199,22 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
 
   return (
     <section ref={sectionRef} className={`day-block${collapsed ? " collapsed" : ""}${isToday ? " is-today" : ""}`}>
-      <header className="day-head" onClick={() => setCollapsed((c) => !c)}>
+      {/* Keyboard-operable disclosure (ODY-022): Enter/Space toggle, focus ring
+          via .day-head:focus-visible; layout unchanged. */}
+      <header
+        className="day-head"
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        aria-label={`Day ${dayNumber}, ${collapsed ? "collapsed" : "expanded"}`}
+        onClick={() => setCollapsed((c) => !c)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setCollapsed((c) => !c);
+          }
+        }}
+      >
         <svg className="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />
         </svg>
