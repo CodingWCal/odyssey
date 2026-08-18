@@ -55,6 +55,7 @@ export async function upsertNote(
     update: { content, updatedBy: dbUser.id },
   });
 
-  revalidatePath(`/trips/${tripId}/notes`);
+  // Notes now live only on the itinerary (ODY-060) — the standalone /notes
+  // route was removed, so there's a single write path and one place to refresh.
   revalidatePath(`/trips/${tripId}/itinerary`);
 }

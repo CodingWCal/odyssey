@@ -13,8 +13,9 @@ export interface TripSearchResult {
   title: string;
   /** Location / day / snippet — secondary context under the title. */
   subtitle: string;
-  /** Which trip tab to jump to on select. */
-  tab: "itinerary" | "collections" | "notes";
+  /** Which trip tab to jump to on select. Notes live on the itinerary now
+   * (ODY-060), so note matches route there too. */
+  tab: "itinerary" | "collections";
 }
 
 const PER_KIND_CAP = 8;
@@ -66,7 +67,7 @@ export async function searchTrip(tripId: string, rawQuery: string): Promise<Trip
   if (note) {
     const sections = normalizeTripNoteContent(note.content).sections;
     for (const m of searchNoteSections(sections, q)) {
-      results.push({ kind: "note", id: m.id, title: m.title, subtitle: m.snippet, tab: "notes" });
+      results.push({ kind: "note", id: m.id, title: m.title, subtitle: m.snippet, tab: "itinerary" });
     }
   }
 
