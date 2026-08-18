@@ -877,7 +877,8 @@ configured; service role stays server-side), size/type validation via Zod + serv
 action, fallback to the current gradients (they're on-brand — keep them as the
 default state, photo optional). Respect existing RLS posture from the security memo.
 
-### ODY-032 · Print / share itinerary view — M, sonnet
+### ODY-032 · Print / share itinerary view — M, sonnet — ✅ DONE (2026-08-09)
+> **Shipped the `/trips/[tripId]/print` route exactly as specced (new files + one additive hero link + CSS append — low conflict surface).** Server-rendered, members-only via `getTripById`: a paper-first `.print-sheet` (ink-on-cream, DM Serif headings, mono figures) with a day-by-day plan — each day's `sortEventsByTime`-ordered events showing time, `TypeBadge`, title, location, notes — and a **budget summary** from one `db.expense.groupBy` (per-category + total, formatted with the trip currency via ODY-024's `formatMoney`). A `PrintButton` (client, `window.print()`) sits in an on-screen toolbar that's hidden in the printed output; the `@media print` block also drops the workspace chrome and adds `break-inside: avoid` so days/events don't split across pages. Entry: a "Print →" link beside "Day agenda" in `ItineraryHero`. Ties into ODY-072 (the same route is the "share" surface). No schema change; tab title "Print itinerary" via the ODY-026 template. tsc / eslint / 208 tests / build clean (`ƒ /trips/[tripId]/print`).
 > **In plain terms:** A printable, paper-style version of the itinerary — the "printed map" moment the brand is named for.
 On-brand "printed map" moment: a `/trips/[tripId]/print` server-rendered route with a
 paper-first, ink-on-cream stylesheet (print CSS), day-by-day list + budget summary.

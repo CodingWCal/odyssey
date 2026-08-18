@@ -107,6 +107,10 @@ export function ItineraryHero({
           <Link href={`/trips/${tripId}/agenda`} className="hero-agenda-link">
             Day agenda <Icons.chevron size={12} />
           </Link>
+          <span className="dot" />
+          <Link href={`/trips/${tripId}/print`} className="hero-agenda-link">
+            Print <Icons.chevron size={12} />
+          </Link>
         </div>
       </section>
 

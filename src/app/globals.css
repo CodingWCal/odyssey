@@ -3557,3 +3557,43 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   .agenda-daynav { justify-content: flex-start; margin-bottom: 16px; }
   .agenda-item { border: 1px solid #ccc; break-inside: avoid; background: none; }
 }
+
+/* ─── Print / share itinerary (ODY-032) ──────────────────────────────── */
+.print-toolbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.print-sheet {
+  max-width: 720px; margin: 0 auto;
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: var(--radius-lg);
+  padding: 40px 44px;
+  box-shadow: 0 20px 50px -30px rgba(42,47,88,.4);
+}
+.print-head { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 24px; }
+.print-head h1 { font-family: var(--font-display); font-size: 34px; margin: 0; color: var(--ink); }
+.print-meta { margin: 6px 0 0; font-size: 14px; color: var(--ink-2); font-family: var(--font-mono); }
+
+.print-day { margin-bottom: 22px; break-inside: avoid; }
+.print-day h2 { font-family: var(--font-display); font-size: 20px; margin: 0 0 10px; color: var(--ink); }
+.print-day-date { font-family: var(--font-body); font-size: 13px; color: var(--ink-3); font-weight: 400; }
+.print-empty { font-size: 13px; color: var(--ink-3); margin: 0 0 0 2px; }
+.print-events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.print-event { display: grid; grid-template-columns: 58px 1fr; gap: 12px; break-inside: avoid; }
+.print-time { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-2); padding-top: 1px; }
+.print-event-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.print-event-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14.5px; }
+.print-loc { font-size: 12.5px; color: var(--ink-2); }
+.print-note { font-size: 12.5px; color: var(--ink-3); white-space: pre-wrap; }
+
+.print-budget { margin-top: 26px; border-top: 1px solid var(--rule); padding-top: 16px; break-inside: avoid; }
+.print-budget h2 { font-family: var(--font-display); font-size: 20px; margin: 0 0 10px; }
+.print-budget-list { list-style: none; margin: 0; padding: 0; }
+.print-budget-list li { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; }
+.print-budget-list li span:last-child { font-family: var(--font-mono); }
+.print-budget-total { border-top: 1px solid var(--rule); margin-top: 4px; font-weight: 600; }
+.print-foot { margin-top: 28px; text-align: center; font-size: 11px; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; }
+
+@media print {
+  .print-toolbar { display: none !important; }
+  .main { padding: 0 !important; }
+  .print-sheet { max-width: none; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+  .print-event, .print-day, .print-budget { break-inside: avoid; }
+}
