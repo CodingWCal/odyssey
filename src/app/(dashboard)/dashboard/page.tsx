@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/trips/DashboardClient";
 import type { DashTrip } from "@/components/trips/TripCard";
 import { resolveCover } from "@/components/trips/cover";
-import { clerkUserNeedsName } from "@/lib/auth";
+import { clerkUserNeedsName, getOrCreateDbUser } from "@/lib/auth";
 import type { Metadata } from "next";
 
 // Renders as "Your trips — Odyssey" via the root title template (ODY-026).
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   // ODY-044: email sign-ups without a Clerk name land here as "Traveler".
   if (user && clerkUserNeedsName(user)) redirect("/onboarding/name");
 
-  const trips = await getTripsByUser();
+  const [trips, dbUser] = await Promise.all([getTripsByUser(), getOrCreateDbUser()]);
   const firstName = user?.firstName ?? "traveler";
 
   const ids = trips.map((t: (typeof trips)[number]) => t.id);
@@ -73,6 +73,8 @@ export default async function DashboardPage() {
       countdown,
       cover: resolveCover(t.coverImageUrl, t.id),
       members: t.members.map((m: (typeof t.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" })),
+      archived: t.archivedAt != null,
+      isOwner: t.ownerId === dbUser.id,
     };
   });
 

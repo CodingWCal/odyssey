@@ -231,3 +231,24 @@ export async function deleteTrip(tripId: string) {
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
+
+/** Owner-only soft-hide of a trip from the dashboard (ODY-082). Sets/clears
+ * `archivedAt` — never deletes data; the trip is fully restorable. */
+async function assertTripOwner(tripId: string, userId: string) {
+  const member = await db.tripMember.findFirst({ where: { tripId, userId, role: "owner" } });
+  if (!member) throw new Error("Unauthorized");
+}
+
+export async function archiveTrip(tripId: string) {
+  const dbUser = await getOrCreateUser();
+  await assertTripOwner(tripId, dbUser.id);
+  await db.trip.update({ where: { id: tripId }, data: { archivedAt: new Date() } });
+  revalidatePath("/dashboard");
+}
+
+export async function unarchiveTrip(tripId: string) {
+  const dbUser = await getOrCreateUser();
+  await assertTripOwner(tripId, dbUser.id);
+  await db.trip.update({ where: { id: tripId }, data: { archivedAt: null } });
+  revalidatePath("/dashboard");
+}

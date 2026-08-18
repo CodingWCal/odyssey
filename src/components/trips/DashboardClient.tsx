@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { Icons } from "@/components/shared/Icons";
 import { AvatarStack } from "@/components/shared/AvatarStack";
 import { TripCard, type DashTrip } from "./TripCard";
 import { NewTripWizard } from "./NewTripWizard";
+import { archiveTrip, unarchiveTrip } from "@/app/trips/actions";
+import { toast } from "@/components/shared/Toast";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { formatMoney } from "@/lib/money";
@@ -96,16 +99,35 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
     t.title.toLowerCase().includes(query.toLowerCase()) ||
     t.destination.toLowerCase().includes(query.toLowerCase());
 
-  const live = trips.find((t) => t.status === "live");
+  // Archived trips (ODY-082) are soft-hidden from the primary grid and every
+  // count; they live in a collapsed section and are fully restorable.
+  const active = trips.filter((t) => !t.archived);
+  const archived = trips.filter((t) => t.archived && match(t));
+  const [archivedOpen, setArchivedOpen] = useState(false);
+  const router = useRouter();
+  const [, startArchive] = useTransition();
+
+  function onArchiveToggle(id: string, currentlyArchived: boolean) {
+    startArchive(async () => {
+      try {
+        await (currentlyArchived ? unarchiveTrip(id) : archiveTrip(id));
+        router.refresh();
+      } catch {
+        toast("Couldn't update that trip — try again.");
+      }
+    });
+  }
+
+  const live = active.find((t) => t.status === "live");
   const showLive = live && match(live);
-  const upcoming = trips.filter((t) => t.status === "upcoming" && match(t));
-  const past = trips.filter((t) => t.status === "past" && match(t));
+  const upcoming = active.filter((t) => t.status === "upcoming" && match(t));
+  const past = active.filter((t) => t.status === "past" && match(t));
 
-  const totalDays = trips.reduce((s, t) => s + t.days, 0);
+  const totalDays = active.reduce((s, t) => s + t.days, 0);
   const travelers = new Set<string>();
-  trips.forEach((t) => t.members.forEach((m) => travelers.add(m.id)));
+  active.forEach((t) => t.members.forEach((m) => travelers.add(m.id)));
 
-  const nothing = !showLive && upcoming.length === 0 && past.length === 0;
+  const nothing = !showLive && upcoming.length === 0 && past.length === 0 && archived.length === 0;
 
   return (
     <div className="dash-shell">
@@ -166,7 +188,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
             <h1>Where to <em>next</em>?</h1>
           </div>
           <div className="stat-strip">
-            <span><strong>{trips.length}</strong>adventure{trips.length !== 1 ? "s" : ""}</span>
+            <span><strong>{active.length}</strong>adventure{active.length !== 1 ? "s" : ""}</span>
             <span className="sep">·</span>
             <span><strong>{totalDays}</strong>days planned</span>
             <span className="sep">·</span>
@@ -184,7 +206,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
               <h2>Upcoming <span className="count">{upcoming.length}</span></h2>
             </div>
             <div className="trip-grid">
-              {upcoming.map((t) => <TripCard key={t.id} trip={t} />)}
+              {upcoming.map((t) => <TripCard key={t.id} trip={t} onArchiveToggle={onArchiveToggle} />)}
               {!isMobile && <NewTripCard onClick={openWizard} />}
             </div>
           </>
@@ -196,8 +218,27 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
               <h2>Wrapped <span className="count">{past.length}</span></h2>
             </div>
             <div className="trip-grid">
-              {past.map((t) => <TripCard key={t.id} trip={t} />)}
+              {past.map((t) => <TripCard key={t.id} trip={t} onArchiveToggle={onArchiveToggle} />)}
             </div>
+          </>
+        )}
+
+        {archived.length > 0 && (
+          <>
+            <button
+              type="button"
+              className={`archived-toggle ${archivedOpen ? "open" : ""}`}
+              onClick={() => setArchivedOpen((o) => !o)}
+              aria-expanded={archivedOpen}
+            >
+              <Icons.chevron size={15} />
+              Archived <span className="count">{archived.length}</span>
+            </button>
+            {archivedOpen && (
+              <div className="trip-grid">
+                {archived.map((t) => <TripCard key={t.id} trip={t} onArchiveToggle={onArchiveToggle} />)}
+              </div>
+            )}
           </>
         )}
 

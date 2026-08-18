@@ -17,6 +17,10 @@ export interface DashTrip {
   countdown: string;
   cover: string;
   members: { id: string; name: string }[];
+  /** Soft-hidden from the primary grid (ODY-082). */
+  archived: boolean;
+  /** Only the owner may archive/restore. */
+  isOwner: boolean;
 }
 
 function titleParts(title: string): { head: string; tail: string } {
@@ -25,9 +29,13 @@ function titleParts(title: string): { head: string; tail: string } {
   return { head: m[1], tail: m[2] };
 }
 
-export function TripCard({ trip }: { trip: DashTrip }) {
+export function TripCard({ trip, onArchiveToggle }: { trip: DashTrip; onArchiveToggle?: (id: string, archived: boolean) => void }) {
   const isPast = trip.status === "past";
   const { head, tail } = titleParts(trip.title);
+  // Archive control shows for the owner on archived trips (Restore) and on
+  // past active trips (Archive — the ones that pile up); upcoming/live active
+  // cards stay uncluttered (ODY-082).
+  const showArchive = trip.isOwner && onArchiveToggle && (trip.archived || isPast);
 
   return (
     <Link href={`/trips/${trip.id}/itinerary`} className={`trip-card ${isPast ? "past" : ""}`}>
@@ -36,6 +44,19 @@ export function TripCard({ trip }: { trip: DashTrip }) {
         style={{ "--cover-img": `${COVER_ACCENT}, ${trip.cover}` } as React.CSSProperties}
       >
         <span className="countdown">{trip.countdown}</span>
+        {showArchive && (
+          <button
+            type="button"
+            className="trip-archive-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onArchiveToggle(trip.id, trip.archived);
+            }}
+          >
+            {trip.archived ? "Restore" : "Archive"}
+          </button>
+        )}
         <div className="cover-bottom">
           <div className="dest">{trip.destination}</div>
           <div className="days">{trip.days} days</div>

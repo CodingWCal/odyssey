@@ -705,7 +705,9 @@ QA finding F21: `upsertPoll` requires `role: "owner"`; the rest of planning is e
 - Files: `src/app/trips/[tripId]/schedule/actions.ts`, `src/app/trips/[tripId]/schedule/page.tsx`.
 - Acceptance: an editor can create/edit a poll; viewers still can't; applying a window stays owner-only (or is a deliberate follow-up decision).
 
-### ODY-082 · Trip archive / soft hide on dashboard — M, sonnet
+### ODY-082 · Trip archive / soft hide on dashboard — M, sonnet — ✅ DONE (⚠️ needs `prisma db push`)
+> **Shipped (2026-08-09).** Additive `Trip.archivedAt DateTime?` (null = active; never deletes data). New owner-only `archiveTrip`/`unarchiveTrip` server actions (`src/app/trips/actions.ts`) via a shared `assertTripOwner` check, revalidating `/dashboard`. Dashboard now splits `active` vs `archived`: live/upcoming/"Wrapped" and every stat (adventures / days / travelers) count **active only**; archived trips move to a collapsed **"Archived (N)"** disclosure at the bottom, restorable. `TripCard` gained an owner-only Archive/Restore pill (top-right of the cover, `stopPropagation` so it doesn't trigger the card link) — shown on past active trips (the ones that pile up) and all archived trips, keeping upcoming/live cards uncluttered. Toggle uses `useTransition` + `router.refresh()`; a failure toasts. tsc / eslint / 213 tests / build clean.
+> **⚠️ DEPLOY STEP — run `npx prisma db push` before this serves traffic.** `getTripsByUser` returns full Trip rows, so the dashboard now selects `archivedAt`; without the column the whole dashboard 500s. Additive and safe (nullable, no backfill needed). Same as the ODY-024 / packing pattern.
 > **In plain terms:** Past trips ("Wrapped") pile up forever. Let people archive a trip so the dashboard stays calm, without deleting the memories.
 Dashboard shows all upcoming/past; no way to tidy.
 - Add `archivedAt DateTime?` on Trip via `prisma db push` (Supabase free-tier may be paused — coordinate the push). Owner archives/unarchives; archived trips move to a collapsed "Archived" section, excluded from the main grid and counts.
