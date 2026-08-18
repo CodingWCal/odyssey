@@ -327,7 +327,8 @@ in `src/app/trips/actions.ts`) and resolved via `resolveCover`
 - Guardrails: no hardcoded hex outside globals.css; keep text contrast readable over the gradient.
 - Acceptance: the cover mood chosen at creation (and edited later) appears on the itinerary page, matching the dashboard card — no purple default.
 
-### ODY-020 · Landing page honesty pass — S, haiku
+### ODY-020 · Landing page honesty pass — S, haiku — ✅ DONE (2026-08-09)
+> **Completed across two passes.** ODY-108 F01 (2026-08-09) removed the fabricated "Loved by 4,200 travelers" count, the five-star row, and the invented "Maya R." testimonial + their CSS. This pass finished it: dropped the "Free for solo trips" pricing implication (the app has no payment system, so it implied paid tiers that don't exist) — replaced with a true, non-metric brand line ("Built for every kind of trip — solo, group, spur-of-the-moment."); and removed the dead `href="#"` footer links (Privacy/Terms/Support) + their now-unused CSS. **Note for launch:** real Privacy/Terms pages should exist before a public launch (the app collects auth + trip data) — removed here only because broken links are worse than absent ones; re-add as real pages when written. Layout rhythm/type scale unchanged (copy swap + deletion, no redesign). No invented metrics/testimonials/pricing remain anywhere public. tsc / tests / build clean.
 > **In plain terms:** The landing page currently invents things — fake user counts, a fake testimonial, fake pricing. This replaces them with honest copy in the same voice.
 The landing claims "Loved by 4,200 travelers", a five-star row, a named testimonial
 ("Maya R.") and "Free for solo trips" pricing — all fabricated. Footer Privacy/Terms/

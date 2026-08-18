@@ -84,7 +84,7 @@ pass:
 - **Not fixed here** — swapping icons is a one-line-per-card change, genuinely safe, but it's a visible content/design decision on the highest-traffic marketing surface in the app; flagging with the exact fix rather than silently changing what a visitor sees felt like the more honest call for an audit PR.
 - **Recommendation:** `<Icons.itinerary size={18} />` etc. in place of the shared circle — zero new dependencies, reuses icons that already exist.
 
-### ODY-108-F08 · Footer links are dead (`href="#"` ×3)
+### ODY-108-F08 · Footer links are dead (`href="#"` ×3) — ✅ FIXED (2026-08-09, via ODY-020)
 - **File:** `src/components/landing/LandingPage.tsx:114-118`
 - **What:** Privacy / Terms / Support all point nowhere. Minor, but it's the kind of unfinished-boilerplate tell that undercuts an otherwise deliberate, calm page. Not fixed here (no real destinations exist yet to link to) — noting so it isn't lost.
 

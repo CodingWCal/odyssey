@@ -3026,8 +3026,6 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-footer .brand-mark { width: 20px; height: 20px; }
 .ld-footer-name { font-family: var(--font-display); font-size: 16px; }
 .ld-footer-tag { margin-left: 8px; }
-.ld-footer-links { display: flex; gap: 20px; }
-.ld-footer-links a { color: var(--ink-3); }
 
 @media (max-width: 768px) {
   .ld-nav, .ld-hero, .ld-features, .ld-foot-cta, .ld-footer {
@@ -3041,7 +3039,6 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     flex-direction: column; align-items: flex-start; gap: 12px;
   }
   .ld-footer-tag { display: block; margin-left: 0; margin-top: 2px; }
-  .ld-footer-links { gap: 16px; flex-wrap: wrap; }
 }
 
 /* ── Availability grid + heatmap (ODY-011b — migrated from inline styles) ── */

@@ -53,7 +53,7 @@ export function LandingPage() {
         </div>
 
         <div className="ld-social">
-          <span>Free for solo trips</span>
+          <span>Built for every kind of trip — solo, group, spur-of-the-moment.</span>
         </div>
       </section>
 
@@ -98,11 +98,6 @@ export function LandingPage() {
           <span className="brand-mark" aria-hidden="true" />
           <span className="ld-footer-name">Odyssey</span>
           <span className="ld-footer-tag">© 2026 · Made for the long way around.</span>
-        </div>
-        <div className="ld-footer-links">
-          {["Privacy", "Terms", "Support"].map((l) => (
-            <a key={l} href="#">{l}</a>
-          ))}
         </div>
       </footer>
     </div>
