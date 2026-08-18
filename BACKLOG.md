@@ -352,7 +352,8 @@ input `role="combobox"`, color-only category coding in the budget bar.
 - Convert clickable non-buttons to `<button>` with `aria-expanded`; complete combobox ARIA in `LocationAutocomplete`; add text/pattern reinforcement where color is the only signal; run an axe pass on main routes.
 - Acceptance: keyboard-only operation of itinerary collapse, budget categories, autocomplete; no serious axe violations on the 5 main routes.
 
-### ODY-023 · Weather banner beyond 3 days / graceful absence — S, haiku
+### ODY-023 · Weather banner beyond 3 days / graceful absence — S, haiku — ✅ DONE (2026-08-09)
+> **Shipped.** `fetchWeather` now takes the trip end date too and clamps its request to `[today, today+15] ∩ trip range`. Extracted the pure date math into `planWeatherWindow(start, end, now)` (testable without the network — the pattern used by `scheduleWindow`): returns `{ unavailable: true }` when the trip is fully past or starts beyond the 15-day forecast horizon, else the clamped `{ startStr, endStr }`. In-progress trips now request from **today** (fixes the old "mid-trip still shows the start date's weather" bug), not the start date. `fetchWeather` returns a `WeatherResult` union (`WeatherData | { unavailable: true } | null`); `ItineraryHero` renders a quiet italic placeholder — "Forecast opens closer to departure" (`.hero-weather-soft`) — for the unavailable case instead of the row collapsing to nothing. 6 new unit tests cover past / far-future / near-future / in-progress / horizon-edge-clamp / ends-today. tsc / eslint / 199 tests / build clean.
 > **In plain terms:** The weather banner silently vanishes for past trips or trips far in the future. This makes it always show something sensible.
 `fetchWeather` (`src/components/shared/WeatherBanner.tsx:63`) requests `startDate`
 → +2 days from the *forecast* API: past trips and trips >16 days out silently render

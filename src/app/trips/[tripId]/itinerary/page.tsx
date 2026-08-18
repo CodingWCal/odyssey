@@ -25,7 +25,7 @@ export default async function ItineraryPage({ params }: Props) {
   const trip = await getTripById(tripId);
   if (!trip) notFound();
 
-  const weather = await fetchWeather(trip.destination, trip.startDate);
+  const weather = await fetchWeather(trip.destination, trip.startDate, trip.endDate);
   const totalEvents = trip.days.reduce((n: number, d: (typeof trip.days)[number]) => n + d.events.length, 0);
   const dateRange = `${formatShortDate(trip.startDate)} – ${formatShortDate(trip.endDate)}`;
   const members = trip.members.map((m: (typeof trip.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" }));

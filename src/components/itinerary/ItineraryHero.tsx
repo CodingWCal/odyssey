@@ -13,7 +13,8 @@ interface ItineraryHeroProps {
   title: string;
   titleParts: { head: string; tail: string };
   members: { id: string; name: string }[];
-  weather: { condition: string; temperature: number } | null;
+  // A reading, an out-of-horizon marker (placeholder), or null (ODY-023).
+  weather: { condition: string; temperature: number } | { unavailable: true } | null;
   totalDays: number;
   totalEvents: number;
   trip: {
@@ -80,13 +81,19 @@ export function ItineraryHero({
           )}
         </div>
         <div className="hero-row">
-          {weather && (
+          {weather && "condition" in weather && (
             <>
               <span className="hero-weather">
                 <span>{CONDITION_ICONS[weather.condition] ?? CONDITION_ICONS.default}</span>
                 <span className="temp">{Math.round(weather.temperature)}°F</span>
                 <span className="hero-cond">· {weather.condition}</span>
               </span>
+              <span className="dot" />
+            </>
+          )}
+          {weather && "unavailable" in weather && (
+            <>
+              <span className="hero-weather hero-weather-soft">Forecast opens closer to departure</span>
               <span className="dot" />
             </>
           )}

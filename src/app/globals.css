@@ -413,6 +413,10 @@
   backdrop-filter: blur(8px);
 }
 .hero-weather .temp { font-family: var(--font-mono); font-weight: 500; }
+/* Placeholder when the trip is outside the forecast horizon (ODY-023) —
+   quieter than a live reading, no icon, just a calm line so the row never
+   collapses to nothing for past / far-future trips. */
+.hero-weather-soft { padding: 6px 12px; opacity: .8; font-style: italic; }
 
 .hero-people {
   display: flex; align-items: center; gap: 10px;
