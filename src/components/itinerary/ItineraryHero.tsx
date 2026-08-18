@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Icons } from "@/components/shared/Icons";
 import { AvatarStack } from "@/components/shared/AvatarStack";
 import { TripEditModal } from "@/components/trips/TripEditModal";
@@ -102,6 +103,10 @@ export function ItineraryHero({
           <span>{totalEvents} planned events</span>
           <span className="dot" />
           <span><Icons.pin size={12} /> {destination}</span>
+          <span className="dot" />
+          <Link href={`/trips/${tripId}/agenda`} className="hero-agenda-link">
+            Day agenda <Icons.chevron size={12} />
+          </Link>
         </div>
       </section>
 
