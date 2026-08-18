@@ -377,7 +377,8 @@ notes and budget edits similarly lag.
 - Use `useOptimistic`/local state reconciliation for event reorder and day-note saves; revert with a toast (ODY-013) on failure.
 - Acceptance: drag drops feel instant; server disagreement reverts visibly.
 
-### ODY-026 · SEO & metadata polish — S, haiku
+### ODY-026 · SEO & metadata polish — S, haiku — ✅ DONE (2026-08-09)
+> **Shipped.** Root `layout.tsx` now sets `metadataBase` (explicit `NEXT_PUBLIC_SITE_URL` → Vercel production domain → localhost fallback, so OG image paths resolve to absolute URLs), a title template (`"%s — Odyssey"`), a brand-voice default title + description, and full `openGraph` + `twitter` (`summary_large_image`) cards pointing at `public/landing.png` (1280×800, the real on-brand app screenshot). Per-route titles: trip layout gains a lightweight title-only `generateMetadata` → "Tokyo — Odyssey" on every trip tab (auth-free by design — a title behind a UUID isn't sensitive and page content stays gated, so metadata never throws); dashboard exports `title: "Your trips"` → "Your trips — Odyssey". Favicon already present (`src/app/favicon.ico`, Next auto-serves). **Optional follow-up:** set `NEXT_PUBLIC_SITE_URL` to the real custom domain if/when one exists (otherwise Vercel's project URL is used); a purpose-designed 1200×630 OG image would be marginally sharper than the screenshot but the ticket accepts a static PNG. tsc / eslint / 193 tests / build clean.
 > **In plain terms:** Shared links show a generic preview and every browser tab says the same thing. This adds real page titles and a branded link-preview card.
 Only default metadata; no OG image, no per-route titles.
 - `metadata` exports: landing (brand tagline), dashboard/trip routes (`"Trip title — Odyssey"` via `generateMetadata`), OG image in brand palette (static PNG is fine), proper favicon set from the brand mark.

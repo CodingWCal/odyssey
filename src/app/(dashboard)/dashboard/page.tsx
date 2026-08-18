@@ -6,6 +6,10 @@ import { DashboardClient } from "@/components/trips/DashboardClient";
 import type { DashTrip } from "@/components/trips/TripCard";
 import { resolveCover } from "@/components/trips/cover";
 import { clerkUserNeedsName } from "@/lib/auth";
+import type { Metadata } from "next";
+
+// Renders as "Your trips — Odyssey" via the root title template (ODY-026).
+export const metadata: Metadata = { title: "Your trips" };
 
 function fmtDate(d: Date) {
   // Trip dates are UTC-midnight (ODY-003) — format in UTC so US timezones
