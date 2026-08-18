@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createPlace, deletePlace } from "@/app/trips/[tripId]/collections/actions";
+import { addPlaceToItinerary, createPlace, deletePlace } from "@/app/trips/[tripId]/collections/actions";
 import { LocationAutocomplete } from "@/components/itinerary/LocationAutocomplete";
 import { Icons, EVENT_TYPES } from "@/components/shared/Icons";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { toast } from "@/components/shared/Toast";
+import { formatShortDate } from "@/lib/utils";
 import { TYPE_HEX } from "@/components/map/mapTypes";
 import type { EventType } from "@/types";
 
@@ -19,17 +20,26 @@ export interface CollectionPlace {
   notes: string | null;
 }
 
+interface DayOption {
+  id: string;
+  label: string;
+  date: Date;
+}
+
 interface CollectionsClientProps {
   tripId: string;
   places: CollectionPlace[];
+  /** Trip days for the "add to itinerary" picker (ODY-078). */
+  days: DayOption[];
   readOnly?: boolean;
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
 }
 
-export function CollectionsClient({ tripId, places: initial, readOnly = false, destination }: CollectionsClientProps) {
+export function CollectionsClient({ tripId, places: initial, days, readOnly = false, destination }: CollectionsClientProps) {
   const [places, setPlaces] = useState(initial);
   const [adding, setAdding] = useState(false);
+  const [dayPick, setDayPick] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState({
     category: "restaurant" as EventType,
@@ -92,6 +102,24 @@ export function CollectionsClient({ tripId, places: initial, readOnly = false, d
         setPlaces((prev) => prev.filter((p) => p.id !== id));
       } catch {
         toast(`Couldn't remove "${title}" — try again.`);
+      }
+    });
+  }
+
+  // Promote a saved place onto the itinerary on the picked day (ODY-078).
+  function handleAddToItinerary(p: CollectionPlace) {
+    if (readOnly) return;
+    const dayId = dayPick[p.id] || days[0]?.id;
+    if (!dayId) {
+      toast("This trip has no days to add to yet.");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await addPlaceToItinerary({ tripId, dayId, placeId: p.id });
+        toast("Added to itinerary.", "success");
+      } catch {
+        toast("Couldn't add to itinerary — try again.");
       }
     });
   }
@@ -223,15 +251,43 @@ export function CollectionsClient({ tripId, places: initial, readOnly = false, d
                       )}
                     </div>
                     {!readOnly && (
-                      <button
-                        type="button"
-                        className="icon-btn danger"
-                        aria-label={`Remove ${p.title}`}
-                        disabled={isPending}
-                        onClick={() => handleDelete(p.id, p.title)}
-                      >
-                        <Icons.trash size={14} />
-                      </button>
+                      <div className="collections-item-actions">
+                        {days.length > 0 && (
+                          <label className="explore-day-pick">
+                            <span className="sr-only">Day to add {p.title} to</span>
+                            <select
+                              className="input"
+                              value={dayPick[p.id] || days[0].id}
+                              onChange={(e) => setDayPick((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                            >
+                              {days.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.label} · {formatShortDate(d.date)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        {days.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn btn-primary sm"
+                            disabled={isPending}
+                            onClick={() => handleAddToItinerary(p)}
+                          >
+                            Add to itinerary
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="icon-btn danger"
+                          aria-label={`Remove ${p.title}`}
+                          disabled={isPending}
+                          onClick={() => handleDelete(p.id, p.title)}
+                        >
+                          <Icons.trash size={14} />
+                        </button>
+                      </div>
                     )}
                   </li>
                 ))}

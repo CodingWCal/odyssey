@@ -15,11 +15,18 @@ export default async function CollectionsPage({ params }: Props) {
   const places = await listPlaces(tripId);
   const readOnly = trip.myRole === "viewer";
 
+  const days = trip.days.map((d: (typeof trip.days)[number], i: number) => ({
+    id: d.id,
+    label: `Day ${String(i + 1).padStart(2, "0")}`,
+    date: d.date,
+  }));
+
   return (
     <div className="canvas">
       <CollectionsClient
         tripId={tripId}
         destination={trip.destination}
+        days={days}
         places={places.map((p) => ({
           id: p.id,
           category: p.category,

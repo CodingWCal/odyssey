@@ -667,7 +667,8 @@ The dashboard already computes `live`/`upcoming`/`past`; the itinerary doesn't l
 > **In plain terms:** Soft non-blocking hint when two timed events on a day overlap.
 - `findOverlaps` helper + unit tests; quiet peach hint on `EventBlock`.
 
-### ODY-078 · Collections → add to a day in one tap — S, sonnet
+### ODY-078 · Collections → add to a day in one tap — S, sonnet — ✅ DONE (2026-08-09)
+> **Shipped.** New `addPlaceToItinerary({ tripId, dayId, placeId })` server action (`collections/actions.ts`) mirrors Explore's `saveExploreToItinerary`: it verifies the place belongs to the trip, then reuses `createEvent` — which already enforces editor+ and the ODY-052 day-scope guard — mapping `Place.category` → `Event.type` (shared vocabulary) and carrying the place's geocoded lat/lng so the new event pins like any hand-entered one. `CollectionsClient` gained a per-place day `<select>` + "Add to itinerary" button (reusing Explore's `.explore-day-pick` pattern), gated behind `!readOnly` and `days.length > 0`; the page now passes `days`. The place stays in Collections after adding (non-destructive — it's now also on the plan). Viewers see no controls and the action rejects them server-side. tsc / eslint / 199 tests / build clean.
 > **In plain terms:** Explore can drop a place onto the itinerary, but saved Collections places are a dead end — you can't easily say "put this on Thursday." Add that.
 Collections are savable but can't be promoted to the plan (Explore already has `saveExploreToItinerary`).
 - Add an "Add to itinerary" action on a Collection card → day picker → reuse `createEvent` (with the ODY-052 day-scope guard and shared geocode path). Editor+ only.

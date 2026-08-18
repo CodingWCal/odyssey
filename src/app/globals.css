@@ -3373,6 +3373,16 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   border: 1px solid var(--rule); border-radius: var(--radius-lg);
 }
 .collections-item-body { flex: 1; min-width: 0; }
+/* Add-to-itinerary controls on a saved place (ODY-078) — day picker + button
+   stacked over the remove button, right-aligned so the place body still leads. */
+.collections-item-actions {
+  display: flex; flex-direction: column; gap: 6px;
+  flex: none; align-items: stretch; min-width: 150px;
+}
+.collections-item-actions .explore-day-pick,
+.collections-item-actions .explore-day-pick .input,
+.collections-item-actions .btn { width: 100%; }
+.collections-item-actions .icon-btn { align-self: flex-end; }
 .collections-item h3 {
   margin: 0 0 4px; font-size: 16px; font-weight: 500; color: var(--ink);
 }

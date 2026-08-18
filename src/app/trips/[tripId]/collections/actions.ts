@@ -5,6 +5,7 @@ import { db } from "@/lib/prisma/db";
 import { createPlaceSchema, updatePlaceSchema } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 import { geocode } from "@/lib/geocode";
+import { createEvent } from "@/app/trips/[tripId]/itinerary/actions";
 
 /**
  * List places saved to a trip's collection (ODY-045). Any member can read.
@@ -103,4 +104,30 @@ export async function deletePlace(placeId: string) {
   await db.place.delete({ where: { id: placeId } });
   revalidatePath(`/trips/${existing.tripId}/collections`);
   revalidatePath(`/trips/${existing.tripId}/map`);
+}
+
+/**
+ * Promote a saved Collections place onto the itinerary as a real event on the
+ * chosen day (ODY-078). Mirrors Explore's `saveExploreToItinerary`: reuses
+ * `createEvent`, which enforces editor+ and the ODY-052 day-scope guard.
+ * `Place.category` shares Event.type's vocabulary, so it maps 1:1; the place's
+ * already-geocoded lat/lng carry over so the new event pins like any other.
+ */
+export async function addPlaceToItinerary(input: { tripId: string; dayId: string; placeId: string }) {
+  const dbUser = await getOrCreateDbUser();
+  await assertTripRole(input.tripId, dbUser.id, "editor");
+
+  const place = await db.place.findFirst({ where: { id: input.placeId, tripId: input.tripId } });
+  if (!place) throw new Error("Place not found");
+
+  return createEvent({
+    tripId: input.tripId,
+    dayId: input.dayId,
+    type: place.category,
+    title: place.title,
+    location: place.location ?? undefined,
+    notes: place.notes ?? undefined,
+    lat: place.lat ?? undefined,
+    lng: place.lng ?? undefined,
+  });
 }
