@@ -6,7 +6,10 @@ import { db } from "@/lib/prisma/db";
 import { createTripSchema, updateTripSchema, createTripWizardSchema, type CreateTripWizardInput } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 // Local-calendar helpers live in lib so they're unit-testable (ODY-016).
-import { parseDateString, enumerateDays, dayKey } from "@/lib/dates";
+import { parseDateString, enumerateDays, dayKey, shiftDateUTC, daysBetweenUTC } from "@/lib/dates";
+// Event↔expense linkage (shared with the itinerary actions), so a duplicated
+// trip's event costs land on its budget the same way the original's did.
+import { syncLinkedExpense } from "@/lib/expenses";
 
 const getOrCreateUser = getOrCreateDbUser;
 
@@ -148,6 +151,92 @@ export async function createTripWizard(
 
   revalidatePath("/dashboard");
   return { tripId: trip.id };
+}
+
+/**
+ * Duplicate a whole trip the caller belongs to (ODY-033) — a fresh trip they
+ * own, titled "… (copy)", with every day and event cloned. An optional
+ * `newStartDate` ("YYYY-MM-DD") shifts the entire trip by the whole-day delta
+ * so a loved itinerary can be re-run on new dates; omitted, it's an exact-date
+ * clone. The budget starts clean except for event-linked costs, which are
+ * re-synced so the copy's planned spend matches the original. Returns the new
+ * trip id so the client can navigate to it.
+ */
+export async function duplicateTrip(
+  tripId: string,
+  newStartDate?: string
+): Promise<{ tripId: string }> {
+  const dbUser = await getOrCreateUser();
+
+  // Membership is the authorization boundary — any member can make their own
+  // copy (they become its owner).
+  const source = await db.trip.findFirst({
+    where: { id: tripId, members: { some: { userId: dbUser.id } } },
+    include: {
+      days: { include: { events: { orderBy: { orderIndex: "asc" } } }, orderBy: { date: "asc" } },
+    },
+  });
+  if (!source) throw new Error("Not found");
+
+  const delta = newStartDate
+    ? daysBetweenUTC(source.startDate, parseDateString(newStartDate))
+    : 0;
+
+  // Trip + its days + events (+ linked expenses) all commit together (ODY-005).
+  const created = await db.$transaction(async (tx) => {
+    const trip = await tx.trip.create({
+      data: {
+        ownerId: dbUser.id,
+        title: `${source.title} (copy)`,
+        destination: source.destination,
+        startDate: shiftDateUTC(source.startDate, delta),
+        endDate: shiftDateUTC(source.endDate, delta),
+        coverImageUrl: source.coverImageUrl,
+        totalBudget: source.totalBudget,
+        currency: source.currency,
+        timeFormat: source.timeFormat,
+        members: { create: { userId: dbUser.id, role: "owner" } },
+      },
+    });
+
+    for (const day of source.days) {
+      const newDay = await tx.day.create({
+        data: {
+          tripId: trip.id,
+          date: shiftDateUTC(day.date, delta),
+          label: day.label,
+          notes: day.notes,
+        },
+      });
+      for (const ev of day.events) {
+        const clone = await tx.event.create({
+          data: {
+            dayId: newDay.id,
+            tripId: trip.id,
+            type: ev.type,
+            title: ev.title,
+            location: ev.location,
+            startTime: ev.startTime,
+            endTime: ev.endTime,
+            notes: ev.notes,
+            cost: ev.cost,
+            lat: ev.lat,
+            lng: ev.lng,
+            destLocation: ev.destLocation,
+            destLat: ev.destLat,
+            destLng: ev.destLng,
+            orderIndex: ev.orderIndex,
+            createdBy: dbUser.id,
+          },
+        });
+        await syncLinkedExpense(clone, tx);
+      }
+    }
+    return trip;
+  });
+
+  revalidatePath("/dashboard");
+  return { tripId: created.id };
 }
 
 export async function updateTrip(tripId: string, formData: FormData) {

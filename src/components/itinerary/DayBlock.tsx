@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
+import { useState, useRef, useLayoutEffect, useEffect, useMemo, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   closestCenter,
@@ -21,7 +22,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { EventBlock } from "./EventBlock";
 import { AddEventModal } from "./AddEventModal";
 import { DayNotes } from "./DayNotes";
-import { reorderEvents } from "@/app/trips/[tripId]/itinerary/actions";
+import { Modal } from "@/components/shared/Modal";
+import { reorderEvents, copyDayEvents } from "@/app/trips/[tripId]/itinerary/actions";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import type { TripDay } from "@/types";
@@ -92,9 +94,15 @@ interface DayBlockProps {
   currency?: string;
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
+  /** Roster of the trip's days, so this day can copy its events onto another
+   * (ODY-033). Includes this day; the picker filters it out. */
+  days?: { id: string; dayNumber: number; label: string }[];
 }
 
-export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", currency = "USD", destination }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", currency = "USD", destination, days = [] }: DayBlockProps) {
+  const router = useRouter();
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copying, startCopy] = useTransition();
   const [events, setEvents] = useState(day.events);
   const [addOpen, setAddOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -197,6 +205,23 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
 
   const weekday = formatWeekday(day.date);
 
+  // Other days this day's events can be copied onto (ODY-033).
+  const copyTargets = days.filter((d) => d.id !== day.id);
+  const canCopy = !readOnly && events.length > 0 && copyTargets.length > 0;
+
+  function handleCopyTo(targetDayId: string) {
+    startCopy(async () => {
+      try {
+        await copyDayEvents(day.id, targetDayId, tripId);
+        setCopyOpen(false);
+        router.refresh();
+        toast("Events copied.");
+      } catch {
+        toast("Couldn't copy those events — try again.");
+      }
+    });
+  }
+
   return (
     <section ref={sectionRef} className={`day-block${collapsed ? " collapsed" : ""}${isToday ? " is-today" : ""}`}>
       {/* Keyboard-operable disclosure (ODY-022): Enter/Space toggle, focus ring
@@ -283,6 +308,16 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
               <span className="plus"><Icons.plus size={12} /></span>
               <span>Add event to Day {dayNumber}</span>
             </button>
+            {canCopy && (
+              <button
+                type="button"
+                className="day-copy-btn"
+                onClick={(e) => { e.stopPropagation(); setCopyOpen(true); }}
+              >
+                <Icons.copy size={13} />
+                Copy this day&rsquo;s events to&hellip;
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -296,6 +331,36 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
         onClose={() => setAddOpen(false)}
         onSuccess={() => setAddOpen(false)}
       />
+
+      <Modal open={copyOpen} onClose={() => setCopyOpen(false)} ariaLabel="Copy events to another day">
+        <div className="modal-head">
+          <div className="left">
+            <h3>Copy Day {String(dayNumber).padStart(2, "0")}&rsquo;s events</h3>
+            <p>
+              Adds {events.length} event{events.length === 1 ? "" : "s"} to the day you pick — the original stays put.
+            </p>
+          </div>
+          <button className="icon-btn" onClick={() => setCopyOpen(false)} aria-label="Close">
+            <Icons.close size={16} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="copy-day-list">
+            {copyTargets.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                className="copy-day-option"
+                disabled={copying}
+                onClick={() => handleCopyTo(d.id)}
+              >
+                <span className="cdo-num">Day {String(d.dayNumber).padStart(2, "0")}</span>
+                <span className="cdo-label">{d.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </section>
   );
 }

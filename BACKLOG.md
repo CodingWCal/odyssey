@@ -887,7 +887,8 @@ On-brand "printed map" moment: a `/trips/[tripId]/print` server-rendered route w
 paper-first, ink-on-cream stylesheet (print CSS), day-by-day list + budget summary.
 No auth changes — members only.
 
-### ODY-033 · Duplicate trip / copy day — M, sonnet
+### ODY-033 · Duplicate trip / copy day — M, sonnet — ✅ DONE (2026-08-19)
+> **Both halves shipped, no schema change.** **Duplicate trip:** `duplicateTrip(tripId, newStartDate?)` (trips/actions.ts) clones a trip the caller belongs to into a fresh trip they own, titled "… (copy)" — every day + event copied, and an optional new start date shifts the whole trip by the whole-day delta (pure `shiftDateUTC`/`daysBetweenUTC` in dates.ts, 6 unit tests) so a loved itinerary re-runs on new dates; omitted = exact-date clone. Budget starts clean except event-linked costs, re-synced via `syncLinkedExpense` so planned spend matches. Entry point: a "⋯" actions menu on the dashboard trip card (which also now hosts Archive/Restore, replacing the standalone pill) → a small date-picker modal. The menu renders as a sibling of the card's link (via `display:contents`) so its clicks never trigger navigation. **Copy day:** `copyDayEvents(sourceDayId, targetDayId, tripId)` (itinerary/actions.ts) clones one day's events onto another in the same trip, appended after the target's events, linked expenses re-synced; both days trip-scoped (ODY-052-style IDOR guard). Entry point: a "Copy this day's events to…" action under each day with a day-picker modal. Editor+ everywhere, all writes transactional (ODY-005). tsc / eslint / 235 tests / build clean.
 > **In plain terms:** Loved a trip? Duplicate the whole thing with new dates, or copy one great day onto another.
 "Weekends that turn into something more": duplicate a whole trip (new dates offset)
 or copy a day's events to another day. Server actions with membership checks +

@@ -7,6 +7,7 @@ import { fetchWeather } from "@/components/shared/WeatherBanner";
 import { notFound } from "next/navigation";
 import type { TripDay } from "@/types";
 import { formatShortDate } from "@/lib/utils";
+import { formatWeekday } from "@/lib/dates";
 import { normalizeTripNoteContent } from "@/lib/tripNotes";
 
 interface Props {
@@ -71,18 +72,28 @@ export default async function ItineraryPage({ params }: Props) {
           <p className="sub mt">Check your trip dates in settings.</p>
         </div>
       ) : (
-        trip.days.map((day: (typeof trip.days)[number], index: number) => (
-          <DayBlock
-            key={day.id}
-            day={day as TripDay}
-            tripId={tripId}
-            dayNumber={index + 1}
-            readOnly={readOnly}
-            timeFormat={trip.timeFormat as "12h" | "24h"}
-            currency={trip.currency ?? "USD"}
-            destination={trip.destination}
-          />
-        ))
+        (() => {
+          // Day roster for the copy-events picker (ODY-033) — id + number +
+          // label, built once and shared by every DayBlock.
+          const dayRoster = trip.days.map((d: (typeof trip.days)[number], i: number) => ({
+            id: d.id,
+            dayNumber: i + 1,
+            label: `${formatWeekday(d.date)} · ${formatShortDate(d.date)}`,
+          }));
+          return trip.days.map((day: (typeof trip.days)[number], index: number) => (
+            <DayBlock
+              key={day.id}
+              day={day as TripDay}
+              tripId={tripId}
+              dayNumber={index + 1}
+              readOnly={readOnly}
+              timeFormat={trip.timeFormat as "12h" | "24h"}
+              currency={trip.currency ?? "USD"}
+              destination={trip.destination}
+              days={dayRoster}
+            />
+          ));
+        })()
       )}
     </div>
   );

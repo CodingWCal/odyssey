@@ -52,6 +52,22 @@ export function dayKey(d: Date): string {
 }
 
 /**
+ * Shift a stored (UTC-midnight) trip/day date by whole calendar days (ODY-033).
+ * Uses UTC components so it stays aligned with how these dates are read
+ * everywhere else (formatWeekday / toDateInputValue) — no DST drift.
+ */
+export function shiftDateUTC(date: Date, days: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
+}
+
+/** Whole-day delta (b − a) between two stored (UTC-midnight) dates (ODY-033). */
+export function daysBetweenUTC(a: Date, b: Date): number {
+  const au = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate());
+  const bu = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate());
+  return Math.round((bu - au) / 86400000);
+}
+
+/**
  * Local calendar day as YYYY-MM-DD (ODY-076).
  * Use for "is today?" against a stored trip/day UTC key from `toDateInputValue`.
  * Do not use `new Date().toISOString().slice(0, 10)` — that flips after ~8pm

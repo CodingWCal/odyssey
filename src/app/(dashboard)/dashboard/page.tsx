@@ -6,6 +6,7 @@ import { DashboardClient } from "@/components/trips/DashboardClient";
 import type { DashTrip } from "@/components/trips/TripCard";
 import { resolveCover } from "@/components/trips/cover";
 import { clerkUserNeedsName, getOrCreateDbUser } from "@/lib/auth";
+import { toDateInputValue } from "@/lib/dates";
 import type { Metadata } from "next";
 
 // Renders as "Your trips — Odyssey" via the root title template (ODY-026).
@@ -65,6 +66,7 @@ export default async function DashboardPage() {
       destination: t.destination,
       startStr: fmtDate(start),
       endStr: fmtDate(end),
+      startISO: toDateInputValue(start),
       days: daysBetween(start, end),
       spent: spentByTrip.get(t.id) ?? 0,
       cost: t.totalBudget ?? 0,

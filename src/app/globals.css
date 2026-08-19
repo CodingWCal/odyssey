@@ -3598,17 +3598,8 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   .print-event, .print-day, .print-budget { break-inside: avoid; }
 }
 
-/* ─── Trip archive (ODY-082) ─────────────────────────────────────────── */
-.trip-card .cover { position: relative; }
-.trip-archive-btn {
-  position: absolute; top: 12px; right: 12px; z-index: 2;
-  background: rgba(0,0,0,.38); backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,255,255,.3); border-radius: var(--radius-pill);
-  padding: 4px 12px; font-size: 11px; color: white; cursor: pointer;
-  opacity: .9; transition: opacity .15s ease, background .15s ease;
-}
-.trip-archive-btn:hover { opacity: 1; background: rgba(0,0,0,.55); }
-
+/* ─── Trip archive (ODY-082) — archive/restore now live in the card actions
+   menu (ODY-033); the dashboard's archived section toggle stays here. ──── */
 .archived-toggle {
   display: inline-flex; align-items: center; gap: 8px;
   margin-top: 26px; margin-bottom: 4px; padding: 6px 4px;
@@ -3654,3 +3645,68 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 @media (prefers-reduced-motion: reduce) {
   .ld-stamp { animation: none; }
 }
+
+/* ── Copy a day's events to another day (ODY-033) ── */
+.add-event-row { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.day-copy-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: 0; padding: 4px 2px;
+  color: var(--ink-3); font-size: 12.5px; cursor: pointer;
+  transition: color .15s ease;
+}
+.day-copy-btn:hover { color: var(--peri); }
+.day-copy-btn svg { color: currentColor; }
+
+.copy-day-list { display: flex; flex-direction: column; gap: 8px; }
+.copy-day-option {
+  display: flex; align-items: baseline; gap: 12px;
+  width: 100%; text-align: left;
+  background: var(--paper-2); border: 1px solid var(--rule);
+  border-radius: var(--radius-md); padding: 12px 14px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.copy-day-option:hover { background: var(--peri-soft); border-color: var(--peri); }
+.copy-day-option:disabled { opacity: .5; cursor: default; }
+.cdo-num {
+  font-family: var(--font-display); font-style: italic;
+  font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--peri); flex-shrink: 0;
+}
+.cdo-label { font-size: 13.5px; color: var(--ink); }
+
+/* ── Trip card actions menu + duplicate (ODY-033) ── */
+.trip-card { position: relative; }
+/* The anchor wraps cover+body but stays out of the layout so the card's own
+   flex column is unchanged; the menu/modal render as siblings, not children. */
+.trip-card-link { display: contents; color: inherit; text-decoration: none; }
+
+.trip-card-menu { position: absolute; top: 12px; right: 12px; z-index: 3; }
+.trip-card-menu-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: var(--radius-pill);
+  background: rgba(0,0,0,.38); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.3); color: white; cursor: pointer;
+  opacity: .9; transition: opacity .15s ease, background .15s ease;
+}
+.trip-card-menu-btn:hover { opacity: 1; background: rgba(0,0,0,.55); }
+/* Full-viewport click-catcher that closes the menu on an outside click. */
+.trip-card-menu-scrim { position: fixed; inset: 0; z-index: 40; }
+.trip-card-menu-panel {
+  position: absolute; top: 36px; right: 0; z-index: 41; min-width: 184px;
+  background: var(--paper-2); border: 1px solid var(--rule-2);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-hover);
+  padding: 6px; display: flex; flex-direction: column;
+}
+.tcm-item {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; text-align: left;
+  background: none; border: 0; border-radius: var(--radius-sm);
+  padding: 9px 10px; font-size: 13.5px; color: var(--ink); cursor: pointer;
+  transition: background .12s ease;
+}
+.tcm-item:hover { background: var(--peri-soft); color: var(--peri); }
+.tcm-item svg { color: var(--ink-3); }
+.tcm-item:hover svg { color: var(--peri); }
+
+.field-hint { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; margin: 0; }

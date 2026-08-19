@@ -225,6 +225,66 @@ export async function reorderEvents(updates: { id: string; orderIndex: number }[
   revalidateTrip(tripId);
 }
 
+/**
+ * Copy every event from one day onto another within the same trip (ODY-033).
+ * Clones the events (new rows, same details/times) appended after the target's
+ * existing events, and re-links any budget expense so the copy's costs land on
+ * the budget too. Source day notes are left alone — this copies the plan, not
+ * the scratchpad. Editor+ only; both days must belong to `tripId`.
+ */
+export async function copyDayEvents(sourceDayId: string, targetDayId: string, tripId: string) {
+  const dbUser = await getDbUser();
+  await assertTripAccess(tripId, dbUser.id);
+  if (sourceDayId === targetDayId) return;
+
+  // Both days scoped to this trip — blocks copying across trips via a foreign
+  // day id (mirrors the ODY-052 dayId guard).
+  const [source, target] = await Promise.all([
+    db.day.findFirst({
+      where: { id: sourceDayId, tripId },
+      include: { events: { orderBy: { orderIndex: "asc" } } },
+    }),
+    db.day.findFirst({ where: { id: targetDayId, tripId }, select: { id: true } }),
+  ]);
+  if (!source || !target) throw new Error("Not found");
+  if (source.events.length === 0) return;
+
+  const last = await db.event.findFirst({
+    where: { dayId: targetDayId },
+    orderBy: { orderIndex: "desc" },
+  });
+  let nextIndex = (last?.orderIndex ?? -1) + 1;
+
+  // All clones (and their linked expenses) commit together (ODY-005).
+  await db.$transaction(async (tx) => {
+    for (const ev of source.events) {
+      const created = await tx.event.create({
+        data: {
+          dayId: targetDayId,
+          tripId,
+          type: ev.type,
+          title: ev.title,
+          location: ev.location,
+          startTime: ev.startTime,
+          endTime: ev.endTime,
+          notes: ev.notes,
+          cost: ev.cost,
+          lat: ev.lat,
+          lng: ev.lng,
+          destLocation: ev.destLocation,
+          destLat: ev.destLat,
+          destLng: ev.destLng,
+          orderIndex: nextIndex++,
+          createdBy: dbUser.id,
+        },
+      });
+      await syncLinkedExpense(created, tx);
+    }
+  });
+
+  revalidateTrip(tripId);
+}
+
 export async function updateDayNotes(dayId: string, tripId: string, notes: string) {
   const dbUser = await getDbUser();
   await assertTripAccess(tripId, dbUser.id);

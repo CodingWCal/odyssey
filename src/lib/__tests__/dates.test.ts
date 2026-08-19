@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   parseDateString,
   enumerateDays,
+  shiftDateUTC,
+  daysBetweenUTC,
   dayKey,
   toDateInputValue,
   localDateKey,
@@ -93,5 +95,37 @@ describe("localDateKey (ODY-076)", () => {
     expect(localDateKey(new Date(2026, 6, 25, 9, 0))).toBe(
       toDateInputValue(new Date("2026-07-25T00:00:00.000Z"))
     );
+  });
+});
+
+describe("shiftDateUTC / daysBetweenUTC (ODY-033)", () => {
+  const utc = (s: string) => new Date(`${s}T00:00:00.000Z`);
+
+  it("shifts a UTC-midnight date forward by whole days", () => {
+    expect(shiftDateUTC(utc("2026-07-10"), 5).toISOString()).toBe("2026-07-15T00:00:00.000Z");
+  });
+
+  it("shifts backward with a negative delta", () => {
+    expect(shiftDateUTC(utc("2026-07-10"), -3).toISOString()).toBe("2026-07-07T00:00:00.000Z");
+  });
+
+  it("rolls across a month boundary", () => {
+    expect(shiftDateUTC(utc("2026-07-30"), 4).toISOString()).toBe("2026-08-03T00:00:00.000Z");
+  });
+
+  it("is a no-op for a zero delta", () => {
+    expect(shiftDateUTC(utc("2026-12-31"), 0).toISOString()).toBe("2026-12-31T00:00:00.000Z");
+  });
+
+  it("measures the whole-day gap between two dates", () => {
+    expect(daysBetweenUTC(utc("2026-07-10"), utc("2026-07-17"))).toBe(7);
+    expect(daysBetweenUTC(utc("2026-07-17"), utc("2026-07-10"))).toBe(-7);
+    expect(daysBetweenUTC(utc("2026-07-10"), utc("2026-07-10"))).toBe(0);
+  });
+
+  it("round-trips: shifting by the measured delta lands on the target", () => {
+    const from = utc("2026-07-10");
+    const to = utc("2026-09-02");
+    expect(shiftDateUTC(from, daysBetweenUTC(from, to)).toISOString()).toBe(to.toISOString());
   });
 });
