@@ -21,7 +21,11 @@ No `<img>` without `alt` (the app uses CSS gradients/SVG, not raster images).
 
 ## P0 — blocks a keyboard or screen-reader user
 
-### F1 · Modal has no focus management (`src/components/shared/Modal.tsx`)
+### F1 · Modal has no focus management (`src/components/shared/Modal.tsx`) — ✅ FIXED (2026-08-19)
+Resolved: the shared desktop `Modal` now moves focus into the dialog on open
+(first control, or the dialog container), traps Tab/Shift-Tab within it, and
+restores focus to the trigger on close. One change fixes every dialog. Zero
+visual change. *(Original finding below.)*
 The desktop dialog renders `role="dialog" aria-modal="true"` and traps Escape +
 locks body scroll, but it never (a) moves focus into the dialog on open,
 (b) traps Tab within it, or (c) returns focus to the trigger on close. A
@@ -122,7 +126,16 @@ on every trip page load.
   targeting `#main`, and wrap the dashboard/auth/onboarding content in a `<main>`
   landmark for parity with the trip layout.
 
-### F11 · Color-blindness: map pin *type* is a color-only signal (`src/components/map/LeafletMap.tsx`)
+### F11 · Color-blindness: map pin *type* is a color-only signal (`src/components/map/LeafletMap.tsx`) — ✅ FIXED (2026-08-19)
+Resolved without touching the palette: the map side-list rows (events *and*
+collections) now show the type as an **icon + label** (`TYPE_LABEL` + the
+existing `Icons` glyph) in the meta line, and every pin tooltip appends the type
+name. So type reads without hue — at a glance in the list, on hover/focus on the
+map — while `TYPE_HEX` and the numbered pins are unchanged. (The on-pin glyph
+inside the divIcon was left out deliberately: the pin's face carries the *order*
+number, and rewriting the rotated divIcon HTML string is riskier than the
+list+tooltip channel, which already makes type recoverable everywhere.)
+*(Original finding below.)*
 Color coding across the app is almost always paired with a second channel, so it
 already reads for color-blind users: event badges are icon+label, budget
 categories are icon+label+color, the availability heatmap prints the *number*

@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { TypeBadge } from "@/components/shared/TypeBadge";
-import { Icons } from "@/components/shared/Icons";
+import { Icons, type EventTypeKey } from "@/components/shared/Icons";
 import { RouteLine } from "@/components/shared/RouteLine";
-import { PLACE_CATEGORIES, TYPE_HEX, type MapDay, type MapEvent, type MapPlace } from "./mapTypes";
+import { PLACE_CATEGORIES, TYPE_HEX, TYPE_LABEL, type MapDay, type MapEvent, type MapPlace } from "./mapTypes";
 import { formatTime, type TimeFormat } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import type { EventType } from "@/types";
@@ -177,8 +177,12 @@ export function MapClient({
                   <div className="body">
                     <div className="title">{ev.title}</div>
                     <div className="meta">
-                      {ev.startTime && <span>{formatTime(ev.startTime, timeFormat)}</span>}
-                      {ev.location && <span>{ev.startTime ? " · " : ""}{ev.location}</span>}
+                      {/* Type as icon + label — the non-color channel (ODY-118 F11). */}
+                      {(() => { const TypeIcon = Icons[ev.type as EventTypeKey] ?? Icons.misc; return (
+                        <span className="map-pin-type"><TypeIcon size={11} /> {TYPE_LABEL[ev.type]}</span>
+                      ); })()}
+                      {ev.startTime && <span> · {formatTime(ev.startTime, timeFormat)}</span>}
+                      {ev.location && <span> · {ev.location}</span>}
                     </div>
                   </div>
                 </div>
@@ -204,7 +208,12 @@ export function MapClient({
                     />
                     <div className="body">
                       <div className="title">{p.title}</div>
-                      <div className="meta">{p.location ?? p.category}</div>
+                      <div className="meta">
+                        {(() => { const CatIcon = Icons[p.category as EventTypeKey] ?? Icons.misc; return (
+                          <span className="map-pin-type"><CatIcon size={11} /> {TYPE_LABEL[p.category]}</span>
+                        ); })()}
+                        {p.location && <span> · {p.location}</span>}
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -3741,3 +3741,8 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   margin: 14px 0 0; text-align: center;
   font-size: 11.5px; color: var(--ink-3); font-style: italic;
 }
+
+/* Type as a non-color channel in the map list (ODY-118 F11) — icon + label so
+   pin type reads without relying on hue. Palette (TYPE_HEX) is unchanged. */
+.map-pin .meta .map-pin-type { display: inline-flex; align-items: center; gap: 4px; }
+.map-pin .meta .map-pin-type svg { color: var(--ink-3); flex-shrink: 0; }

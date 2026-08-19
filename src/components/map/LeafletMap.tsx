@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMapInstance, Marker, Polyline, Layer } from "leaflet";
-import { TYPE_HEX, type MapEvent, type MapPlace } from "./mapTypes";
+import { TYPE_HEX, TYPE_LABEL, type MapEvent, type MapPlace } from "./mapTypes";
 import type { EventType } from "@/types";
 
 type LeafletNS = typeof import("leaflet");
@@ -118,7 +118,7 @@ export function LeafletMap({
       const active = selectedIdRef.current === ev.id;
       const icon = L.divIcon({ className: "", html: markerHtml(ev, active), iconSize: [32, 32], iconAnchor: [16, 32] });
       const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: active ? 1000 : 0 });
-      m.bindTooltip(`${ev.globalIdx}. ${ev.title}`, { className: "od-tip", direction: "top", offset: [0, -28] });
+      m.bindTooltip(`${ev.globalIdx}. ${ev.title} · ${TYPE_LABEL[ev.type]}`, { className: "od-tip", direction: "top", offset: [0, -28] });
       m.on("click", () => onSelectRef.current(ev.id));
       m.addTo(map);
       markersRef.current[ev.id] = m;
@@ -148,7 +148,7 @@ export function LeafletMap({
       const active = selectedIdRef.current === place.id;
       const icon = L.divIcon({ className: "", html: placeMarkerHtml(place, active), iconSize: [22, 22], iconAnchor: [11, 11] });
       const m = L.marker([place.lat, place.lng], { icon, zIndexOffset: active ? 900 : 50 });
-      m.bindTooltip(`◇ ${place.title}`, { className: "od-tip", direction: "top", offset: [0, -14] });
+      m.bindTooltip(`◇ ${place.title} · ${TYPE_LABEL[place.category]}`, { className: "od-tip", direction: "top", offset: [0, -14] });
       m.on("click", () => onSelectRef.current(place.id));
       m.addTo(map);
       placeMarkersRef.current[place.id] = m;

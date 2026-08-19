@@ -52,6 +52,17 @@ export const TYPE_HEX: Record<EventType, string> = {
   misc: "#4A6B8C",
 };
 
+// Human labels for the type — the non-color channel (ODY-118 F11) so pin type
+// reads for color-blind users via the map list and tooltips, not hue alone.
+export const TYPE_LABEL: Record<EventType, string> = {
+  flight: "Flight",
+  hotel: "Hotel",
+  restaurant: "Restaurant",
+  activity: "Activity",
+  transport: "Transport",
+  misc: "Misc",
+};
+
 export const PLACE_CATEGORIES: EventType[] = [
   "restaurant",
   "activity",
