@@ -354,6 +354,18 @@ input `role="combobox"`, color-only category coding in the budget bar.
 - Convert clickable non-buttons to `<button>` with `aria-expanded`; complete combobox ARIA in `LocationAutocomplete`; add text/pattern reinforcement where color is the only signal; run an axe pass on main routes.
 - Acceptance: keyboard-only operation of itinerary collapse, budget categories, autocomplete; no serious axe violations on the 5 main routes.
 
+### ODY-118 · Accessibility audit → remediation — M, sonnet
+> **Full static a11y sweep done (2026-08-19); fixes are the open work.** A code-level pass over all 88 components/routes + `globals.css` is written up in **`docs/ody-118-accessibility-audit.md`** with 10 ranked findings (P0–P3), each with file + fix. Baseline is already solid (`lang`, `<nav aria-label>`+`aria-current` on both navs, combobox ARIA, keyboard disclosures, toast live region, error `role="alert"`, no unlabelled images). The gaps, in fix order:
+> - **P0 F1** — the shared desktop `Modal` has no focus management (no focus-in, no Tab trap, no focus-return). One change fixes *every* dialog (Add/Edit event, Trip edit, Duplicate, Copy day, Expense, Apply-window).
+> - **P1 F2** — several focusable controls set `outline: none` with only a background change on focus; add `:focus-visible` rings.
+> - **P1 F3** — the new trip-card "⋯" menu isn't keyboard-operable (no Escape/arrow-key/focus-move); swap to the base-ui `DropdownMenu` primitive.
+> - **P2 F4/F8** — incomplete `prefers-reduced-motion` coverage (badge pulse, globe auto-spin); F6 packing add-input needs `aria-label`; F7 error toasts should be assertive.
+> - **P3 F9** — no skip-to-content link; dashboard/auth/onboarding lack a `<main>` landmark.
+> - **F10** — contrast measurement + automated **axe** sweep on the 5 main routes still needs a browser (shares the ODY-022 browser half).
+> **In plain terms:** We combed the whole app for accessibility problems and wrote them all down with fixes. Most are low-risk, shared-component changes — one `Modal` fix alone repairs keyboard focus for every popup.
+- Deliverable (this pass): `docs/ody-118-accessibility-audit.md`. Remediation: work the fix order top-down; each item is small and independently shippable.
+- Acceptance: P0–P2 findings fixed with QA green; the axe/contrast items (F10) handed to a browser-capable session and closed against ODY-022.
+
 ### ODY-023 · Weather banner beyond 3 days / graceful absence — S, haiku — ✅ DONE (2026-08-09)
 > **Shipped.** `fetchWeather` now takes the trip end date too and clamps its request to `[today, today+15] ∩ trip range`. Extracted the pure date math into `planWeatherWindow(start, end, now)` (testable without the network — the pattern used by `scheduleWindow`): returns `{ unavailable: true }` when the trip is fully past or starts beyond the 15-day forecast horizon, else the clamped `{ startStr, endStr }`. In-progress trips now request from **today** (fixes the old "mid-trip still shows the start date's weather" bug), not the start date. `fetchWeather` returns a `WeatherResult` union (`WeatherData | { unavailable: true } | null`); `ItineraryHero` renders a quiet italic placeholder — "Forecast opens closer to departure" (`.hero-weather-soft`) — for the unavailable case instead of the row collapsing to nothing. 6 new unit tests cover past / far-future / near-future / in-progress / horizon-edge-clamp / ends-today. tsc / eslint / 199 tests / build clean.
 > **In plain terms:** The weather banner silently vanishes for past trips or trips far in the future. This makes it always show something sensible.
