@@ -111,6 +111,12 @@ export function ItineraryHero({
           <Link href={`/trips/${tripId}/print`} className="hero-agenda-link">
             Print <Icons.chevron size={12} />
           </Link>
+          <span className="dot" />
+          {/* A file download (Content-Disposition), so a plain anchor — not
+              next/link, which would try to client-navigate the .ics. */}
+          <a href={`/trips/${tripId}/calendar`} className="hero-agenda-link" download>
+            Add to calendar <Icons.chevron size={12} />
+          </a>
         </div>
       </section>
 
