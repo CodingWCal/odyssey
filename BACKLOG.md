@@ -927,7 +927,9 @@ New Explore surface on a trip: travelers pick or type a vibe; the app suggests l
 - Secondary: "Save to collections" → `createPlace` (ODY-045) so it can sit as a maybe without a day.
 - Acceptance: saved items appear on itinerary/map/collections like hand-entered ones; viewers cannot save.
 
-### ODY-065 · Distance / time between stops + light route optimize — L, sonnet
+### ODY-065 · Distance / time between stops + light route optimize — L, sonnet — 🟡 PARTIAL (2026-08-19)
+> **Shipped the honest, dependency-free half: straight-line distance between a day's consecutive pinned stops.** New pure `haversineKm` + `formatKm` helpers (`src/lib/geoDistance.ts`, 9 unit tests) — great-circle math, no routing provider, no network, no key, so nothing to rate-limit or break. Surfaced in the day agenda (`DayAgenda`) as a slim "≈ 2.1 km" hop between two *adjacent* pinned stops (an unpinned event in between breaks the chain rather than inventing a misleading number), with a one-line caption clarifying the numbers are straight-line "as the crow flies" so they're never mistaken for walking/driving distance. No schema change, no deps. tsc / eslint / 244 tests / build clean.
+> **Still open (deliberately deferred as the riskier/heavier half):** routed walk/drive *time* between stops (needs a provider — OSRM/Google — i.e. a network call + failure handling), and the "optimize order" preview/permutation. Both can layer on top of the pure distance core when a provider path is chosen.
 > **In plain terms:** See how long it takes to get from lunch to the museum, and optionally reorder the day to waste less travel time.
 Competitive gap vs Wanderlog map planning.
 - For a day's geocoded events, show estimated walk/drive duration between consecutive pins (provider TBD — OSRM/Google; prefer no new paid dep if a free path exists).

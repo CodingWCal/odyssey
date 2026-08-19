@@ -1,10 +1,12 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { Icons, type EventTypeKey } from "@/components/shared/Icons";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { formatDate, formatTime, type TimeFormat } from "@/lib/utils";
 import { googleMapsUrl } from "@/lib/mapsExport";
+import { haversineKm, formatKm } from "@/lib/geoDistance";
 
 // Event type → accent color token (mirrors EventBlock's TYPE_VAR / CLAUDE.md).
 const TYPE_VAR: Record<string, string> = {
@@ -59,6 +61,15 @@ export function DayAgenda({ tripId, days, selectedDayId, events, timeFormat }: D
   // Ordered stops → a Google Maps route for the day (ODY-072).
   const mapsUrl = googleMapsUrl(pinnedEvents.map((e) => ({ lat: e.lat, lng: e.lng })));
 
+  // Straight-line distance between two *adjacent* pinned stops in the list
+  // (ODY-065). Only when both neighbours are pinned — an unpinned event in
+  // between breaks the chain rather than inventing a misleading number.
+  function hopKm(prev: AgendaEvent | undefined, cur: AgendaEvent): number | null {
+    if (!prev || prev.lat == null || prev.lng == null || cur.lat == null || cur.lng == null) return null;
+    return haversineKm({ lat: prev.lat, lng: prev.lng }, { lat: cur.lat, lng: cur.lng });
+  }
+  const hasAnyHop = events.some((e, i) => hopKm(events[i - 1], e) != null);
+
   return (
     <div className="agenda">
       <header className="agenda-head">
@@ -95,29 +106,43 @@ export function DayAgenda({ tripId, days, selectedDayId, events, timeFormat }: D
         <p className="agenda-empty">Nothing planned for this day yet.</p>
       ) : (
         <ol className="agenda-list">
-          {events.map((e) => (
-            <li
-              key={e.id}
-              className="agenda-item"
-              style={{ "--type-color": `var(--${TYPE_VAR[e.type] ?? "slate"})` } as React.CSSProperties}
-            >
-              <div className="agenda-time">
-                <span className="start">{e.startTime ? formatTime(e.startTime, timeFormat) : "—"}</span>
-                {e.endTime && <span className="end">{formatTime(e.endTime, timeFormat)}</span>}
-              </div>
-              <div className="agenda-body">
-                <div className="agenda-item-head">
-                  <TypeBadge type={e.type as EventTypeKey} />
-                  <h2>{e.title}</h2>
-                </div>
-                {e.location && (
-                  <p className="agenda-loc"><Icons.pin size={12} /> {e.location}</p>
+          {events.map((e, i) => {
+            const hop = hopKm(events[i - 1], e);
+            return (
+              <Fragment key={e.id}>
+                {hop != null && (
+                  <li className="agenda-hop" title="Straight-line distance from the previous stop">
+                    <span className="agenda-hop-rail" aria-hidden="true"><Icons.chevron size={12} /></span>
+                    <span className="agenda-hop-dist">≈ {formatKm(hop)}</span>
+                  </li>
                 )}
-                {e.notes && <p className="agenda-notes">{e.notes}</p>}
-              </div>
-            </li>
-          ))}
+                <li
+                  className="agenda-item"
+                  style={{ "--type-color": `var(--${TYPE_VAR[e.type] ?? "slate"})` } as React.CSSProperties}
+                >
+                  <div className="agenda-time">
+                    <span className="start">{e.startTime ? formatTime(e.startTime, timeFormat) : "—"}</span>
+                    {e.endTime && <span className="end">{formatTime(e.endTime, timeFormat)}</span>}
+                  </div>
+                  <div className="agenda-body">
+                    <div className="agenda-item-head">
+                      <TypeBadge type={e.type as EventTypeKey} />
+                      <h2>{e.title}</h2>
+                    </div>
+                    {e.location && (
+                      <p className="agenda-loc"><Icons.pin size={12} /> {e.location}</p>
+                    )}
+                    {e.notes && <p className="agenda-notes">{e.notes}</p>}
+                  </div>
+                </li>
+              </Fragment>
+            );
+          })}
         </ol>
+      )}
+
+      {hasAnyHop && (
+        <p className="agenda-hop-note">Distances between stops are straight-line, as the crow flies.</p>
       )}
 
       <div className="agenda-foot">
