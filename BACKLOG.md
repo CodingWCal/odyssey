@@ -983,7 +983,8 @@ Competitive gap vs Wanderlog Pro offline.
 - Mutations queue or clearly disabled offline; no localStorage for secrets (CLAUDE.md).
 - Acceptance: after one online visit, airplane-mode reload shows last itinerary; writes blocked with clear copy.
 
-### ODY-069 · Calendar sync (read-only export) — M, sonnet
+### ODY-069 · Calendar sync (read-only export) — M, sonnet — ✅ DONE (2026-08-19)
+> **Export half shipped** (two-way sync stays out of scope, as the ticket says). New pure `buildTripIcs()` in `src/lib/icsExport.ts` (18 unit tests, mirrors `mapsExport.ts`) turns a trip's events into an RFC-5545 VCALENDAR: **timed events use floating local time** (no `Z`/`TZID`) so a 9am event reads 9am *at the destination* even across timezones; **untimed events become all-day spans**; day dates read from UTC calendar components so they never drift a day in US timezones (ODY-003). Proper text escaping, 75-octet line folding, CRLF endings. Served by a members-only route handler `GET /trips/[tripId]/calendar` (auth via `getTripById` → 404 for non-members) as a `text/calendar` attachment, with an "Add to calendar" download link in the itinerary hero beside Day agenda / Print. No schema change, no new deps. tsc / eslint / 229 tests / build clean.
 > **In plain terms:** Add the trip's days (or key events) to Google/Apple Calendar so they show up next to life.
 Related to deferred Google Calendar on Schedule — this ticket is **export/subscribe**, not two-way sync.
 - ICS download and/or "Add to Google Calendar" links for trip range / per-day events; members only.
