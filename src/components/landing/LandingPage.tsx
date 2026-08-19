@@ -39,7 +39,7 @@ export function LandingPage() {
             </defs>
             <text>
               <textPath href="#ldStampPath" startOffset="0">
-                Odyssey · the plan is part of the adventure ·
+                Odyssey · plan · wander · return · repeat ·
               </textPath>
             </text>
           </svg>

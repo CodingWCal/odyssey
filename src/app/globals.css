@@ -3630,7 +3630,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none; overflow: visible;
   transform-origin: 50% 50%;
-  animation: ld-stamp-spin 48s linear infinite;
+  animation: ld-stamp-spin 120s linear infinite;
 }
 .ld-stamp text {
   font-family: var(--font-mono); font-size: 12px;
@@ -3643,9 +3643,9 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-card { position: relative; overflow: hidden; counter-increment: ld-step; }
 .ld-card::before {
   content: counter(ld-step, decimal-leading-zero);
-  position: absolute; top: -20px; right: 8px;
+  position: absolute; top: 14px; right: 20px;
   font-family: var(--font-display); font-style: italic;
-  font-size: 96px; line-height: 1;
+  font-size: 64px; line-height: 1;
   color: color-mix(in srgb, var(--ink) 6%, transparent);
   pointer-events: none; z-index: 0;
 }
