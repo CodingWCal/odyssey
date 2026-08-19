@@ -73,8 +73,9 @@ export default async function DashboardPage() {
       countdown,
       cover: resolveCover(t.coverImageUrl, t.id),
       members: t.members.map((m: (typeof t.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" })),
-      archived: t.archivedAt != null,
-      isOwner: t.ownerId === dbUser.id,
+      // Per-member archive (ODY-082): read *this* member's own archivedAt, so
+      // hiding a trip only affects the current user's dashboard.
+      archived: t.members.find((m: (typeof t.members)[number]) => m.userId === dbUser.id)?.archivedAt != null,
     };
   });
 

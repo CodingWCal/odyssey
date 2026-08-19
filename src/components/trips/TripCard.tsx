@@ -17,10 +17,8 @@ export interface DashTrip {
   countdown: string;
   cover: string;
   members: { id: string; name: string }[];
-  /** Soft-hidden from the primary grid (ODY-082). */
+  /** Soft-hidden from *this* member's dashboard (ODY-082, per-member). */
   archived: boolean;
-  /** Only the owner may archive/restore. */
-  isOwner: boolean;
 }
 
 function titleParts(title: string): { head: string; tail: string } {
@@ -32,10 +30,10 @@ function titleParts(title: string): { head: string; tail: string } {
 export function TripCard({ trip, onArchiveToggle }: { trip: DashTrip; onArchiveToggle?: (id: string, archived: boolean) => void }) {
   const isPast = trip.status === "past";
   const { head, tail } = titleParts(trip.title);
-  // Archive control shows for the owner on archived trips (Restore) and on
-  // past active trips (Archive — the ones that pile up); upcoming/live active
-  // cards stay uncluttered (ODY-082).
-  const showArchive = trip.isOwner && onArchiveToggle && (trip.archived || isPast);
+  // Any member can archive their own view. The control shows on archived trips
+  // (Restore) and on past active trips (Archive — the ones that pile up);
+  // upcoming/live active cards stay uncluttered (ODY-082).
+  const showArchive = onArchiveToggle && (trip.archived || isPast);
 
   return (
     <Link href={`/trips/${trip.id}/itinerary`} className={`trip-card ${isPast ? "past" : ""}`}>

@@ -38,7 +38,6 @@ model Trip {
   totalBudget   Float?
   timeFormat    String   @default("12h") // "12h" | "24h" — display-only preference (ODY-041)
   currency      String   @default("USD") // ISO 4217 code — trip base currency for all money display (ODY-024). Stage 1: symbol/format only, no FX conversion.
-  archivedAt    DateTime? // Soft-hide from the dashboard (ODY-082); null = active. Never deletes data.
   createdAt     DateTime @default(now())
 
   owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -77,6 +76,7 @@ model TripMember {
   userId      String
   role        String   @default("editor")
   splitWeight Float    @default(1)
+  archivedAt  DateTime? // Per-member soft-hide from *this member's* dashboard (ODY-082); null = active. Personal view, never deletes data or affects others.
   joinedAt    DateTime @default(now())
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)

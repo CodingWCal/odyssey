@@ -232,23 +232,22 @@ export async function deleteTrip(tripId: string) {
   redirect("/dashboard");
 }
 
-/** Owner-only soft-hide of a trip from the dashboard (ODY-082). Sets/clears
- * `archivedAt` — never deletes data; the trip is fully restorable. */
-async function assertTripOwner(tripId: string, userId: string) {
-  const member = await db.tripMember.findFirst({ where: { tripId, userId, role: "owner" } });
+/** Per-member soft-hide of a trip from *this member's own* dashboard (ODY-082).
+ * Any member can archive/restore their own view — it sets `archivedAt` on their
+ * TripMember row only, so it never deletes data or changes what anyone else
+ * sees. Fully restorable. */
+async function setMyArchived(tripId: string, archivedAt: Date | null) {
+  const dbUser = await getOrCreateUser();
+  const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
   if (!member) throw new Error("Unauthorized");
+  await db.tripMember.update({ where: { id: member.id }, data: { archivedAt } });
+  revalidatePath("/dashboard");
 }
 
 export async function archiveTrip(tripId: string) {
-  const dbUser = await getOrCreateUser();
-  await assertTripOwner(tripId, dbUser.id);
-  await db.trip.update({ where: { id: tripId }, data: { archivedAt: new Date() } });
-  revalidatePath("/dashboard");
+  await setMyArchived(tripId, new Date());
 }
 
 export async function unarchiveTrip(tripId: string) {
-  const dbUser = await getOrCreateUser();
-  await assertTripOwner(tripId, dbUser.id);
-  await db.trip.update({ where: { id: tripId }, data: { archivedAt: null } });
-  revalidatePath("/dashboard");
+  await setMyArchived(tripId, null);
 }
