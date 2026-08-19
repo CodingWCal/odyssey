@@ -3756,3 +3756,16 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 @media (prefers-reduced-motion: reduce) {
   .ld-badge-dot { animation: none; }
 }
+
+/* Skip-to-content link (ODY-118 F9) — off-screen until keyboard focus, then a
+   pill at top-left. Mouse/touch users never tab to it, so it stays invisible. */
+.skip-link {
+  position: fixed; top: 8px; left: 8px; z-index: var(--z-toast);
+  transform: translateY(-160%); transition: transform .15s ease;
+  background: var(--ink); color: var(--paper);
+  padding: 10px 16px; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 500; text-decoration: none;
+}
+.skip-link:focus { transform: translateY(0); outline: 2px solid var(--peri); outline-offset: 2px; }
+/* The main landmark is a skip target (tabindex=-1); no ring when focused there. */
+#main:focus { outline: none; }

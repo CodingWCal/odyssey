@@ -81,5 +81,10 @@ export default async function DashboardPage() {
     };
   });
 
-  return <DashboardClient firstName={firstName} trips={dashTrips} />;
+  // <main> landmark + skip-link target (ODY-118 F9).
+  return (
+    <main id="main" tabIndex={-1}>
+      <DashboardClient firstName={firstName} trips={dashTrips} />
+    </main>
+  );
 }

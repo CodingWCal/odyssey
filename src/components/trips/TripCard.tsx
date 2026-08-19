@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AvatarStack } from "@/components/shared/AvatarStack";
@@ -46,6 +46,24 @@ export function TripCard({ trip, onArchiveToggle }: { trip: DashTrip; onArchiveT
   const [dupOpen, setDupOpen] = useState(false);
   const [newStart, setNewStart] = useState(trip.startISO);
   const [busy, startDup] = useTransition();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard operability for the actions menu (ODY-118 F3): focus the first
+  // item on open, and Escape closes + returns focus to the trigger. The items
+  // are plain buttons, so Tab moves between them.
+  useEffect(() => {
+    if (!menuOpen) return;
+    panelRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   // Any member can archive their own view. The control shows on archived trips
   // (Restore) and on past active trips (Archive — the ones that pile up);
@@ -113,10 +131,11 @@ export function TripCard({ trip, onArchiveToggle }: { trip: DashTrip; onArchiveT
 
       <div className="trip-card-menu">
         <button
+          ref={triggerRef}
           type="button"
           className="trip-card-menu-btn"
           aria-label="Trip actions"
-          aria-haspopup="menu"
+          aria-haspopup="true"
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((o) => !o)}
         >
@@ -124,13 +143,13 @@ export function TripCard({ trip, onArchiveToggle }: { trip: DashTrip; onArchiveT
         </button>
         {menuOpen && (
           <>
-            <div className="trip-card-menu-scrim" onClick={closeMenu} />
-            <div className="trip-card-menu-panel" role="menu">
-              <button type="button" role="menuitem" className="tcm-item" onClick={openDuplicate}>
+            <div className="trip-card-menu-scrim" onClick={closeMenu} aria-hidden="true" />
+            <div ref={panelRef} className="trip-card-menu-panel" aria-label="Trip actions">
+              <button type="button" className="tcm-item" onClick={openDuplicate}>
                 <Icons.copy size={14} /> Duplicate trip
               </button>
               {showArchive && (
-                <button type="button" role="menuitem" className="tcm-item" onClick={handleArchive}>
+                <button type="button" className="tcm-item" onClick={handleArchive}>
                   {trip.archived ? "Restore to dashboard" : "Archive"}
                 </button>
               )}

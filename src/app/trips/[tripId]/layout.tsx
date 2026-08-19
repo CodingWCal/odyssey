@@ -48,7 +48,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     <div className="app-shell">
       <WorkspaceSidebar trip={trip} canEdit={trip.myRole !== "viewer"} navState={navState} />
       <MobileTripHeader title={trip.title} tripId={trip.id} />
-      <main className="main">{children}</main>
+      <main id="main" tabIndex={-1} className="main">{children}</main>
       <MobileTabBar tripId={trip.id} />
     </div>
   );

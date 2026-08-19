@@ -70,6 +70,8 @@ export default function RootLayout({
         className={`${instrumentSerif.variable} ${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
         <body className="min-h-full">
+          {/* Skip link (ODY-118 F9) — visually hidden until keyboard-focused. */}
+          <a href="#main" className="skip-link">Skip to content</a>
           {children}
           <Toaster />
         </body>

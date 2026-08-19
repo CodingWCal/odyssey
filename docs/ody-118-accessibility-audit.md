@@ -42,7 +42,10 @@ into the page underneath. WCAG 2.4.3 (Focus Order) / 2.4.7.
 
 ## P1 — serious, affects a common flow
 
-### F2 · Several focusable controls remove the outline with no visible replacement (`globals.css`)
+### F2 · Focusable controls remove the outline with no visible replacement — ⏸ DEFERRED to a browser session (with F10)
+Most flagged controls are already covered by a container `:focus-within` (`.day-notes`, `.search-wrap`). The remaining ones are *seamless inline editors* (`.notes-editor`, `.note-section-editor`/`-title`, `.event-notes textarea`, `.trip-search-input`) where adding a focus ring is a visual-taste judgment best made against a render — deliberately deferred to the same browser-capable session as F10 so the ring is verified, not guessed.
+
+<!-- was: ### F2 · Several focusable controls remove the outline with no visible replacement (`globals.css`) -->
 `outline: none` appears on editable/focusable controls that only change
 *background* on focus (or nothing): the inline editable event title
 (`globals.css:847`, `.event-title[contenteditable]:focus` → soft fill only),
@@ -56,7 +59,10 @@ render to measure — flag, then verify.)*
   indicator exists (e.g. `.input:focus` at 1061 adds a box-shadow ring — that
   one is fine).
 
-### F3 · Trip-card actions menu isn't keyboard-operable (`src/components/trips/TripCard.tsx`)
+### F3 · Trip-card actions menu isn't keyboard-operable — ✅ FIXED (2026-08-19)
+Resolved: the menu focuses its first item on open, Escape closes it and returns focus to the trigger, and the items are plain Tab-navigable buttons. Dropped the `role="menu"`/`role="menuitem"` (not backed by arrow-key roving) in favour of honest button semantics + `aria-haspopup`. No visual change.
+
+<!-- was: ### F3 · Trip-card actions menu isn't keyboard-operable (`src/components/trips/TripCard.tsx`) -->
 The "⋯" menu sets `aria-haspopup`/`aria-expanded` and uses `role="menu"` /
 `role="menuitem"`, but: it doesn't close on Escape, doesn't move focus into the
 panel, has no arrow-key roving focus, and the outside-click catcher is a
@@ -129,7 +135,10 @@ affordance. It's purely decorative, so the accessible name over-promises.
 - **Fix:** mark the mount `aria-hidden="true"` (it conveys no information), which
   also removes it from the tab/AT order. Ties into F4.
 
-### F9 · No skip-to-content link
+### F9 · Skip-to-content link + main landmarks — ✅ FIXED (2026-08-19)
+Resolved: a skip link (off-screen until keyboard focus) in the root layout targets `#main`; the trip layout's `<main>` gained `id="main" tabIndex={-1}`, and the dashboard content is now wrapped in a `<main id="main">`. Invisible to mouse/touch users.
+
+<!-- was: ### F9 · No skip-to-content link -->
 There's no "skip to main content" link, and the dashboard/auth/onboarding routes
 render directly under `<body>` with no `<main>` landmark (only the trip layout
 has `<main className="main">`). Keyboard users must tab through the sidebar/nav
