@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
+import { RouteLine } from "@/components/shared/RouteLine";
 import { PLACE_CATEGORIES, TYPE_HEX, type MapDay, type MapEvent, type MapPlace } from "./mapTypes";
 import { formatTime, type TimeFormat } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
@@ -248,12 +249,16 @@ export function MapClient({
             </div>
             <div className="card-meta">
               {selectedEvent.location && (
-                <span className="row">
-                  <Icons.pin size={13} />{" "}
-                  {(selectedEvent.type === "flight" || selectedEvent.type === "transport") && selectedEvent.destLocation
-                    ? `${selectedEvent.location} → ${selectedEvent.destLocation}`
-                    : selectedEvent.location}
-                </span>
+                (selectedEvent.type === "flight" || selectedEvent.type === "transport") && selectedEvent.destLocation ? (
+                  <span className="row event-route">
+                    <Icons.pin size={13} />
+                    <RouteLine from={selectedEvent.location} to={selectedEvent.destLocation} />
+                  </span>
+                ) : (
+                  <span className="row">
+                    <Icons.pin size={13} /> {selectedEvent.location}
+                  </span>
+                )
               )}
               {selectedEvent.startTime && (
                 <span className="row mono">

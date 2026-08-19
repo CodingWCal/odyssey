@@ -5,6 +5,7 @@ import { AddEventModal } from "./AddEventModal";
 import { deleteEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
+import { RouteLine } from "@/components/shared/RouteLine";
 import { toast } from "@/components/shared/Toast";
 import type { TripEvent } from "@/types";
 import { parseNoteChunks } from "@/lib/notes";
@@ -144,12 +145,16 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
               {(event.location || event.cost != null) && (
                 <div className="event-sub">
                   {event.location && (
-                    <span className="meta">
-                      <Icons.pin size={12} />{" "}
-                      {(event.type === "flight" || event.type === "transport") && event.destLocation
-                        ? `${event.location} → ${event.destLocation}`
-                        : event.location}
-                    </span>
+                    (event.type === "flight" || event.type === "transport") && event.destLocation ? (
+                      <span className="meta event-route">
+                        <Icons.pin size={12} />
+                        <RouteLine from={event.location} to={event.destLocation} />
+                      </span>
+                    ) : (
+                      <span className="meta">
+                        <Icons.pin size={12} /> {event.location}
+                      </span>
+                    )
                   )}
                   {event.cost != null && (
                     <span className="cost">{formatMoney(event.cost, currency)}</span>

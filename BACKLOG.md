@@ -846,7 +846,8 @@ Depends on / pairs with **ODY-094** (needs `paidBy` / `ExpenseShare` for real pe
 - Guardrails: editorial tokens; no new deps; progressive disclosure (equal default, advanced behind a reveal).
 - Acceptance: traveler can navigate Budget on a phone without hunting; can open a food event/expense and understand that meal’s split without doing mental math.
 
-### ODY-096 · Mobile commute detail overflow on event cards — S, sonnet (future only)
+### ODY-096 · Mobile commute detail overflow on event cards — S, sonnet — ✅ DONE (2026-08-19)
+> **Shipped, presentational only (no schema, no deps).** Flight/transport events with a destination now render origin and destination as structured spans via a shared `RouteLine` component (`src/components/shared/RouteLine.tsx`), used by both the itinerary `EventBlock` and the map popup card so they can't drift. Desktop keeps the inline "A → B" form; at ≤560px the two endpoints **stack vertically** (`.route-lines` flips to a column) and the "→" rotates downward, so long addresses wrap inside the card instead of overflowing. Long single-location addresses also gained `overflow-wrap: anywhere` + `min-width: 0` so they wrap rather than force horizontal scroll. Title/time/type ordering and desktop/tablet layout unchanged. tsc / eslint / 235 tests / build clean.
 > **In plain terms:** Long origin/destination addresses on transport events overflow or feel cramped on phones.
 - Responsive layout (not just smaller type): stack origin → destination vertically on narrow screens; default to concise street + city; full address via expand/details/map.
 - Prioritize title, time, type; keep edit/delete tappable; no clip/overlap/horizontal scroll; preserve desktop/tablet.
