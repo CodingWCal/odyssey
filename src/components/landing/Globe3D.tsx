@@ -100,10 +100,14 @@ export function Globe3D({ size = 300 }: Globe3DProps) {
       globe.rotation.x = 0.35;
 
       // --- Pointer drag to spin (with inertia) ---
+      // Respect prefers-reduced-motion (ODY-118 F4): hold the globe still at
+      // idle. Drag still works — that motion is user-initiated.
+      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      const idleSpin = reduceMotion ? 0 : 0.0026;
       let dragging = false;
       let lastX = 0;
       let lastY = 0;
-      let velX = 0.0026; // auto-spin speed
+      let velX = idleSpin; // auto-spin speed
       let velY = 0;
 
       const onDown = (e: PointerEvent) => {
@@ -139,8 +143,8 @@ export function Globe3D({ size = 300 }: Globe3DProps) {
       let raf = 0;
       const tick = () => {
         if (!dragging) {
-          // Inertia decay, settling back to a slow idle spin.
-          velX += (0.0026 - velX) * 0.02;
+          // Inertia decay, settling back to the idle spin (0 under reduced motion).
+          velX += (idleSpin - velX) * 0.02;
           velY *= 0.92;
           globe.rotation.y += velX;
           globe.rotation.x += velY;
@@ -189,7 +193,10 @@ export function Globe3D({ size = 300 }: Globe3DProps) {
   return (
     <div
       ref={mountRef}
-      aria-label="Interactive globe — drag to spin"
+      // Decorative (ODY-118 F8): the globe conveys no information, so it's
+      // hidden from assistive tech rather than announcing a drag interaction a
+      // keyboard/screen-reader user can't perform.
+      aria-hidden="true"
       className="globe-wrap"
       style={{ "--globe-size": `${size}px` } as React.CSSProperties}
     />

@@ -72,7 +72,10 @@ menu.) WCAG 2.1.1.
 
 ## P2 — should fix, narrower impact
 
-### F4 · Incomplete `prefers-reduced-motion` coverage (`globals.css` + `Globe3D.tsx`)
+### F4 · Incomplete `prefers-reduced-motion` coverage — ✅ FIXED (2026-08-19)
+Resolved: a `@media (prefers-reduced-motion: reduce)` block stills the badge pulse (the stamp was already guarded), and `Globe3D` checks `matchMedia` and holds the globe still at idle (drag still works). Only affects users who set the OS preference.
+
+<!-- was: ### F4 · Incomplete `prefers-reduced-motion` coverage (`globals.css` + `Globe3D.tsx`) -->
 `globals.css` has 22 animation/transition declarations but only 3
 `prefers-reduced-motion` guards. Unguarded perpetual motion includes the landing
 badge pulse (`@keyframes ld-pulse`, infinite) and the hero globe's JS
@@ -92,13 +95,19 @@ Copy-day and Duplicate modals do, some others rely on generic labels.
 - **Fix:** prefer `aria-labelledby` pointing at the dialog's `<h3>` id where a
   visible title exists; keep `aria-label` as the fallback.
 
-### F6 · Packing "add item" input has no accessible name (`src/components/packing/PackingClient.tsx:204`)
+### F6 · Packing "add item" input has no accessible name — ✅ FIXED (2026-08-19)
+Resolved: added `aria-label` ("Add a group/personal packing item").
+
+<!-- was: ### F6 · Packing "add item" input has no accessible name (`src/components/packing/PackingClient.tsx:204`) -->
 The add-item `<input>` has only a `placeholder` (placeholders aren't accessible
 names and vanish on input). Every *other* input in the app is labeled — this is
 the one gap.
 - **Fix:** add `aria-label={scope === "group" ? "Add a group packing item" : "Add a personal packing item"}`.
 
-### F7 · No inline error association for form validation
+### F7 · Error toasts now announce assertively — ✅ FIXED (partial) (2026-08-19)
+Resolved the priority half: the toast stack is split into two live regions — errors in `role="alert"` / `aria-live="assertive"`, successes in `role="status"` / `aria-live="polite"` — so a failure isn't queued behind a success. Full inline per-field error association remains a larger follow-up.
+
+<!-- was: ### F7 · No inline error association for form validation -->
 Server-action/Zod failures surface only through the polite toast
 (`role="status"`). There's no `aria-describedby` linking a failed field to its
 error message, and a *failure* toast announces at the same low priority as a
@@ -111,7 +120,10 @@ success toast, so a screen-reader user may not learn *which* field was wrong.
 
 ## P3 — polish / needs-render confirmation
 
-### F8 · Decorative interactive globe exposes an interaction it can't fulfill by keyboard (`Globe3D.tsx`)
+### F8 · Decorative globe hidden from assistive tech — ✅ FIXED (2026-08-19)
+Resolved: the globe mount is now `aria-hidden="true"` (removed the misleading interactive label); it conveys no information and is out of the AT/tab order.
+
+<!-- was: ### F8 · Decorative interactive globe exposes an interaction it can't fulfill by keyboard (`Globe3D.tsx`) -->
 The canvas has `aria-label="Interactive globe — drag to spin"` but no keyboard
 affordance. It's purely decorative, so the accessible name over-promises.
 - **Fix:** mark the mount `aria-hidden="true"` (it conveys no information), which

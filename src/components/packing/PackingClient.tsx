@@ -205,6 +205,7 @@ export function PackingClient({ tripId, items, members, hasLegacyPacking, readOn
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder={scope === "group" ? "e.g. First-aid kit" : "e.g. Passport"}
+              aria-label={scope === "group" ? "Add a group packing item" : "Add a personal packing item"}
               maxLength={160}
             />
             <button className="btn btn-primary" disabled={pending}>Add item</button>

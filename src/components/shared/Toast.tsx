@@ -46,20 +46,33 @@ export function Toaster() {
 
   if (items.length === 0) return null;
 
+  const dismiss = (id: number) => setItems((prev) => prev.filter((x) => x.id !== id));
+  const renderToast = (t: ToastItem) => (
+    <div key={t.id} className={`toast ${t.kind}`}>
+      <span>{t.message}</span>
+      <button className="toast-dismiss" aria-label="Dismiss" onClick={() => dismiss(t.id)}>
+        ×
+      </button>
+    </div>
+  );
+
+  // Two live regions (ODY-118 F7): failures announce assertively (role="alert"),
+  // successes politely — a failure shouldn't wait behind a success in the queue.
+  const errors = items.filter((t) => t.kind === "error");
+  const successes = items.filter((t) => t.kind === "success");
+
   return (
-    <div className="toast-stack" role="status" aria-live="polite">
-      {items.map((t) => (
-        <div key={t.id} className={`toast ${t.kind}`}>
-          <span>{t.message}</span>
-          <button
-            className="toast-dismiss"
-            aria-label="Dismiss"
-            onClick={() => setItems((prev) => prev.filter((x) => x.id !== t.id))}
-          >
-            ×
-          </button>
+    <div className="toast-stack">
+      {errors.length > 0 && (
+        <div className="toast-group" role="alert" aria-live="assertive">
+          {errors.map(renderToast)}
         </div>
-      ))}
+      )}
+      {successes.length > 0 && (
+        <div className="toast-group" role="status" aria-live="polite">
+          {successes.map(renderToast)}
+        </div>
+      )}
     </div>
   );
 }

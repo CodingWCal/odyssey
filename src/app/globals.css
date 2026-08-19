@@ -3746,3 +3746,13 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
    pin type reads without relying on hue. Palette (TYPE_HEX) is unchanged. */
 .map-pin .meta .map-pin-type { display: inline-flex; align-items: center; gap: 4px; }
 .map-pin .meta .map-pin-type svg { color: var(--ink-3); flex-shrink: 0; }
+
+/* Two toast live regions share one visual stack (ODY-118 F7). */
+.toast-group { display: flex; flex-direction: column; gap: 8px; }
+
+/* Reduced-motion: still the infinite decorative animations (ODY-118 F4). The
+   boarding-pass stamp is already guarded above; the badge pulse is added here.
+   The hero globe's idle spin is stopped in Globe3D via matchMedia. */
+@media (prefers-reduced-motion: reduce) {
+  .ld-badge-dot { animation: none; }
+}
