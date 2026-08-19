@@ -109,6 +109,11 @@ model Event {
   endTime    String?
   notes      String?
   cost         Float?
+  // Booking details (ODY-086) — all optional, mainly for flight/hotel. No
+  // backfill needed; null means "not recorded".
+  confirmationCode String? // reservation / confirmation number
+  bookingUrl       String? // link to the reservation
+  checkIn          String? // free-text check-in detail, e.g. "After 3:00 PM"
   orderIndex   Int      @default(0)
   lat          Float?
   lng          Float?

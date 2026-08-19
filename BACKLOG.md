@@ -1052,7 +1052,9 @@ Depends on: ODY-036 (prod auth), ODY-037 (share/invites), ODY-058/059 (mobile ch
 
 ## P3 — User Journey delight (2026-07-25 UX audit)
 
-### ODY-086 · Booking details on events (confirmation #, link, check-in) — M, sonnet
+### ODY-086 · Booking details on events (confirmation #, link, check-in) — M, sonnet — ✅ DONE (⚠️ needs `prisma db push`) (2026-08-19)
+> **Shipped.** Three optional `Event` fields — `confirmationCode`, `bookingUrl`, `checkIn` (free-text so it covers hotel check-in *and* flight boarding). Zod-validated (URL + length caps); a bare URL like "acme.com/x" is auto-prefixed with `https://` on save. UI: a collapsed **"Booking details"** disclosure in the event modal (auto-opens when the event already has any), rendered read-only on the block as a quiet mono row — check-in, `#confirmation`, and a "Reservation ↗" link. Edit clears a field when emptied ("" → null). No new deps. tsc / eslint / 250 tests / build clean.
+> **⚠️ Deploy gate:** run `npx prisma db push` before this reaches a shared DB — event reads select the new columns, so the itinerary 500s until the table has them (same pattern as ODY-024/067/082). The Prisma client is already regenerated locally so the build is green.
 > **In plain terms:** For flights and hotels you want the confirmation number, a booking link, and check-in time right on the event — the "boarding pass" moment. Keep it a couple of optional fields, not a CRM.
 Events have `type`/`location`/`notes` but no structured booking info.
 - Add optional `confirmationCode String?`, `bookingUrl String?`, `checkIn`/`checkOut` (reuse `startTime`/`endTime` where possible) via `prisma db push` (coordinate Supabase pause). Zod-validate URL + length caps.

@@ -33,6 +33,9 @@ export interface TripEvent {
   destLocation: string | null;
   destLat: number | null;
   destLng: number | null;
+  confirmationCode: string | null;
+  bookingUrl: string | null;
+  checkIn: string | null;
   createdBy: string;
   createdAt: Date;
 }

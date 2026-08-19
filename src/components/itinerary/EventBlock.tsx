@@ -162,6 +162,22 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
                 </div>
               )}
 
+              {(event.confirmationCode || event.bookingUrl || event.checkIn) && (
+                <div className="event-booking">
+                  {event.checkIn && (
+                    <span className="eb-item"><Icons.clock size={12} /> {event.checkIn}</span>
+                  )}
+                  {event.confirmationCode && (
+                    <span className="eb-item eb-conf" title="Confirmation number">#{event.confirmationCode}</span>
+                  )}
+                  {event.bookingUrl && (
+                    <a className="eb-item eb-link" href={event.bookingUrl} target="_blank" rel="noopener noreferrer">
+                      Reservation ↗
+                    </a>
+                  )}
+                </div>
+              )}
+
               {event.notes && (
                 <EventNotes text={event.notes} />
               )}

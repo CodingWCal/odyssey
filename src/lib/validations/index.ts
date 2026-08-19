@@ -59,6 +59,10 @@ export const createEventSchema = z.object({
   destLocation: z.string().max(300).optional().or(z.literal("")),
   destLat: z.coerce.number().optional(),
   destLng: z.coerce.number().optional(),
+  // Booking details (ODY-086) — all optional.
+  confirmationCode: z.string().max(100).optional().or(z.literal("")),
+  bookingUrl: z.string().url("Enter a valid URL").max(2000).optional().or(z.literal("")),
+  checkIn: z.string().max(100).optional().or(z.literal("")),
 });
 
 export const updateEventSchema = createEventSchema.partial().omit({ dayId: true, tripId: true });

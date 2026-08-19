@@ -3803,3 +3803,27 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   background: var(--teal-soft); color: var(--teal);
   padding: 1px 6px; border-radius: var(--radius-pill);
 }
+
+/* ── Event booking details (ODY-086) ── */
+/* Form: collapsible "Booking details" disclosure inside the event modal. */
+.ev-booking-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0; cursor: pointer; padding: 2px 0;
+  font-size: 13px; font-weight: 500; color: var(--ink-2);
+  transition: color .15s ease;
+}
+.ev-booking-toggle:hover { color: var(--peri); }
+.ev-booking-toggle svg { transition: transform .15s ease; color: var(--ink-3); }
+.ev-booking-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.ev-booking-fields { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+
+/* Read view: a compact meta row under the event's location/cost. */
+.event-booking {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  margin-top: 8px; font-size: 12.5px;
+}
+.event-booking .eb-item { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); }
+.event-booking .eb-item svg { color: var(--ink-3); }
+.event-booking .eb-conf { font-family: var(--font-mono); color: var(--ink-2); }
+.event-booking .eb-link { color: var(--peri); font-weight: 500; text-decoration: none; }
+.event-booking .eb-link:hover { text-decoration: underline; }

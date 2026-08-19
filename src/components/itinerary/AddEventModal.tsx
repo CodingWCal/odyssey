@@ -38,8 +38,15 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
     destLocation: existing?.destLocation ?? "",
     destLat: (existing?.destLat ?? undefined) as number | undefined,
     destLng: (existing?.destLng ?? undefined) as number | undefined,
+    confirmationCode: existing?.confirmationCode ?? "",
+    bookingUrl: existing?.bookingUrl ?? "",
+    checkIn: existing?.checkIn ?? "",
   });
   const [form, setForm] = useState(initialForm);
+  // Booking details are collapsed by default, but opened when the event
+  // already has any (ODY-086).
+  const hasBooking = Boolean(existing?.confirmationCode || existing?.bookingUrl || existing?.checkIn);
+  const [bookingOpen, setBookingOpen] = useState(hasBooking);
 
   // Re-seed the form each time the modal opens ("adjust state during render"
   // — the React-sanctioned replacement for a reset-on-open effect).
@@ -49,6 +56,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
     if (open) {
       setForm(initialForm());
       setTitleError(false);
+      setBookingOpen(hasBooking);
     }
   }
 
@@ -67,6 +75,10 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
       toast("Give this event a title first.");
       return;
     }
+    // Add a scheme to a bare URL so "acme.com/booking" saves as a valid link.
+    const bookingUrl = form.bookingUrl.trim();
+    const normalizedUrl = bookingUrl && !/^https?:\/\//i.test(bookingUrl) ? `https://${bookingUrl}` : bookingUrl;
+
     startTransition(async () => {
       const payload = {
         type: form.type,
@@ -83,6 +95,11 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
         destLocation: hasRoute ? form.destLocation || "" : "",
         destLat: hasRoute ? form.destLat : undefined,
         destLng: hasRoute ? form.destLng : undefined,
+        // Booking details (ODY-086) — sent as raw strings so an emptied field
+        // clears on edit ("" → null in the action).
+        confirmationCode: form.confirmationCode,
+        bookingUrl: normalizedUrl,
+        checkIn: form.checkIn,
       };
       try {
         if (isEdit && existing) {
@@ -227,8 +244,60 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
             className="input"
             value={form.notes}
             onChange={(e) => set("notes", e.target.value)}
-            placeholder="Confirmation #, what to bring… Start lines with - for bullets."
+            placeholder="What to bring, reminders… Start lines with - for bullets."
           />
+        </div>
+
+        {/* Booking details (ODY-086) — collapsed by default so the common case
+            stays uncluttered; opens automatically when the event already has any. */}
+        <div className="field">
+          <button
+            type="button"
+            className="ev-booking-toggle"
+            onClick={() => setBookingOpen((o) => !o)}
+            aria-expanded={bookingOpen}
+            aria-controls="ev-booking-fields"
+          >
+            <Icons.chevron size={14} /> Booking details
+          </button>
+          {bookingOpen && (
+            <div id="ev-booking-fields" className="ev-booking-fields">
+              <div className="field">
+                <label htmlFor="ev-conf">Confirmation #</label>
+                <input
+                  id="ev-conf"
+                  className="input mono"
+                  value={form.confirmationCode}
+                  onChange={(e) => set("confirmationCode", e.target.value)}
+                  placeholder="ABC123"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="ev-url">Reservation link</label>
+                <input
+                  id="ev-url"
+                  className="input"
+                  type="url"
+                  inputMode="url"
+                  value={form.bookingUrl}
+                  onChange={(e) => set("bookingUrl", e.target.value)}
+                  placeholder="https://…"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="ev-checkin">
+                  {form.type === "hotel" ? "Check-in" : "Check-in / boarding"}
+                </label>
+                <input
+                  id="ev-checkin"
+                  className="input"
+                  value={form.checkIn}
+                  onChange={(e) => set("checkIn", e.target.value)}
+                  placeholder={form.type === "hotel" ? "After 3:00 PM" : "Boards 45 min before"}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
