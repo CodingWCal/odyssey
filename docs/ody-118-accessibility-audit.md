@@ -122,6 +122,33 @@ on every trip page load.
   targeting `#main`, and wrap the dashboard/auth/onboarding content in a `<main>`
   landmark for parity with the trip layout.
 
+### F11 · Color-blindness: map pin *type* is a color-only signal (`src/components/map/LeafletMap.tsx`)
+Color coding across the app is almost always paired with a second channel, so it
+already reads for color-blind users: event badges are icon+label, budget
+categories are icon+label+color, the availability heatmap prints the *number*
+free (color is redundant), and event pins carry a *sequence number*. The two
+exceptions are on the map: a pin's **type** (flight/hotel/restaurant/…) is
+conveyed by **fill color alone** (`markerHtml` → `background:${TYPE_HEX[type]}`),
+and collection markers are color-only diamonds. Type is recoverable on click (the
+popup shows the `TypeBadge`), but not at a glance. WCAG 1.4.1 (Use of Color).
+- **Fix — palette-preserving, no theme change:** render the type's line-icon
+  inside the pin as a second channel (the icons already exist in `Icons.tsx` and
+  map 1:1 to types), keeping the exact `TYPE_HEX` colors. Same for collection
+  markers (category icon in the diamond). This adds a channel; it does not
+  restyle anything.
+
+### Aesthetic guarantee (why none of this repaints the design)
+Every fix above is **additive, not a repaint** — it adds a second channel or a
+behavior, and leaves the curated palette, type, spacing, and themes untouched:
+- Invisible to sighted mouse/touch users: F1, F3, F5, F6, F7, F8, F9.
+- F2 focus rings render **only** on `:focus-visible` (keyboard focus), reusing
+  the existing `--peri` ring already on the day/category headers — never shown on
+  mouse/touch.
+- F4 reduced-motion only alters anything for users who set the OS preference.
+- F11 keeps `TYPE_HEX` exactly; it only adds the (already-designed) type icon as
+  a second channel to the pin.
+No finding changes a color value, a font, a spacing token, or a theme.
+
 ### F10 · Contrast + axe sweep — needs a render (tracked, not resolvable statically)
 Muted tokens (`--ink-3` on `--paper-2`/`--paper-3`), the soft focus fills (F2),
 the availability heatmap's low-opacity teal cells, and the budget category bar

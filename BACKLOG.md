@@ -361,7 +361,10 @@ input `role="combobox"`, color-only category coding in the budget bar.
 > - **P1 F3** — the new trip-card "⋯" menu isn't keyboard-operable (no Escape/arrow-key/focus-move); swap to the base-ui `DropdownMenu` primitive.
 > - **P2 F4/F8** — incomplete `prefers-reduced-motion` coverage (badge pulse, globe auto-spin); F6 packing add-input needs `aria-label`; F7 error toasts should be assertive.
 > - **P3 F9** — no skip-to-content link; dashboard/auth/onboarding lack a `<main>` landmark.
+> - **F11 (color-blindness)** — color coding is already mostly paired with an icon/label/number; the only color-only-at-a-glance signals are map pin *type* and collection-marker category. Fix adds the (already-designed) type icon inside the pin as a second channel — `TYPE_HEX` palette unchanged.
 > - **F10** — contrast measurement + automated **axe** sweep on the 5 main routes still needs a browser (shares the ODY-022 browser half).
+>
+> **Aesthetic guarantee:** every fix is additive (a second channel or a behavior), not a repaint — no color value, font, spacing token, or theme changes. F2 focus rings show only on `:focus-visible` (keyboard), reusing the existing `--peri` ring; F4 reduced-motion only affects users who set the OS preference; F11 keeps `TYPE_HEX` exactly and just adds the type icon to the pin.
 > **In plain terms:** We combed the whole app for accessibility problems and wrote them all down with fixes. Most are low-risk, shared-component changes — one `Modal` fix alone repairs keyboard focus for every popup.
 - Deliverable (this pass): `docs/ody-118-accessibility-audit.md`. Remediation: work the fix order top-down; each item is small and independently shippable.
 - Acceptance: P0–P2 findings fixed with QA green; the axe/contrast items (F10) handed to a browser-capable session and closed against ODY-022.
