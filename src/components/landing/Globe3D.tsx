@@ -103,7 +103,7 @@ export function Globe3D({ size = 300 }: Globe3DProps) {
       let dragging = false;
       let lastX = 0;
       let lastY = 0;
-      let velX = 0.004; // auto-spin speed
+      let velX = 0.0026; // auto-spin speed
       let velY = 0;
 
       const onDown = (e: PointerEvent) => {
@@ -140,7 +140,7 @@ export function Globe3D({ size = 300 }: Globe3DProps) {
       const tick = () => {
         if (!dragging) {
           // Inertia decay, settling back to a slow idle spin.
-          velX += (0.004 - velX) * 0.02;
+          velX += (0.0026 - velX) * 0.02;
           velY *= 0.92;
           globe.rotation.y += velX;
           globe.rotation.x += velY;
