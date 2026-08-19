@@ -250,3 +250,33 @@ export function classifyBalance(balance: number): PersonalBalanceState {
   if (balance < -0.004) return "owe";
   return "settled";
 }
+
+export interface ExpenseShareLike {
+  userId: string;
+  amountCents: number;
+}
+
+export interface DescribedSplit {
+  /** Participants sorted by amount owed (desc), ties broken by userId for
+   * stable ordering. */
+  rows: ExpenseShareLike[];
+  /** Number of participants on the expense. */
+  count: number;
+  /** True when every participant owes the same amount (an equal split). */
+  equal: boolean;
+}
+
+/**
+ * Describe a single expense's split for a read-only per-expense breakdown
+ * (ODY-097). Pure name-free math over the persisted ExpenseShare rows: sort the
+ * participants and detect whether it's an even split, so the UI can say
+ * "Split equally 3 ways" vs. list custom amounts. Cent-based, so no float drift.
+ */
+export function describeExpenseSplit(shares: ExpenseShareLike[]): DescribedSplit {
+  const rows = [...shares].sort(
+    (a, b) => b.amountCents - a.amountCents || a.userId.localeCompare(b.userId)
+  );
+  const equal =
+    rows.length > 1 && rows.every((r) => r.amountCents === rows[0].amountCents);
+  return { rows, count: rows.length, equal };
+}

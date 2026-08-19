@@ -7,7 +7,7 @@ import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights, recordSettlement, deleteSettlement } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
-import { suggestSettlements, classifyBalance, type SplitRow } from "@/lib/budget";
+import { suggestSettlements, classifyBalance, describeExpenseSplit, type SplitRow } from "@/lib/budget";
 import { formatMoney } from "@/lib/money";
 
 /** A recorded settle-up payment outside the expense ledger (ODY-107). */
@@ -67,6 +67,83 @@ interface BudgetClientProps {
   currency: string;
 }
 
+/**
+ * One expense with an expandable, read-only per-person split (ODY-097). The
+ * breakdown answers "who owes what for *this* bill" — the piece the trip-level
+ * weight card can't show. Data is already loaded (ExpenseShare rows); this only
+ * reveals it.
+ */
+function ExpenseRow({
+  e,
+  fmtMoney,
+  currency,
+  nameByUserId,
+  readOnly,
+  onEdit,
+}: {
+  e: BudgetExpense;
+  fmtMoney: (n: number) => string;
+  currency: string;
+  nameByUserId: Record<string, string>;
+  readOnly?: boolean;
+  onEdit: (e: BudgetExpense) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const split = describeExpenseSplit(e.shares);
+  const canSplit = split.count > 0;
+  const nameOf = (userId: string) => nameByUserId[userId] ?? "Traveler";
+
+  return (
+    <div className={`expense-item${open ? " open" : ""}`}>
+      <div className={`expense-row c-${e.category}`}>
+        <div className="label-block">
+          <div className="lbl">
+            <span>{e.label}</span>
+            {e.eventTitle && <span className="link-tag">↪ Itinerary</span>}
+          </div>
+          <span className="sub">Paid by {e.who}{e.eventTitle ? ` · linked to "${e.eventTitle}"` : ""}</span>
+        </div>
+        <div className="amount">{fmtMoney(e.amount)}</div>
+        {canSplit && (
+          <button
+            type="button"
+            className="split-toggle"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={open ? "Hide split" : "Show who owes what"}
+          >
+            {split.equal ? `Split ${split.count} ways` : `Split · ${split.count}`}
+            <Icons.chevron size={12} />
+          </button>
+        )}
+        {!readOnly && (
+          <div className="row-actions">
+            <button className="icon-btn" onClick={() => onEdit(e)} aria-label="Edit"><Icons.edit size={13} /></button>
+          </div>
+        )}
+      </div>
+      {open && canSplit && (
+        <div className="expense-split">
+          <div className="expense-split-head">
+            {split.equal ? `Split equally ${split.count} ways` : `Custom split · ${split.count} ${split.count === 1 ? "person" : "people"}`}
+          </div>
+          <ul>
+            {split.rows.map((r) => (
+              <li key={r.userId}>
+                <span className="who">
+                  {nameOf(r.userId)}
+                  {r.userId === e.paidBy && <span className="payer-tag">paid</span>}
+                </span>
+                <span className="owes">{formatMoney(r.amountCents / 100, currency)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoryBlock({
   category,
   expenses,
@@ -76,6 +153,7 @@ function CategoryBlock({
   onEdit,
   readOnly,
   currency,
+  nameByUserId,
 }: {
   category: Category;
   expenses: BudgetExpense[];
@@ -85,6 +163,7 @@ function CategoryBlock({
   onEdit: (e: BudgetExpense) => void;
   readOnly?: boolean;
   currency: string;
+  nameByUserId: Record<string, string>;
 }) {
   const fmtMoney = (n: number) => formatMoney(n, currency);
   const [collapsed, setCollapsed] = useState(false);
@@ -145,21 +224,15 @@ function CategoryBlock({
       <div className="cat-body" ref={bodyRef}>
         <div className="expense-list">
           {expenses.map((e) => (
-            <div className={`expense-row c-${e.category}`} key={e.id}>
-              <div className="label-block">
-                <div className="lbl">
-                  <span>{e.label}</span>
-                  {e.eventTitle && <span className="link-tag">↪ Itinerary</span>}
-                </div>
-                <span className="sub">Paid by {e.who}{e.eventTitle ? ` · linked to "${e.eventTitle}"` : ""}</span>
-              </div>
-              <div className="amount">{fmtMoney(e.amount)}</div>
-              {!readOnly && (
-                <div className="row-actions">
-                  <button className="icon-btn" onClick={() => onEdit(e)} aria-label="Edit"><Icons.edit size={13} /></button>
-                </div>
-              )}
-            </div>
+            <ExpenseRow
+              key={e.id}
+              e={e}
+              fmtMoney={fmtMoney}
+              currency={currency}
+              nameByUserId={nameByUserId}
+              readOnly={readOnly}
+              onEdit={onEdit}
+            />
           ))}
         </div>
         {!readOnly && (
@@ -478,6 +551,8 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
     list: expenses.filter((e) => e.category === c),
   })).filter((g) => g.list.length > 0);
   const activeCatCount = CATEGORIES.filter((c) => (catTotals[c] ?? 0) > 0).length;
+  // userId → name, for the per-expense split breakdown (ODY-097).
+  const nameByUserId = Object.fromEntries(tripMembers.map((m) => [m.userId, m.name]));
 
   function openAdd(category: Category | null) {
     setModal({ open: true, mode: "add", initial: category ? { category } : null });
@@ -657,6 +732,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
             onEdit={openEdit}
             readOnly={readOnly}
             currency={currency}
+            nameByUserId={nameByUserId}
           />
         ))
       )}

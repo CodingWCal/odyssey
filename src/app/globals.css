@@ -3769,3 +3769,37 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .skip-link:focus { transform: translateY(0); outline: 2px solid var(--peri); outline-offset: 2px; }
 /* The main landmark is a skip target (tabindex=-1); no ring when focused there. */
 #main:focus { outline: none; }
+
+/* ── Per-expense split breakdown (ODY-097) — read-only "who owes what" ── */
+.expense-item { margin-bottom: 10px; }
+.expense-item .expense-row { margin-bottom: 0; }
+.split-toggle {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  background: none; border: 0; cursor: pointer; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
+  padding: 4px 8px; border-radius: var(--radius-pill);
+  transition: color .15s ease, background .15s ease;
+}
+.split-toggle:hover { color: var(--peri); background: var(--peri-soft); }
+.split-toggle svg { transition: transform .15s ease; }
+.expense-item.open .split-toggle svg { transform: rotate(180deg); }
+
+.expense-split {
+  margin: 6px 0 0 18px; padding: 10px 14px;
+  background: var(--paper-3); border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+}
+.expense-split-head {
+  color: var(--ink-3); font-family: var(--font-mono);
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: 8px;
+}
+.expense-split ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.expense-split li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.expense-split .who { color: var(--ink); font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
+.expense-split .owes { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.payer-tag {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  background: var(--teal-soft); color: var(--teal);
+  padding: 1px 6px; border-radius: var(--radius-pill);
+}

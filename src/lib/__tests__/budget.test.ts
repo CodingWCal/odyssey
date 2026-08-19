@@ -6,6 +6,7 @@ import {
   equalSharesCents,
   aggregateBalances,
   classifyBalance,
+  describeExpenseSplit,
   adjustmentSharesCents,
   type SplitRow,
 } from "@/lib/budget";
@@ -410,5 +411,53 @@ describe("aggregateBalances with settlements (ODY-107)", () => {
     );
     const sam = balances.find((b) => b.userId === "sam")!;
     expect(sam.balanceCents).toBe(-3000);
+  });
+});
+
+describe("describeExpenseSplit (ODY-097)", () => {
+  it("sorts participants by amount owed, descending", () => {
+    const d = describeExpenseSplit([
+      { userId: "a", amountCents: 1000 },
+      { userId: "b", amountCents: 3000 },
+      { userId: "c", amountCents: 2000 },
+    ]);
+    expect(d.rows.map((r) => r.userId)).toEqual(["b", "c", "a"]);
+    expect(d.count).toBe(3);
+  });
+
+  it("breaks ties by userId for a stable order", () => {
+    const d = describeExpenseSplit([
+      { userId: "z", amountCents: 500 },
+      { userId: "a", amountCents: 500 },
+    ]);
+    expect(d.rows.map((r) => r.userId)).toEqual(["a", "z"]);
+  });
+
+  it("flags an equal split", () => {
+    const d = describeExpenseSplit([
+      { userId: "a", amountCents: 1500 },
+      { userId: "b", amountCents: 1500 },
+      { userId: "c", amountCents: 1500 },
+    ]);
+    expect(d.equal).toBe(true);
+  });
+
+  it("does not flag an uneven split", () => {
+    const d = describeExpenseSplit([
+      { userId: "a", amountCents: 1400 },
+      { userId: "b", amountCents: 1600 },
+    ]);
+    expect(d.equal).toBe(false);
+  });
+
+  it("does not call a single participant an equal split", () => {
+    expect(describeExpenseSplit([{ userId: "a", amountCents: 1000 }]).equal).toBe(false);
+  });
+
+  it("handles no shares", () => {
+    const d = describeExpenseSplit([]);
+    expect(d.count).toBe(0);
+    expect(d.equal).toBe(false);
+    expect(d.rows).toEqual([]);
   });
 });
