@@ -3619,3 +3619,38 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .archived-toggle svg { transition: transform .15s ease; color: var(--ink-3); }
 .archived-toggle.open svg { transform: rotate(180deg); }
 .archived-toggle .count { font-family: var(--font-body); font-size: 13px; color: var(--ink-3); }
+
+/* ── Landing flourishes (ODY-011e) — borrowed from the design inspo, built
+   token-only with no new deps. (1) A slow boarding-pass stamp ringing the
+   hero globe; (2) ghost step-numbers behind the feature cards. Both are
+   decorative and both go still under prefers-reduced-motion. */
+.ld-globe-stage { position: relative; width: 300px; max-width: 100%; margin: 0 auto; }
+.ld-globe-stage .globe-wrap { margin: 0; }
+.ld-stamp {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; overflow: visible;
+  transform-origin: 50% 50%;
+  animation: ld-stamp-spin 48s linear infinite;
+}
+.ld-stamp text {
+  font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: .26em; text-transform: uppercase;
+  fill: var(--ink-3);
+}
+@keyframes ld-stamp-spin { to { transform: rotate(360deg); } }
+
+.ld-features-grid { counter-reset: ld-step; }
+.ld-card { position: relative; overflow: hidden; counter-increment: ld-step; }
+.ld-card::before {
+  content: counter(ld-step, decimal-leading-zero);
+  position: absolute; top: -20px; right: 8px;
+  font-family: var(--font-display); font-style: italic;
+  font-size: 96px; line-height: 1;
+  color: color-mix(in srgb, var(--ink) 6%, transparent);
+  pointer-events: none; z-index: 0;
+}
+.ld-card > * { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-stamp { animation: none; }
+}
