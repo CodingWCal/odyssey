@@ -45,9 +45,14 @@ export function LandingPage() {
           <circle className="ld-node ld-node-sm" cx="640" cy="240" r="1.8" />
           <circle className="ld-node ld-node-sm" cx="560" cy="150" r="1.8" />
           <circle className="ld-node ld-node-sm" cx="760" cy="480" r="1.8" />
-          {/* Secondary dashed routes. */}
+          {/* Secondary dashed routes — dots flow along these. */}
           <path className="ld-route ld-route-2" d="M -20 90 C 320 240 640 120 1010 300" />
           <path className="ld-route ld-route-2" d="M 260 30 C 520 200 820 110 1240 330" />
+          <path className="ld-route ld-route-2" d="M -40 380 C 260 320 520 440 820 360 S 1120 400 1240 360" />
+          <path className="ld-route ld-route-3" d="M -40 200 C 300 260 560 140 900 210 S 1160 180 1240 200" />
+          <path className="ld-route ld-route-3" d="M 160 -20 C 360 120 640 60 900 180" />
+          <circle className="ld-node ld-node-sm" cx="900" cy="180" r="1.8" />
+          <circle className="ld-node ld-node-sm" cx="820" cy="360" r="1.8" />
           {/* Primary route (draws in) + its arriving destination pin. */}
           <path className="ld-route ld-route-1" d="M 190 430 C 400 300 660 360 1010 150" />
           <circle className="ld-node-ring" cx="190" cy="430" r="6" />

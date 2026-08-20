@@ -2966,9 +2966,13 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .ld-hero > *:not(.ld-routes) { position: relative; z-index: 1; }
 .ld-route { fill: none; stroke: var(--peri); stroke-linecap: round; }
-.ld-route-2 { stroke-width: 1.4; stroke-opacity: .28; stroke-dasharray: 2 8; }
-.ld-route-3 { stroke-width: 1.1; stroke-opacity: .2; stroke-dasharray: 2 9; }
+/* Dashed trajectories whose dots travel along the path (animated flight paths).
+   Dashoffset ends are multiples of each dash period so the loop is seamless. */
+.ld-route-2 { stroke-width: 1.4; stroke-opacity: .3; stroke-dasharray: 2 8; animation: ld-flow-2 7s linear infinite; }
+.ld-route-3 { stroke-width: 1.1; stroke-opacity: .22; stroke-dasharray: 2 9; animation: ld-flow-3 11s linear infinite; }
 .ld-node-sm { fill-opacity: .5; }
+@keyframes ld-flow-2 { to { stroke-dashoffset: -100; } }
+@keyframes ld-flow-3 { to { stroke-dashoffset: -110; } }
 .ld-route-1 {
   stroke-width: 1.5; stroke-opacity: .34;
   stroke-dasharray: 1300; stroke-dashoffset: 1300;
@@ -2981,6 +2985,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 @keyframes ld-node-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
   .ld-route-1 { animation: none; stroke-dashoffset: 0; }
+  .ld-route-2, .ld-route-3 { animation: none; }
   .ld-node-dest { animation: none; opacity: 1; }
 }
 
@@ -3907,13 +3912,19 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .bp-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .bp-k { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
 .bp-v { font-size: 12.5px; color: var(--ink-2); }
-.bp-perf { position: relative; width: 0; border-left: 2px dashed var(--rule-2); margin: 14px 0; }
+/* A real perforation: a column of punched holes, so the stub reads as a
+   detachable, segmented stub rather than a solid block. */
+.bp-perf {
+  position: relative; width: 5px; flex: none; margin: 8px 0;
+  background-image: radial-gradient(circle at center, var(--paper) 0 2px, transparent 2.4px);
+  background-size: 5px 11px; background-repeat: repeat-y; background-position: center;
+}
 .bp-notch {
-  position: absolute; left: -9px; width: 18px; height: 18px; border-radius: 50%;
+  position: absolute; left: -6.5px; width: 18px; height: 18px; border-radius: 50%;
   background: var(--paper); border: 1px solid var(--rule);
 }
-.bp-notch-top { top: -23px; }
-.bp-notch-bottom { bottom: -23px; }
+.bp-notch-top { top: -19px; }
+.bp-notch-bottom { bottom: -19px; }
 .bp-stub {
   flex: none; width: 118px; padding: 22px 18px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
@@ -3946,10 +3957,14 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 @media (max-width: 560px) {
   .ld-ticket-band { padding-left: 20px; padding-right: 20px; }
   .ld-ticket { flex-direction: column; transform: rotate(0); max-width: 360px; }
-  .bp-perf { width: auto; height: 0; border-left: 0; border-top: 2px dashed var(--rule-2); margin: 0 14px; }
-  .bp-notch { left: auto; }
-  .bp-notch-top { top: -9px; left: -23px; }
-  .bp-notch-bottom { bottom: auto; top: -9px; right: -23px; }
+  .bp-perf {
+    width: auto; height: 5px; margin: 0 14px;
+    background-image: radial-gradient(circle at center, var(--paper) 0 2px, transparent 2.4px);
+    background-size: 11px 5px; background-repeat: repeat-x; background-position: center;
+  }
+  .bp-notch { left: auto; top: auto; }
+  .bp-notch-top { top: -6.5px; left: -19px; }
+  .bp-notch-bottom { bottom: auto; top: -6.5px; right: -19px; }
   .bp-stub { width: 100%; flex-direction: row; justify-content: space-between; gap: 14px; }
   .bp-barcode { width: 130px; }
 }
@@ -3967,8 +3982,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   text-transform: uppercase; color: var(--ink-3);
 }
 .ld-paintmap {
-  display: block; width: 100%; height: 440px; margin-top: 20px;
+  /* Full-bleed + edge-faded so the map dissolves into the page rather than
+     sitting in a rectangle (ODY-011f). */
+  display: block; width: 100vw; margin-left: calc(50% - 50vw); height: 500px; margin-top: 8px;
   background: transparent; cursor: crosshair;
+  -webkit-mask-image: radial-gradient(118% 82% at 50% 46%, #000 48%, transparent 90%);
+  mask-image: radial-gradient(118% 82% at 50% 46%, #000 48%, transparent 90%);
 }
 @media (pointer: coarse) {
   .ld-paintmap { cursor: default; }
@@ -3977,7 +3996,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 @media (max-width: 560px) {
   .ld-paint-band { padding-left: 20px; padding-right: 20px; }
   .ld-paint-copy h2 { font-size: 32px; }
-  .ld-paintmap { height: 260px; }
+  .ld-paintmap { height: 320px; }
 }
 
 /* (6) Scroll-drawn trajectory trails (ODY-011f) — plot in on scroll. */

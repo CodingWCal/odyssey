@@ -34,7 +34,7 @@ export function PaintMap() {
     const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
     const staticMode = reduce || coarse;
 
-    const LIFE = 3600; // ripple lifespan — slow, koi-pond calm
+    const LIFE = 4400; // ripple lifespan — slow, koi-pond calm
     const landVB = new Path2D(WORLD_PATH);
     let w = 0;
     let h = 0;
@@ -60,8 +60,10 @@ export function PaintMap() {
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Contain-fit + a gentle tilt (uniform scale — no stretch, so no warp).
-      const fitScale = Math.min(w / WORLD_VIEWBOX.w, h / WORLD_VIEWBOX.h) * 0.94;
+      // Cover-fit + zoom (uniform scale — no stretch/warp), so the map fills
+      // and crops in rather than showing the whole textbook rectangle. The CSS
+      // edge-fade mask dissolves the crop into the page.
+      const fitScale = Math.max(w / WORLD_VIEWBOX.w, h / WORLD_VIEWBOX.h) * 1.32;
       const cx = w / 2;
       const cy = h / 2;
       const fit = new DOMMatrix([
@@ -98,9 +100,11 @@ export function PaintMap() {
         renderBase();
         c.save();
         c.clip(landPx);
+        c.globalCompositeOperation = "multiply";
         for (let i = 0; i < 6; i++) {
-          bloom((0.18 + i * 0.13) * w, (0.32 + (i % 3) * 0.22) * h, palette[i % palette.length], 0.12);
+          bloom((0.18 + i * 0.13) * w, (0.32 + (i % 3) * 0.22) * h, palette[i % palette.length], 0.1);
         }
+        c.globalCompositeOperation = "source-over";
         c.restore();
       } else {
         renderBase();
@@ -112,12 +116,13 @@ export function PaintMap() {
       c.drawImage(base, 0, 0, w, h);
     }
 
-    // A soft watercolor pigment bloom at (x,y). Caller clips to land.
+    // A soft watercolor pigment bloom at (x,y). Caller clips to land and sets
+    // the multiply blend so overlapping colors mix like wet pigment.
     function bloom(x: number, y: number, color: string, alpha: number) {
-      const r = 66;
+      const r = 84;
       const g = c.createRadialGradient(x, y, 0, x, y, r);
       g.addColorStop(0, color);
-      g.addColorStop(0.55, color);
+      g.addColorStop(0.4, color);
       g.addColorStop(1, "transparent");
       c.globalAlpha = alpha;
       c.fillStyle = g;
@@ -133,20 +138,28 @@ export function PaintMap() {
       const now = performance.now();
       c.save();
       c.clip(landPx);
+
+      // Pass 1 — watercolor pigment blooms, multiplied so they blend like paint.
+      c.globalCompositeOperation = "multiply";
       for (const rp of ripples) {
         const age = (now - rp.t0) / LIFE;
         if (age >= 1) continue;
-        const ease = 1 - Math.pow(1 - age, 1.8);
-        // Pigment bloom — rises then dries away (sin bump), stays faint.
-        bloom(rp.x, rp.y, rp.color, Math.sin(age * Math.PI) * 0.16);
-        // Water rings — concentric, expanding, thinning.
-        const maxR = 160;
+        bloom(rp.x, rp.y, rp.color, Math.sin(age * Math.PI) * 0.14);
+      }
+      c.globalCompositeOperation = "source-over";
+
+      // Pass 2 — calm concentric water rings.
+      const maxR = 150;
+      for (const rp of ripples) {
+        const age = (now - rp.t0) / LIFE;
+        if (age >= 1) continue;
+        const ease = 1 - Math.pow(1 - age, 1.9);
         c.strokeStyle = rp.color;
-        for (const k of [0, 0.26, 0.52, 0.78]) {
+        for (const k of [0, 0.32, 0.64]) {
           const rr = (ease - k) * maxR;
           if (rr <= 0) continue;
-          c.globalAlpha = (1 - age) * 0.34 * (1 - k * 0.7);
-          c.lineWidth = 1.4 * (1 - age) + 0.35;
+          c.globalAlpha = (1 - age) * 0.24 * (1 - k * 0.6);
+          c.lineWidth = 1.2 * (1 - age) + 0.35;
           c.beginPath();
           c.arc(rp.x, rp.y, rr, 0, Math.PI * 2);
           c.stroke();
@@ -167,7 +180,7 @@ export function PaintMap() {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      if (Math.hypot(x - lastX, y - lastY) < 30) return;
+      if (Math.hypot(x - lastX, y - lastY) < 42) return;
       lastX = x;
       lastY = y;
       ripples.push({ x, y, t0: performance.now(), color: palette[colorTick++ % palette.length] });
