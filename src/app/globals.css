@@ -3934,3 +3934,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   .bp-stub { width: 100%; flex-direction: row; justify-content: space-between; gap: 14px; }
   .bp-barcode { width: 130px; }
 }
+
+/* Placeholder for Clerk's UserButton before hydration (ODY-118 follow-up) —
+   same footprint so there's no layout shift when it swaps in. */
+.user-btn-ph { width: 28px; height: 28px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--rule); }

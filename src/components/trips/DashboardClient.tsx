@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useMounted } from "@/lib/hooks/useMounted";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
@@ -89,6 +90,7 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
   const [wizardOpen, setWizardOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const isMobile = useIsMobile();
+  const mounted = useMounted();
   // Icon-search kicks in well before the pill can collide with "New trip"
   // (ODY-092 follow-up — the 768px-only flip left a wide collision band).
   const useIconSearch = useMediaQuery("(max-width: 1100px)");
@@ -174,7 +176,10 @@ export function DashboardClient({ firstName, trips }: { firstName: string; trips
                 <Icons.plus size={14} /> <span className="btn-label">New trip</span>
               </button>
               <span className="user-btn-slot">
-                <UserButton />
+                {/* Clerk's UserButton mounts client-only and would otherwise
+                    hydration-mismatch; render it after hydration behind a
+                    same-size placeholder. */}
+                {mounted ? <UserButton /> : <span className="user-btn-ph" aria-hidden="true" />}
               </span>
             </div>
           </>
