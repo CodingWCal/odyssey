@@ -34,14 +34,19 @@ export function LandingPage() {
             draws itself in on load and its destination pin arrives. Decorative,
             full-bleed line-art (can't warp), still under reduced-motion. */}
         <svg className="ld-routes" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-          {/* Faint background trajectories. */}
-          <path className="ld-route ld-route-3" d="M 40 300 C 260 340 380 180 640 240" />
-          <path className="ld-route ld-route-3" d="M 700 40 C 840 160 1000 120 1180 210" />
-          <path className="ld-route ld-route-3" d="M 120 500 C 300 470 420 520 700 470" />
+          {/* Faint background trajectories, spread across the full width. */}
+          <path className="ld-route ld-route-3" d="M -40 300 C 220 360 360 170 640 240" />
+          <path className="ld-route ld-route-3" d="M 640 240 C 820 300 980 150 1240 250" />
+          <path className="ld-route ld-route-3" d="M 700 20 C 860 150 1010 110 1240 200" />
+          <path className="ld-route ld-route-3" d="M -40 120 C 180 90 320 200 560 150" />
+          <path className="ld-route ld-route-3" d="M 120 520 C 320 480 460 540 760 480" />
+          <path className="ld-route ld-route-3" d="M 780 500 C 960 460 1080 520 1240 470" />
           <circle className="ld-node ld-node-sm" cx="640" cy="240" r="1.8" />
-          <circle className="ld-node ld-node-sm" cx="700" cy="40" r="1.8" />
-          {/* Secondary dashed route. */}
-          <path className="ld-route ld-route-2" d="M 210 70 C 480 220 760 110 1010 300" />
+          <circle className="ld-node ld-node-sm" cx="560" cy="150" r="1.8" />
+          <circle className="ld-node ld-node-sm" cx="760" cy="480" r="1.8" />
+          {/* Secondary dashed routes. */}
+          <path className="ld-route ld-route-2" d="M -20 90 C 320 240 640 120 1010 300" />
+          <path className="ld-route ld-route-2" d="M 260 30 C 520 200 820 110 1240 330" />
           {/* Primary route (draws in) + its arriving destination pin. */}
           <path className="ld-route ld-route-1" d="M 190 430 C 400 300 660 360 1010 150" />
           <circle className="ld-node-ring" cx="190" cy="430" r="6" />
