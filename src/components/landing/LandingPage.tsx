@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icons } from "@/components/shared/Icons";
 import { Globe3D } from "./Globe3D";
 import { DepartureBoard } from "./DepartureBoard";
+import { PaintMap } from "./PaintMap";
 import { Reveal } from "./Reveal";
 
 // Styles live in globals.css under the `ld-` prefix (ODY-011a). The only
@@ -33,7 +34,15 @@ export function LandingPage() {
             draws itself in on load and its destination pin arrives. Decorative,
             full-bleed line-art (can't warp), still under reduced-motion. */}
         <svg className="ld-routes" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+          {/* Faint background trajectories. */}
+          <path className="ld-route ld-route-3" d="M 40 300 C 260 340 380 180 640 240" />
+          <path className="ld-route ld-route-3" d="M 700 40 C 840 160 1000 120 1180 210" />
+          <path className="ld-route ld-route-3" d="M 120 500 C 300 470 420 520 700 470" />
+          <circle className="ld-node ld-node-sm" cx="640" cy="240" r="1.8" />
+          <circle className="ld-node ld-node-sm" cx="700" cy="40" r="1.8" />
+          {/* Secondary dashed route. */}
           <path className="ld-route ld-route-2" d="M 210 70 C 480 220 760 110 1010 300" />
+          {/* Primary route (draws in) + its arriving destination pin. */}
           <path className="ld-route ld-route-1" d="M 190 430 C 400 300 660 360 1010 150" />
           <circle className="ld-node-ring" cx="190" cy="430" r="6" />
           <circle className="ld-node" cx="190" cy="430" r="2.5" />
@@ -133,6 +142,17 @@ export function LandingPage() {
             </Reveal>
           ))}
         </div>
+      </section>
+
+      {/* Paint-in map — a blank dot-map that colors in with the palette as the
+          cursor crosses it (ODY-011f). */}
+      <section className="ld-paint-band">
+        <Reveal className="ld-paint-copy">
+          <h2>Every trip starts <em className="ld-em">blank</em>.</h2>
+          <p>Then you fill it in — one plan, one pin, one day at a time.</p>
+          <span className="ld-paint-hint">Move your cursor across the map</span>
+        </Reveal>
+        <PaintMap />
       </section>
 
       {/* Footer CTA */}
