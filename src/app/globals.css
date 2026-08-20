@@ -2956,7 +2956,27 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-nav-signin { font-size: 13.5px; color: var(--ink-2); }
 .ld-nav-cta { text-decoration: none; }
 
-.ld-hero { max-width: 820px; margin: 0 auto; padding: 56px 48px 60px; text-align: center; }
+.ld-hero { max-width: 820px; margin: 0 auto; padding: 56px 48px 60px; text-align: center; position: relative; overflow: hidden; }
+
+/* Plotted-route backdrop (ODY-011f) — behind all hero content. */
+.ld-routes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.ld-hero > *:not(.ld-routes) { position: relative; z-index: 1; }
+.ld-route { fill: none; stroke: var(--peri); stroke-linecap: round; }
+.ld-route-2 { stroke-width: 1.25; stroke-opacity: .18; stroke-dasharray: 2 8; }
+.ld-route-1 {
+  stroke-width: 1.5; stroke-opacity: .34;
+  stroke-dasharray: 1300; stroke-dashoffset: 1300;
+  animation: ld-route-draw 1.9s cubic-bezier(.22,.61,.36,1) .35s forwards;
+}
+.ld-node { fill: var(--peri); }
+.ld-node-ring { fill: none; stroke: var(--peri); stroke-width: 1.5; stroke-opacity: .5; }
+.ld-node-dest { opacity: 0; transform-box: fill-box; transform-origin: center; animation: ld-node-in .45s ease-out 2.15s forwards; }
+@keyframes ld-route-draw { to { stroke-dashoffset: 0; } }
+@keyframes ld-node-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .ld-route-1 { animation: none; stroke-dashoffset: 0; }
+  .ld-node-dest { animation: none; opacity: 1; }
+}
 
 .ld-badge {
   display: inline-flex; align-items: center; gap: 8px;

@@ -24,6 +24,20 @@ export function LandingPage() {
 
       {/* Hero */}
       <section className="ld-hero">
+        {/* Plotted-route backdrop (ODY-011f) — thin map arcs; the primary one
+            draws itself in on load and its destination pin arrives. Decorative,
+            full-bleed line-art (can't warp), still under reduced-motion. */}
+        <svg className="ld-routes" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+          <path className="ld-route ld-route-2" d="M 210 70 C 480 220 760 110 1010 300" />
+          <path className="ld-route ld-route-1" d="M 190 430 C 400 300 660 360 1010 150" />
+          <circle className="ld-node-ring" cx="190" cy="430" r="6" />
+          <circle className="ld-node" cx="190" cy="430" r="2.5" />
+          <g className="ld-node-dest">
+            <circle className="ld-node-ring" cx="1010" cy="150" r="6" />
+            <circle className="ld-node" cx="1010" cy="150" r="2.5" />
+          </g>
+        </svg>
+
         {/* Interactive globe (drag to spin). */}
         <Globe3D size={300} />
 
