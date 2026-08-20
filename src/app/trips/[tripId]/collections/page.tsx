@@ -35,6 +35,7 @@ export default async function CollectionsPage({ params }: Props) {
           lat: p.lat,
           lng: p.lng,
           notes: p.notes,
+          listName: p.listName,
         }))}
         readOnly={readOnly}
       />

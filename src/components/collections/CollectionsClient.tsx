@@ -18,6 +18,8 @@ export interface CollectionPlace {
   lat: number | null;
   lng: number | null;
   notes: string | null;
+  /** Optional traveler-named list, e.g. "Ramen crawl" (ODY-093). */
+  listName: string | null;
 }
 
 interface DayOption {
@@ -46,6 +48,7 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
     title: "",
     location: "",
     notes: "",
+    listName: "",
     lat: undefined as number | undefined,
     lng: undefined as number | undefined,
   });
@@ -64,6 +67,7 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
       title: "",
       location: "",
       notes: "",
+      listName: "",
       lat: undefined,
       lng: undefined,
     });
@@ -82,6 +86,7 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
           title: form.title,
           location: form.location || undefined,
           notes: form.notes || undefined,
+          listName: form.listName || undefined,
           lat: form.lat,
           lng: form.lng,
         });
@@ -124,10 +129,81 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
     });
   }
 
+  // Named lists (ODY-093) group first; everything unlisted falls back to the
+  // category grouping. A place belongs to a list purely by matching name.
+  const norm = (p: CollectionPlace) => p.listName?.trim() || null;
+  const listNames = Array.from(new Set(places.map(norm).filter((n): n is string => !!n))).sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const byList = listNames.map((name) => ({ name, items: places.filter((p) => norm(p) === name) }));
+  const unlisted = places.filter((p) => norm(p) === null);
   const byCategory = EVENT_TYPES.map((cat) => ({
     cat,
-    items: places.filter((p) => p.category === cat),
+    items: unlisted.filter((p) => p.category === cat),
   })).filter((g) => g.items.length > 0);
+
+  // One place card, reused by both the named-list and category groupings.
+  // `showBadge` labels the type inside a mixed named list.
+  function renderPlace(p: CollectionPlace, showBadge: boolean) {
+    return (
+      <li key={p.id} className="collections-item">
+        <div className="collections-item-body">
+          <h3>
+            {showBadge && <TypeBadge type={p.category as EventType} />}
+            {p.title}
+          </h3>
+          {p.location && (
+            <p className="collections-loc">
+              <Icons.pin size={12} /> {p.location}
+            </p>
+          )}
+          {p.notes && <p className="collections-notes">{p.notes}</p>}
+          {p.lat == null && (
+            <p className="collections-warn">No map pin yet — add a more specific location.</p>
+          )}
+        </div>
+        {!readOnly && (
+          <div className="collections-item-actions">
+            {days.length > 0 && (
+              <label className="explore-day-pick">
+                <span className="sr-only">Day to add {p.title} to</span>
+                <select
+                  className="input"
+                  value={dayPick[p.id] || days[0].id}
+                  onChange={(e) => setDayPick((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                >
+                  {days.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label} · {formatShortDate(d.date)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {days.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-primary sm"
+                disabled={isPending}
+                onClick={() => handleAddToItinerary(p)}
+              >
+                Add to itinerary
+              </button>
+            )}
+            <button
+              type="button"
+              className="icon-btn danger"
+              aria-label={`Remove ${p.title}`}
+              disabled={isPending}
+              onClick={() => handleDelete(p.id, p.title)}
+            >
+              <Icons.trash size={14} />
+            </button>
+          </div>
+        )}
+      </li>
+    );
+  }
 
   return (
     <div className="collections-page">
@@ -138,7 +214,8 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
             Place <em>collection</em>
           </h1>
           <p className="collections-sub">
-            Spots you&apos;re considering — not on the itinerary yet. They show on the map by category.
+            Spots you&apos;re considering — not on the itinerary yet. Group them into your own lists
+            (&ldquo;Ramen crawl,&rdquo; &ldquo;Date night&rdquo;) or leave them to sort by type. They show on the map by category.
           </p>
         </div>
         {!readOnly && (
@@ -201,6 +278,25 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
               placeholder="Why save this? Hours, vibe…"
             />
           </div>
+          <div className="field">
+            <label htmlFor="place-list">List <span className="field-optional">(optional)</span></label>
+            <input
+              id="place-list"
+              className="input"
+              list="place-list-names"
+              value={form.listName}
+              onChange={(e) => setForm((s) => ({ ...s, listName: e.target.value }))}
+              placeholder="e.g. Ramen crawl, Date night, If we have time"
+              maxLength={60}
+            />
+            {listNames.length > 0 && (
+              <datalist id="place-list-names">
+                {listNames.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+            )}
+          </div>
           <div className="collections-form-foot">
             <button className="btn btn-ghost" type="button" onClick={() => { setAdding(false); resetForm(); }} disabled={isPending}>
               Cancel
@@ -224,6 +320,22 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
         </div>
       ) : (
         <div className="collections-groups">
+          {/* Traveler-named lists first (ODY-093) — mixed types allowed, so
+              each card carries its own type badge. */}
+          {byList.map(({ name, items }) => (
+            <section key={`list-${name}`} className="collections-group collections-group-list">
+              <header className="collections-group-head">
+                <span className="collections-list-icon" aria-hidden="true"><Icons.collections size={15} /></span>
+                <h2 className="collections-list-name">{name}</h2>
+                <span className="collections-count">{items.length}</span>
+              </header>
+              <ul className="collections-list">
+                {items.map((p) => renderPlace(p, true))}
+              </ul>
+            </section>
+          ))}
+
+          {/* Everything not in a named list, grouped by category as before. */}
           {byCategory.map(({ cat, items }) => (
             <section key={cat} className="collections-group">
               <header className="collections-group-head">
@@ -236,61 +348,7 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
                 <span className="collections-count">{items.length}</span>
               </header>
               <ul className="collections-list">
-                {items.map((p) => (
-                  <li key={p.id} className="collections-item">
-                    <div className="collections-item-body">
-                      <h3>{p.title}</h3>
-                      {p.location && (
-                        <p className="collections-loc">
-                          <Icons.pin size={12} /> {p.location}
-                        </p>
-                      )}
-                      {p.notes && <p className="collections-notes">{p.notes}</p>}
-                      {p.lat == null && (
-                        <p className="collections-warn">No map pin yet — add a more specific location.</p>
-                      )}
-                    </div>
-                    {!readOnly && (
-                      <div className="collections-item-actions">
-                        {days.length > 0 && (
-                          <label className="explore-day-pick">
-                            <span className="sr-only">Day to add {p.title} to</span>
-                            <select
-                              className="input"
-                              value={dayPick[p.id] || days[0].id}
-                              onChange={(e) => setDayPick((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                            >
-                              {days.map((d) => (
-                                <option key={d.id} value={d.id}>
-                                  {d.label} · {formatShortDate(d.date)}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        )}
-                        {days.length > 0 && (
-                          <button
-                            type="button"
-                            className="btn btn-primary sm"
-                            disabled={isPending}
-                            onClick={() => handleAddToItinerary(p)}
-                          >
-                            Add to itinerary
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="icon-btn danger"
-                          aria-label={`Remove ${p.title}`}
-                          disabled={isPending}
-                          onClick={() => handleDelete(p.id, p.title)}
-                        >
-                          <Icons.trash size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
+                {items.map((p) => renderPlace(p, false))}
               </ul>
             </section>
           ))}

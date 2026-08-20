@@ -197,6 +197,8 @@ export const createPlaceSchema = z.object({
   notes: z.string().max(2000).optional().or(z.literal("")),
   lat: z.coerce.number().finite().optional(),
   lng: z.coerce.number().finite().optional(),
+  // Optional named list (ODY-093).
+  listName: z.string().max(60).optional().or(z.literal("")),
 });
 
 export const updatePlaceSchema = createPlaceSchema.omit({ tripId: true }).partial().extend({

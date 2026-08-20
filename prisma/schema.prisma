@@ -219,6 +219,10 @@ model Place {
   lat       Float?
   lng       Float?
   notes     String?
+  // Optional traveler-named list, e.g. "Ramen crawl" (ODY-093). Freeform label
+  // rather than a join table — places grouped by matching name; null = grouped
+  // by category as before.
+  listName  String?
   createdBy String
   createdAt DateTime @default(now())
 

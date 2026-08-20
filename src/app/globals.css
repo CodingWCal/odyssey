@@ -3827,3 +3827,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .event-booking .eb-conf { font-family: var(--font-mono); color: var(--ink-2); }
 .event-booking .eb-link { color: var(--peri); font-weight: 500; text-decoration: none; }
 .event-booking .eb-link:hover { text-decoration: underline; }
+
+/* ── Named collection lists (ODY-093) ── */
+/* A place card can carry a type badge inline with its title inside a mixed list. */
+.collections-item h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.collections-list-icon { color: var(--peri); display: inline-flex; align-items: center; }
+.collections-list-name {
+  margin: 0; font-family: var(--font-display); font-style: italic;
+  font-size: 19px; font-weight: 400; color: var(--ink);
+}
