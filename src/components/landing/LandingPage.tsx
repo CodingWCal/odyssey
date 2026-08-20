@@ -3,6 +3,7 @@ import { Icons } from "@/components/shared/Icons";
 import { Globe3D } from "./Globe3D";
 import { DepartureBoard } from "./DepartureBoard";
 import { PaintMap } from "./PaintMap";
+import { RouteTrail } from "./RouteTrail";
 import { Reveal } from "./Reveal";
 
 // Styles live in globals.css under the `ld-` prefix (ODY-011a). The only
@@ -125,6 +126,9 @@ export function LandingPage() {
         </Reveal>
       </section>
 
+      {/* Trajectory that plots itself in as you scroll here. */}
+      <RouteTrail d="M 40 90 C 320 20 560 120 840 50 S 1080 70 1170 60" />
+
       {/* Feature cards */}
       <section className="ld-features">
         <div className="ld-features-grid">
@@ -149,8 +153,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Paint-in map — a blank dot-map that colors in with the palette as the
-          cursor crosses it (ODY-011f). */}
+      {/* Return leg — draws in from the other direction. */}
+      <RouteTrail flip d="M 1160 100 C 880 30 600 120 300 50 S 90 80 30 70" />
+
+      {/* Paint-in map — a real world map the cursor explores with watercolor
+          ripples (ODY-011f). */}
       <section className="ld-paint-band">
         <Reveal className="ld-paint-copy">
           <h2>Every trip starts <em className="ld-em">blank</em>.</h2>
