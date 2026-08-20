@@ -24,26 +24,8 @@ export function LandingPage() {
 
       {/* Hero */}
       <section className="ld-hero">
-        {/* Interactive globe, ringed by a slow boarding-pass stamp. The SVG is
-            decorative (pointer-events: none) so the globe stays draggable, and
-            its rotation is paused under prefers-reduced-motion. */}
-        <div className="ld-globe-stage">
-          <Globe3D size={300} />
-          <svg className="ld-stamp" viewBox="0 0 300 300" aria-hidden="true" focusable="false">
-            <defs>
-              <path
-                id="ldStampPath"
-                fill="none"
-                d="M150,150 m-132,0 a132,132 0 1,1 264,0 a132,132 0 1,1 -264,0"
-              />
-            </defs>
-            <text>
-              <textPath href="#ldStampPath" startOffset="0">
-                Odyssey · plan · wander · return · repeat ·
-              </textPath>
-            </text>
-          </svg>
-        </div>
+        {/* Interactive globe (drag to spin). */}
+        <Globe3D size={300} />
 
         <div className="ld-badge">
           <span className="ld-badge-dot" />
