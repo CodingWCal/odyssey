@@ -3836,3 +3836,101 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   margin: 0; font-family: var(--font-display); font-style: italic;
   font-size: 19px; font-weight: 400; color: var(--ink);
 }
+
+/* ══ Landing visuals (ODY-011f) — printed-paper identity ══════════════ */
+
+/* (1) Paper grain — a static, desaturated noise tile, very faint, multiplied
+   over the page for analog warmth. No motion. */
+.ld-grain {
+  position: fixed; inset: 0; z-index: 90; pointer-events: none;
+  opacity: .05; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* (2) Split-flap departure tile — the honest word-rotation. */
+.ld-board { display: inline-flex; align-items: center; gap: 12px; perspective: 420px; }
+.ld-board-label {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.ld-board-tile {
+  display: inline-block; min-width: 104px; text-align: center;
+  background: var(--ink); color: var(--paper);
+  padding: 5px 12px; border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: 13px; letter-spacing: .03em;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.22);
+  overflow: hidden;
+}
+.ld-board-flap {
+  display: inline-block; transform-origin: center top;
+  transition: transform .26s ease, opacity .26s ease;
+}
+.ld-board-flap.flipping { transform: rotateX(90deg); opacity: 0; }
+
+/* (3) Boarding-pass ticket — the metaphor as one real object. */
+.ld-ticket-band { display: flex; justify-content: center; padding: 8px 48px 64px; }
+.ld-ticket {
+  display: flex; align-items: stretch; width: 100%; max-width: 560px;
+  background: var(--paper-2); border: 1px solid var(--rule);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-hover);
+  transform: rotate(-1.4deg); transition: transform .3s ease;
+}
+.ld-ticket:hover { transform: rotate(0deg); }
+.bp-main { flex: 1; min-width: 0; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.bp-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.bp-brand { font-family: var(--font-display); font-size: 22px; color: var(--ink); }
+.bp-code { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.bp-route { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.bp-place { font-family: var(--font-display); font-style: italic; font-size: 28px; color: var(--ink); }
+.bp-arrow { color: var(--peri); font-size: 20px; }
+.bp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.bp-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bp-k { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.bp-v { font-size: 12.5px; color: var(--ink-2); }
+.bp-perf { position: relative; width: 0; border-left: 2px dashed var(--rule-2); margin: 14px 0; }
+.bp-notch {
+  position: absolute; left: -9px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--paper); border: 1px solid var(--rule);
+}
+.bp-notch-top { top: -23px; }
+.bp-notch-bottom { bottom: -23px; }
+.bp-stub {
+  flex: none; width: 118px; padding: 22px 18px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
+}
+.bp-gate { font-family: var(--font-display); font-size: 34px; line-height: 1; color: var(--ink); }
+.bp-barcode {
+  width: 100%; height: 42px; margin: 4px 0; opacity: .85;
+  background: repeating-linear-gradient(90deg,
+    var(--ink) 0 2px, transparent 2px 4px,
+    var(--ink) 4px 5px, transparent 5px 8px,
+    var(--ink) 8px 11px, transparent 11px 12px,
+    var(--ink) 12px 13px, transparent 13px 16px);
+}
+
+/* (4) Scroll reveal — fade + rise once in view. */
+.ld-reveal {
+  opacity: 0; transform: translateY(16px);
+  transition: opacity .6s ease, transform .6s ease;
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.ld-reveal.is-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-board-flap { transition: none; }
+  .ld-board-flap.flipping { transform: none; opacity: 1; }
+  .ld-ticket { transition: none; }
+  .ld-reveal { opacity: 1; transform: none; transition: none; }
+}
+
+@media (max-width: 560px) {
+  .ld-ticket-band { padding-left: 20px; padding-right: 20px; }
+  .ld-ticket { flex-direction: column; transform: rotate(0); max-width: 360px; }
+  .bp-perf { width: auto; height: 0; border-left: 0; border-top: 2px dashed var(--rule-2); margin: 0 14px; }
+  .bp-notch { left: auto; }
+  .bp-notch-top { top: -9px; left: -23px; }
+  .bp-notch-bottom { bottom: auto; top: -9px; right: -23px; }
+  .bp-stub { width: 100%; flex-direction: row; justify-content: space-between; gap: 14px; }
+  .bp-barcode { width: 130px; }
+}

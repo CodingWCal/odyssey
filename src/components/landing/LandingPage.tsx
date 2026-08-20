@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Icons } from "@/components/shared/Icons";
 import { Globe3D } from "./Globe3D";
+import { DepartureBoard } from "./DepartureBoard";
+import { Reveal } from "./Reveal";
 
 // Styles live in globals.css under the `ld-` prefix (ODY-011a). The only
 // inline style is the per-card accent color, passed as a CSS custom property
@@ -8,6 +10,9 @@ import { Globe3D } from "./Globe3D";
 export function LandingPage() {
   return (
     <div className="ld-page">
+      {/* Printed-paper grain over the whole page (ODY-011f) — static, ~4%,
+          pointer-events none. Adds analog warmth without any motion. */}
+      <div className="ld-grain" aria-hidden="true" />
       {/* Nav */}
       <nav className="ld-nav">
         <div className="brand">
@@ -67,8 +72,43 @@ export function LandingPage() {
         </div>
 
         <div className="ld-social">
-          <span>Built for every kind of trip — solo, group, spur-of-the-moment.</span>
+          <DepartureBoard />
         </div>
+      </section>
+
+      {/* Boarding-pass ticket — the brand's core metaphor as one real object
+          (ODY-011f). Static markup; a subtle straighten-on-hover only. */}
+      <section className="ld-ticket-band">
+        <Reveal>
+          <article className="ld-ticket" aria-label="A trip, as a boarding pass">
+            <div className="bp-main">
+              <div className="bp-row bp-row-top">
+                <span className="bp-brand">Odyssey</span>
+                <span className="bp-code">ODY · 2026</span>
+              </div>
+              <div className="bp-route">
+                <span className="bp-place">Home</span>
+                <span className="bp-arrow" aria-hidden="true">→</span>
+                <span className="bp-place">Anywhere</span>
+              </div>
+              <div className="bp-grid">
+                <div className="bp-cell"><span className="bp-k">Passenger</span><span className="bp-v">You &amp; the crew</span></div>
+                <div className="bp-cell"><span className="bp-k">Departs</span><span className="bp-v">When you&rsquo;re ready</span></div>
+                <div className="bp-cell"><span className="bp-k">Duration</span><span className="bp-v">The long way</span></div>
+              </div>
+            </div>
+            <div className="bp-perf" aria-hidden="true">
+              <span className="bp-notch bp-notch-top" />
+              <span className="bp-notch bp-notch-bottom" />
+            </div>
+            <div className="bp-stub">
+              <span className="bp-k">Gate</span>
+              <span className="bp-gate">07</span>
+              <span className="bp-barcode" aria-hidden="true" />
+              <span className="bp-code">Seat 2A</span>
+            </div>
+          </article>
+        </Reveal>
       </section>
 
       {/* Feature cards */}
@@ -81,29 +121,33 @@ export function LandingPage() {
             { color: "var(--gold)", Icon: Icons.members, title: "The crew, in sync", body: "Invite by email. Everyone can plan; no one steps on each other's plans." },
             { color: "var(--peach)", Icon: Icons.note, title: "Notes that breathe", body: "Pin a vibe at the top of the trip. Drop a thought under a day. They autosave." },
             { color: "var(--slate)", Icon: Icons.weather, title: "Weather, ambient", body: "Today's sky in your hero banner. A quiet reminder to pack the lighter jacket." },
-          ].map((f) => (
-            <div key={f.title} className="ld-card">
-              <div className="ld-card-icon" style={{ "--f-color": f.color } as React.CSSProperties}>
-                <f.Icon size={18} />
+          ].map((f, i) => (
+            <Reveal key={f.title} delay={i * 70}>
+              <div className="ld-card">
+                <div className="ld-card-icon" style={{ "--f-color": f.color } as React.CSSProperties}>
+                  <f.Icon size={18} />
+                </div>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
               </div>
-              <h3>{f.title}</h3>
-              <p>{f.body}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* Footer CTA */}
       <section className="ld-foot-cta">
-        <h2>
-          Where to <em className="ld-em">next</em>?
-        </h2>
-        <p>
-          The world keeps moving. Your plans deserve a calm place to live.
-        </p>
-        <Link href="/sign-up" className="ld-cta-primary">
-          Get early access →
-        </Link>
+        <Reveal>
+          <h2>
+            Where to <em className="ld-em">next</em>?
+          </h2>
+          <p>
+            The world keeps moving. Your plans deserve a calm place to live.
+          </p>
+          <Link href="/sign-up" className="ld-cta-primary">
+            Get early access →
+          </Link>
+        </Reveal>
       </section>
 
       {/* Footer */}
