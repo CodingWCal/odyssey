@@ -23,7 +23,14 @@ export default async function BudgetPage({ params }: Props) {
       user: { select: { name: true } },
       payer: { select: { name: true } },
       event: { select: { title: true } },
-      shares: { select: { userId: true, amountCents: true } },
+      // Each share carries its own user relation (not just cross-referenced
+      // against *current* trip.members) — a share's payer may have been
+      // re-linked to a different account since, or otherwise not match the
+      // live membership list, and this must still resolve to their real name
+      // rather than silently falling back to "Traveler" (bug found live on
+      // "Manders Bday Trip" — a $100 self-paid split showed Mandy Wong
+      // correctly as payer but "Traveler" in the expanded breakdown).
+      shares: { select: { userId: true, amountCents: true, user: { select: { name: true } } } },
     },
   });
 
@@ -46,7 +53,11 @@ export default async function BudgetPage({ params }: Props) {
     eventTitle: e.event?.title ?? null,
     paidBy: e.paidBy ?? e.addedBy,
     splitMode: (e.splitMode === "exact" ? "exact" : "equal") as "equal" | "exact",
-    shares: e.shares.map((s: (typeof e.shares)[number]) => ({ userId: s.userId, amountCents: s.amountCents })),
+    shares: e.shares.map((s: (typeof e.shares)[number]) => ({
+      userId: s.userId,
+      amountCents: s.amountCents,
+      name: s.user.name,
+    })),
   }));
 
   // Real per-member balances aggregated across every expense's actual

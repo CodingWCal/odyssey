@@ -31,7 +31,13 @@ export interface BudgetExpense {
   /** Resolved payer userId (paidBy ?? addedBy) — ODY-094. */
   paidBy: string;
   splitMode: "equal" | "exact";
-  shares: { userId: string; amountCents: number }[];
+  // Each share carries its own name, resolved server-side from ExpenseShare's
+  // own user relation — NOT cross-referenced against current trip.members, so
+  // a payer who's since been re-linked to a different account still resolves
+  // correctly instead of falling back to a placeholder (found live: a
+  // self-paid split showed the payer correctly at the top of the card but
+  // "Traveler" in the expanded breakdown).
+  shares: { userId: string; amountCents: number; name: string }[];
 }
 
 export interface SplitMember {
@@ -77,21 +83,18 @@ function ExpenseRow({
   e,
   fmtMoney,
   currency,
-  nameByUserId,
   readOnly,
   onEdit,
 }: {
   e: BudgetExpense;
   fmtMoney: (n: number) => string;
   currency: string;
-  nameByUserId: Record<string, string>;
   readOnly?: boolean;
   onEdit: (e: BudgetExpense) => void;
 }) {
   const [open, setOpen] = useState(false);
   const split = describeExpenseSplit(e.shares);
   const canSplit = split.count > 0;
-  const nameOf = (userId: string) => nameByUserId[userId] ?? "Traveler";
 
   return (
     <div className={`expense-item${open ? " open" : ""}`}>
@@ -131,7 +134,7 @@ function ExpenseRow({
             {split.rows.map((r) => (
               <li key={r.userId}>
                 <span className="who">
-                  {nameOf(r.userId)}
+                  {r.name}
                   {r.userId === e.paidBy && <span className="payer-tag">paid</span>}
                 </span>
                 <span className="owes">{formatMoney(r.amountCents / 100, currency)}</span>
@@ -153,7 +156,6 @@ function CategoryBlock({
   onEdit,
   readOnly,
   currency,
-  nameByUserId,
 }: {
   category: Category;
   expenses: BudgetExpense[];
@@ -163,7 +165,6 @@ function CategoryBlock({
   onEdit: (e: BudgetExpense) => void;
   readOnly?: boolean;
   currency: string;
-  nameByUserId: Record<string, string>;
 }) {
   const fmtMoney = (n: number) => formatMoney(n, currency);
   const [collapsed, setCollapsed] = useState(false);
@@ -229,7 +230,6 @@ function CategoryBlock({
               e={e}
               fmtMoney={fmtMoney}
               currency={currency}
-              nameByUserId={nameByUserId}
               readOnly={readOnly}
               onEdit={onEdit}
             />
@@ -551,8 +551,6 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
     list: expenses.filter((e) => e.category === c),
   })).filter((g) => g.list.length > 0);
   const activeCatCount = CATEGORIES.filter((c) => (catTotals[c] ?? 0) > 0).length;
-  // userId → name, for the per-expense split breakdown (ODY-097).
-  const nameByUserId = Object.fromEntries(tripMembers.map((m) => [m.userId, m.name]));
 
   function openAdd(category: Category | null) {
     setModal({ open: true, mode: "add", initial: category ? { category } : null });
@@ -732,7 +730,6 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
             onEdit={openEdit}
             readOnly={readOnly}
             currency={currency}
-            nameByUserId={nameByUserId}
           />
         ))
       )}

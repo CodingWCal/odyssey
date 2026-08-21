@@ -256,10 +256,11 @@ export interface ExpenseShareLike {
   amountCents: number;
 }
 
-export interface DescribedSplit {
+export interface DescribedSplit<T extends ExpenseShareLike = ExpenseShareLike> {
   /** Participants sorted by amount owed (desc), ties broken by userId for
-   * stable ordering. */
-  rows: ExpenseShareLike[];
+   * stable ordering. Carries through whatever extra fields the caller passed
+   * (e.g. a resolved display name) — this function only sorts. */
+  rows: T[];
   /** Number of participants on the expense. */
   count: number;
   /** True when every participant owes the same amount (an equal split). */
@@ -268,11 +269,11 @@ export interface DescribedSplit {
 
 /**
  * Describe a single expense's split for a read-only per-expense breakdown
- * (ODY-097). Pure name-free math over the persisted ExpenseShare rows: sort the
+ * (ODY-097). Pure math over the persisted ExpenseShare rows: sort the
  * participants and detect whether it's an even split, so the UI can say
  * "Split equally 3 ways" vs. list custom amounts. Cent-based, so no float drift.
  */
-export function describeExpenseSplit(shares: ExpenseShareLike[]): DescribedSplit {
+export function describeExpenseSplit<T extends ExpenseShareLike>(shares: T[]): DescribedSplit<T> {
   const rows = [...shares].sort(
     (a, b) => b.amountCents - a.amountCents || a.userId.localeCompare(b.userId)
   );
