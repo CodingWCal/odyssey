@@ -148,22 +148,31 @@ export function PaintMap() {
       }
       c.globalCompositeOperation = "source-over";
 
-      // Pass 2 — calm concentric water rings.
-      const maxR = 150;
+      // Pass 2 — an expanding water wave: several concentric crests radiating
+      // out (a radial gradient of soft rings), like a stone dropped in a pond.
+      const maxR = 172;
+      const crests = 4;
+      const half = 0.055;
       for (const rp of ripples) {
         const age = (now - rp.t0) / LIFE;
         if (age >= 1) continue;
-        const ease = 1 - Math.pow(1 - age, 1.9);
-        c.strokeStyle = rp.color;
-        for (const k of [0, 0.32, 0.64]) {
-          const rr = (ease - k) * maxR;
-          if (rr <= 0) continue;
-          c.globalAlpha = (1 - age) * 0.24 * (1 - k * 0.6);
-          c.lineWidth = 1.2 * (1 - age) + 0.35;
-          c.beginPath();
-          c.arc(rp.x, rp.y, rr, 0, Math.PI * 2);
-          c.stroke();
+        const R = (1 - Math.pow(1 - age, 1.9)) * maxR;
+        if (R < 3) continue;
+        const g = c.createRadialGradient(rp.x, rp.y, 0, rp.x, rp.y, R);
+        g.addColorStop(0, "transparent");
+        for (let i = 0; i < crests; i++) {
+          const p = (i + 0.5) / crests; // crest centre (0..1 of the radius)
+          g.addColorStop(p - half, "transparent");
+          g.addColorStop(p, rp.color);
+          g.addColorStop(p + half, "transparent");
         }
+        g.addColorStop(1, "transparent");
+        // Outer crests thin as the wave loses energy; whole thing fades with age.
+        c.globalAlpha = (1 - age) * 0.3;
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(rp.x, rp.y, R, 0, Math.PI * 2);
+        c.fill();
       }
       c.globalAlpha = 1;
       c.restore();
