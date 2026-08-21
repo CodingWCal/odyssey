@@ -3891,7 +3891,9 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-ticket-band { display: flex; justify-content: center; padding: 8px 48px 64px; }
 .ld-ticket {
   display: flex; align-items: stretch; width: 100%; max-width: 560px;
-  background: var(--paper-2); border: 1px solid var(--rule);
+  background: var(--paper-2);
+  /* No crisp border — the soft shadow defines the edge, so when the stub tears
+     off there's no leftover border line behind it (ODY-011f). */
   border-radius: var(--radius-lg); box-shadow: var(--shadow-hover);
   transform: rotate(-1.4deg);
 }
