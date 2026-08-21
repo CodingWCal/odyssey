@@ -63,7 +63,7 @@ export function PaintMap() {
       // Cover-fit + zoom (uniform scale — no stretch/warp), so the map fills
       // and crops in rather than showing the whole textbook rectangle. The CSS
       // edge-fade mask dissolves the crop into the page.
-      const fitScale = Math.max(w / WORLD_VIEWBOX.w, h / WORLD_VIEWBOX.h) * 1.32;
+      const fitScale = Math.max(w / WORLD_VIEWBOX.w, h / WORLD_VIEWBOX.h) * 1.2;
       const cx = w / 2;
       const cy = h / 2;
       const fit = new DOMMatrix([

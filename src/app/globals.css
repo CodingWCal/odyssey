@@ -3901,7 +3901,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   transform: translateX(14px) rotate(2.6deg);
   box-shadow: -6px 0 14px rgba(31,34,56,.14);
 }
-.bp-main { flex: 1; min-width: 0; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.bp-main { flex: 1; min-width: 0; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
 .bp-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .bp-brand { font-family: var(--font-display); font-size: 22px; color: var(--ink); }
 .bp-code { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
@@ -3928,6 +3928,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .bp-stub {
   flex: none; width: 118px; padding: 22px 18px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
 }
 .bp-gate { font-family: var(--font-display); font-size: 34px; line-height: 1; color: var(--ink); }
 .bp-barcode {
@@ -3984,10 +3985,11 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-paintmap {
   /* Full-bleed + edge-faded so the map dissolves into the page rather than
      sitting in a rectangle (ODY-011f). */
-  display: block; width: 100vw; margin-left: calc(50% - 50vw); height: 500px; margin-top: 8px;
+  display: block; width: 100vw; margin-left: calc(50% - 50vw); height: 480px; margin-top: 8px;
   background: transparent; cursor: crosshair;
-  -webkit-mask-image: radial-gradient(118% 82% at 50% 46%, #000 48%, transparent 90%);
-  mask-image: radial-gradient(118% 82% at 50% 46%, #000 48%, transparent 90%);
+  /* farthest-side fades to transparent AT each edge, so there's no hard crop. */
+  -webkit-mask-image: radial-gradient(ellipse farthest-side at 50% 44%, #000 26%, transparent 100%);
+  mask-image: radial-gradient(ellipse farthest-side at 50% 44%, #000 26%, transparent 100%);
 }
 @media (pointer: coarse) {
   .ld-paintmap { cursor: default; }
