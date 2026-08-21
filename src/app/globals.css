@@ -179,6 +179,12 @@
   flex-direction: column;
   padding: 22px 18px 18px;
   position: relative;
+  /* The shell is a fixed 100vh grid with overflow:hidden, so on a short
+     screen the sidebar's own content (nav + bottom-pinned footer) would be
+     clipped with no way to reach it. Let the column scroll internally. */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .sidebar::before {
   /* faint sunset wash at top of sidebar — restrained */
@@ -1274,11 +1280,15 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 
 .budget-hero .hero-figure {
   display: flex; align-items: baseline; gap: 14px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 .budget-hero .figure-spent {
   font-family: var(--font-display);
-  font-size: 64px;
+  /* Fluid rather than a fixed 64px: a large amount (e.g. "$12,345.00") at
+     64px overflows a phone's content column and forces horizontal scroll.
+     Scales down with the viewport, capped at the original 64px on desktop. */
+  font-size: clamp(38px, 11vw, 64px);
   line-height: .95;
   letter-spacing: -.005em;
   color: white;
