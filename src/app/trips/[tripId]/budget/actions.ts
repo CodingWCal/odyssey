@@ -138,7 +138,24 @@ export async function updateExpense(
     const members = await tripMemberWeights(tripId);
     const memberUserIds = new Set(members.map((m) => m.userId));
     if (validated.paidBy && memberUserIds.has(validated.paidBy)) patch.paidBy = validated.paidBy;
-    if (shares) assertSharesAreMembers(shares, memberUserIds);
+    if (shares) {
+      // Allow a share whose userId is either a current member OR someone who
+      // was already a participant on this expense. A member may have left the
+      // trip or had their account re-linked since the expense was logged, and
+      // the edit form seeds its participant set from the existing shares —
+      // editing the price/label must not be blocked just because a stale
+      // participant rides along (that previously 500'd, ODY-094). This still
+      // rejects injecting an arbitrary brand-new userId.
+      const existingParticipants = await db.expenseShare.findMany({
+        where: { expenseId, expense: { tripId } },
+        select: { userId: true },
+      });
+      const allowedUserIds = new Set([
+        ...memberUserIds,
+        ...existingParticipants.map((s: { userId: string }) => s.userId),
+      ]);
+      assertSharesAreMembers(shares, allowedUserIds);
+    }
   }
   if (validated.splitMode) patch.splitMode = validated.splitMode;
 

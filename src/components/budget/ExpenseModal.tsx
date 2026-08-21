@@ -6,7 +6,7 @@ import { Icons } from "@/components/shared/Icons";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { createExpense, updateExpense, deleteExpense } from "@/app/trips/[tripId]/budget/actions";
 import { toast } from "@/components/shared/Toast";
-import { equalSharesCents, adjustmentSharesCents } from "@/lib/budget";
+import { equalSharesCents, adjustmentSharesCents, weightedSharesCents } from "@/lib/budget";
 
 export interface ExpenseInitial {
   id?: string;
@@ -175,7 +175,19 @@ export function ExpenseModal({
 
   function sharesPayload(): { userId: string; amountCents: number }[] | undefined {
     if (!dirtiedSplit) {
-      return isEdit ? initial?.shares : undefined; // undefined => server applies the weighted default
+      if (!isEdit) return undefined; // undefined => server applies the weighted default
+      const existing = initial?.shares;
+      if (!existing?.length) return undefined;
+      // Split wasn't touched, but the amount may have changed. Rescale the
+      // existing shares proportionally so they still reconcile to the new
+      // total — otherwise editing just the price sends stale shares summing to
+      // the old amount, which the server's reconcile check rejects (a 500).
+      const existingSum = existing.reduce((s, x) => s + x.amountCents, 0);
+      if (existingSum === totalCents) return existing;
+      return weightedSharesCents(
+        existing.map((s) => ({ userId: s.userId, weight: s.amountCents })),
+        totalCents
+      );
     }
     const ids = [...selected];
     if (uiMode === "adjust") {

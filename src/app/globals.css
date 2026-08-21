@@ -1713,6 +1713,34 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     gap: 8px;
   }
   .split-row .share, .split-row .paid, .split-row .balance { align-items: flex-start; }
+
+  /* Expense cards: the single-line desktop row (label · amount · split · edit)
+     overflows on narrow screens — long labels wrap into the amount and the
+     split/paid text overlaps. Reflow to a two-row grid: label + amount up top,
+     the split toggle and edit button beneath. Also trims the timeline indent
+     so the cards get their width back. */
+  .expense-list { margin-left: 24px; padding-left: 16px; }
+  .expense-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "label amount"
+      "split actions";
+    align-items: start;
+    column-gap: 12px;
+    row-gap: 8px;
+    padding: 12px 14px;
+  }
+  .expense-row .label-block { grid-area: label; }
+  .expense-row .amount { grid-area: amount; justify-self: end; }
+  .expense-row .split-toggle { grid-area: split; justify-self: start; }
+  .expense-row .row-actions {
+    grid-area: actions;
+    justify-self: end;
+    align-self: center;
+    opacity: 1; /* no hover on touch — the edit control must stay visible */
+  }
+  .expense-row::before { left: -21px; }
 }
 
 /* Page action bar */
