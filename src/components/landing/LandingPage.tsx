@@ -167,7 +167,7 @@ export function LandingPage() {
         <Reveal className="ld-paint-copy">
           <h2>Every trip starts <em className="ld-em">blank</em>.</h2>
           <p>Then you fill it in — one plan, one pin, one day at a time.</p>
-          <span className="ld-paint-hint">Move your cursor across the map</span>
+          <span className="ld-paint-hint">Move across the map — or tap — to ripple the water</span>
         </Reveal>
         <PaintMap />
       </section>

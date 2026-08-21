@@ -5,15 +5,26 @@ import { WORLD_PATH, WORLD_VIEWBOX } from "./worldPath";
 
 const PALETTE_VARS = ["--peri", "--teal", "--coral", "--peach", "--gold", "--slate"];
 
+// Parse the world path into subpaths of [x,y] points (viewBox space), once.
+function parseSubpaths(d: string): number[][][] {
+  const out: number[][][] = [];
+  for (const seg of d.split("Z")) {
+    const nums = seg.match(/-?\d+(?:\.\d+)?/g);
+    if (!nums || nums.length < 6) continue;
+    const pts: number[][] = [];
+    for (let i = 0; i + 1 < nums.length; i += 2) pts.push([Number(nums[i]), Number(nums[i + 1])]);
+    out.push(pts);
+  }
+  return out;
+}
+const SUBPATHS_VB = parseSubpaths(WORLD_PATH);
+
 /**
- * A hand-drawn world map that the cursor "explores" (ODY-011f). Moving the
- * pointer drops watercolor ripples — concentric rings expanding like a stone in
- * a still pond, each leaving a faint pigment bloom that spreads and dries away
- * (so it never muddies). Everything is clipped to land so paint stays on the
- * continents. The coastline is sketched with a few offset passes for a
- * pen-on-paper feel, and the map is tilted a touch so it reads as drawn on the
- * page. Canvas-based, base cached; decorative (aria-hidden). Touch and
- * reduced-motion get a still, gently washed map.
+ * A hand-drawn world map whose coastlines behave like a water surface (ODY-011f)
+ * — touch/hover drops a ripple and the contour lines nearby distort and warp
+ * outward like surface-tension waves, koi-pond style, before settling. A faint
+ * palette wash follows. Points are displaced per-frame; the loop idles when no
+ * ripple is alive. Decorative (aria-hidden); reduced-motion holds it still.
  */
 export function PaintMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -31,19 +42,15 @@ export function PaintMap() {
     const ink = cs.getPropertyValue("--slate").trim() || "#4A6B8C";
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-    const staticMode = reduce || coarse;
 
-    const LIFE = 4400; // ripple lifespan — slow, koi-pond calm
+    const LIFE = 4200;
     const landVB = new Path2D(WORLD_PATH);
     let w = 0;
     let h = 0;
+    let subpaths: number[][][] = [];
     let landPx = new Path2D();
 
-    const base = document.createElement("canvas");
-    const bctx = base.getContext("2d");
-
-    type Ripple = { x: number; y: number; t0: number; color: string };
+    type Ripple = { x: number; y: number; t0: number; color: string; amp: number; maxR: number };
     let ripples: Ripple[] = [];
     let lastX = -999;
     let lastY = -999;
@@ -54,16 +61,13 @@ export function PaintMap() {
       const rect = canvas.getBoundingClientRect();
       w = rect.width;
       h = rect.height;
-      if (w === 0 || h === 0 || !bctx) return;
-      canvas.width = base.width = Math.round(w * dpr);
-      canvas.height = base.height = Math.round(h * dpr);
+      if (w === 0 || h === 0) return;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Cover-fit + zoom (uniform scale — no stretch/warp), so the map fills
-      // and crops in rather than showing the whole textbook rectangle. The CSS
-      // edge-fade mask dissolves the crop into the page.
-      const fitScale = Math.max(w / WORLD_VIEWBOX.w, h / WORLD_VIEWBOX.h) * 1.2;
+      // Cover-fit + zoom + a gentle tilt (uniform scale — no warp of proportions).
+      const fitScale = Math.max(w / WORLD_VIEWBOX.w, h / WORLD_VIEWBOX.h) * 1.55;
       const cx = w / 2;
       const cy = h / 2;
       const fit = new DOMMatrix([
@@ -71,133 +75,122 @@ export function PaintMap() {
         (w - WORLD_VIEWBOX.w * fitScale) / 2,
         (h - WORLD_VIEWBOX.h * fitScale) / 2,
       ]);
-      const flair = new DOMMatrix().translateSelf(cx, cy).rotateSelf(-4).translateSelf(-cx, -cy);
+      const m = new DOMMatrix().translateSelf(cx, cy).rotateSelf(-4).translateSelf(-cx, -cy).multiply(fit);
       landPx = new Path2D();
-      landPx.addPath(landVB, flair.multiply(fit));
+      landPx.addPath(landVB, m);
+      // Pre-transform every coastline point into canvas px.
+      const { a, b, c: mc, d: md, e, f } = m;
+      subpaths = SUBPATHS_VB.map((pts) => pts.map(([x, y]) => [a * x + mc * y + e, b * x + md * y + f]));
+      draw(performance.now());
+    }
 
-      // Hand-drawn coastline: a few faint offset passes build a sketched line.
-      bctx.clearRect(0, 0, w, h);
-      bctx.strokeStyle = ink;
-      bctx.lineJoin = "round";
-      bctx.lineCap = "round";
-      const passes = [
-        { dx: 0, dy: 0, a: 0.32, lw: 0.8 },
-        { dx: 0.6, dy: -0.5, a: 0.14, lw: 0.7 },
-        { dx: -0.5, dy: 0.6, a: 0.12, lw: 0.7 },
-      ];
-      for (const p of passes) {
-        bctx.save();
-        bctx.translate(p.dx, p.dy);
-        bctx.globalAlpha = p.a;
-        bctx.lineWidth = p.lw;
-        bctx.stroke(landPx);
-        bctx.restore();
-      }
-      bctx.globalAlpha = 1;
+    function ease(age: number) {
+      return 1 - Math.pow(1 - age, 1.9);
+    }
 
-      if (staticMode) {
-        // A few faint static blooms so the map isn't blank without a cursor.
-        renderBase();
+    function draw(now: number) {
+      c.clearRect(0, 0, w, h);
+
+      // Faint clean color wash — one soft bloom per ripple, blended like paint.
+      if (ripples.length) {
         c.save();
         c.clip(landPx);
         c.globalCompositeOperation = "multiply";
-        for (let i = 0; i < 6; i++) {
-          bloom((0.18 + i * 0.13) * w, (0.32 + (i % 3) * 0.22) * h, palette[i % palette.length], 0.1);
+        for (const rp of ripples) {
+          const age = (now - rp.t0) / LIFE;
+          if (age >= 1) continue;
+          const r = 40 + ease(age) * rp.maxR * 0.6;
+          const g = c.createRadialGradient(rp.x, rp.y, 0, rp.x, rp.y, r);
+          g.addColorStop(0, rp.color);
+          g.addColorStop(1, "transparent");
+          c.globalAlpha = Math.sin(age * Math.PI) * 0.12;
+          c.fillStyle = g;
+          c.beginPath();
+          c.arc(rp.x, rp.y, r, 0, Math.PI * 2);
+          c.fill();
         }
         c.globalCompositeOperation = "source-over";
         c.restore();
-      } else {
-        renderBase();
       }
-    }
 
-    function renderBase() {
-      c.clearRect(0, 0, w, h);
-      c.drawImage(base, 0, 0, w, h);
-    }
-
-    // A soft watercolor pigment bloom at (x,y). Caller clips to land and sets
-    // the multiply blend so overlapping colors mix like wet pigment.
-    function bloom(x: number, y: number, color: string, alpha: number) {
-      const r = 84;
-      const g = c.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, color);
-      g.addColorStop(0.4, color);
-      g.addColorStop(1, "transparent");
-      c.globalAlpha = alpha;
-      c.fillStyle = g;
+      // Coastlines, distorted by the live ripples (surface-tension warp).
+      c.strokeStyle = ink;
+      c.globalAlpha = 0.34;
+      c.lineWidth = 0.6;
+      c.lineJoin = "round";
+      c.lineCap = "round";
       c.beginPath();
-      c.arc(x, y, r, 0, Math.PI * 2);
-      c.fill();
-      c.globalAlpha = 1;
-    }
-
-    function render() {
-      renderBase();
-      if (!ripples.length) return;
-      const now = performance.now();
-      c.save();
-      c.clip(landPx);
-
-      // Pass 1 — watercolor pigment blooms, multiplied so they blend like paint.
-      c.globalCompositeOperation = "multiply";
-      for (const rp of ripples) {
-        const age = (now - rp.t0) / LIFE;
-        if (age >= 1) continue;
-        bloom(rp.x, rp.y, rp.color, Math.sin(age * Math.PI) * 0.14);
-      }
-      c.globalCompositeOperation = "source-over";
-
-      // Pass 2 — an expanding water wave: several concentric crests radiating
-      // out (a radial gradient of soft rings), like a stone dropped in a pond.
-      const maxR = 172;
-      const crests = 4;
-      const half = 0.055;
-      for (const rp of ripples) {
-        const age = (now - rp.t0) / LIFE;
-        if (age >= 1) continue;
-        const R = (1 - Math.pow(1 - age, 1.9)) * maxR;
-        if (R < 3) continue;
-        const g = c.createRadialGradient(rp.x, rp.y, 0, rp.x, rp.y, R);
-        g.addColorStop(0, "transparent");
-        for (let i = 0; i < crests; i++) {
-          const p = (i + 0.5) / crests; // crest centre (0..1 of the radius)
-          g.addColorStop(p - half, "transparent");
-          g.addColorStop(p, rp.color);
-          g.addColorStop(p + half, "transparent");
+      for (const sp of subpaths) {
+        for (let i = 0; i < sp.length; i++) {
+          const p = sp[i];
+          let px = p[0];
+          let py = p[1];
+          for (const rp of ripples) {
+            const age = (now - rp.t0) / LIFE;
+            if (age >= 1) continue;
+            const ex = px - rp.x;
+            const ey = py - rp.y;
+            const dist = Math.hypot(ex, ey) || 0.001;
+            const R = ease(age) * rp.maxR;
+            const off = dist - R;
+            const band = 44;
+            if (off < -band * 1.6 || off > band * 1.6) continue;
+            const envelope = Math.exp(-(off * off) / (2 * band * band));
+            const push = rp.amp * (1 - age) * envelope * Math.sin(off / 9);
+            px += (ex / dist) * push;
+            py += (ey / dist) * push;
+          }
+          if (i === 0) c.moveTo(px, py);
+          else c.lineTo(px, py);
         }
-        g.addColorStop(1, "transparent");
-        // Outer crests thin as the wave loses energy; whole thing fades with age.
-        c.globalAlpha = (1 - age) * 0.3;
-        c.fillStyle = g;
-        c.beginPath();
-        c.arc(rp.x, rp.y, R, 0, Math.PI * 2);
-        c.fill();
       }
+      c.stroke();
       c.globalAlpha = 1;
-      c.restore();
     }
 
     function loop() {
       const now = performance.now();
       ripples = ripples.filter((r) => now - r.t0 < LIFE);
-      render();
+      draw(now);
       raf = ripples.length ? requestAnimationFrame(loop) : 0;
     }
 
-    function onMove(e: PointerEvent) {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      if (Math.hypot(x - lastX, y - lastY) < 42) return;
-      lastX = x;
-      lastY = y;
-      ripples.push({ x, y, t0: performance.now(), color: palette[colorTick++ % palette.length] });
+    function spawn(x: number, y: number, splash: boolean) {
+      ripples.push({
+        x,
+        y,
+        t0: performance.now(),
+        color: palette[colorTick++ % palette.length],
+        amp: splash ? 12 : 7,
+        maxR: splash ? 230 : 175,
+      });
+      if (ripples.length > 14) ripples.shift();
       if (!raf) raf = requestAnimationFrame(loop);
     }
 
+    function pos(e: PointerEvent) {
+      const rect = canvas.getBoundingClientRect();
+      return [e.clientX - rect.left, e.clientY - rect.top] as const;
+    }
+    function onMove(e: PointerEvent) {
+      const [x, y] = pos(e);
+      if (Math.hypot(x - lastX, y - lastY) < 40) return;
+      lastX = x;
+      lastY = y;
+      spawn(x, y, false);
+    }
+    function onDown(e: PointerEvent) {
+      const [x, y] = pos(e);
+      lastX = x;
+      lastY = y;
+      spawn(x, y, true); // a firmer splash on tap/click
+    }
+
     fit();
-    if (!staticMode) canvas.addEventListener("pointermove", onMove);
+    if (!reduce) {
+      canvas.addEventListener("pointermove", onMove);
+      canvas.addEventListener("pointerdown", onDown);
+    }
 
     let rt = 0;
     function onResize() {
@@ -208,6 +201,7 @@ export function PaintMap() {
 
     return () => {
       canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerdown", onDown);
       window.removeEventListener("resize", onResize);
       if (raf) cancelAnimationFrame(raf);
       window.clearTimeout(rt);

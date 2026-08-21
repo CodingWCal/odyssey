@@ -3987,12 +3987,15 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-paintmap {
   /* Full-bleed + edge-faded so the map dissolves into the page rather than
      sitting in a rectangle (ODY-011f). */
-  display: block; width: 100vw; margin-left: calc(50% - 50vw); height: 480px; margin-top: 8px;
+  display: block; width: 100vw; margin-left: calc(50% - 50vw); height: 620px; margin-top: 8px;
   background: transparent; cursor: crosshair;
   /* farthest-side fades to transparent AT each edge, so there's no hard crop. */
-  -webkit-mask-image: radial-gradient(ellipse farthest-side at 50% 44%, #000 26%, transparent 100%);
-  mask-image: radial-gradient(ellipse farthest-side at 50% 44%, #000 26%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse farthest-side at 50% 46%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse farthest-side at 50% 46%, #000 30%, transparent 100%);
+  animation: ld-map-in 1.3s ease .15s both;
 }
+@keyframes ld-map-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ld-paintmap { animation: none; } }
 @media (pointer: coarse) {
   .ld-paintmap { cursor: default; }
   .ld-paint-hint { display: none; }
@@ -4000,7 +4003,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 @media (max-width: 560px) {
   .ld-paint-band { padding-left: 20px; padding-right: 20px; }
   .ld-paint-copy h2 { font-size: 32px; }
-  .ld-paintmap { height: 320px; }
+  .ld-paintmap { height: 380px; }
 }
 
 /* (6) Scroll-drawn trajectory trails (ODY-011f) — plot in on scroll. */
