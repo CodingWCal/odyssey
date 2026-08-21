@@ -161,15 +161,15 @@ export function LandingPage() {
       {/* Return leg — draws in from the other direction. */}
       <RouteTrail flip d="M 1160 100 C 880 30 600 120 300 50 S 90 80 30 70" />
 
-      {/* Paint-in map — a real world map the cursor explores with watercolor
-          ripples (ODY-011f). */}
+      {/* Paint-in map — a real world map the cursor ripples like water, sitting
+          behind the copy so the two read as one surface (ODY-011f). */}
       <section className="ld-paint-band">
+        <PaintMap />
         <Reveal className="ld-paint-copy">
           <h2>Every trip starts <em className="ld-em">blank</em>.</h2>
           <p>Then you fill it in — one plan, one pin, one day at a time.</p>
           <span className="ld-paint-hint">Move across the map — or tap — to ripple the water</span>
         </Reveal>
-        <PaintMap />
       </section>
 
       {/* Footer CTA */}

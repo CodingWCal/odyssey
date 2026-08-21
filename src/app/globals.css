@@ -3891,19 +3891,22 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .ld-ticket-band { display: flex; justify-content: center; padding: 8px 48px 64px; }
 .ld-ticket {
   display: flex; align-items: stretch; width: 100%; max-width: 560px;
-  background: var(--paper-2);
-  /* No crisp border — the soft shadow defines the edge, so when the stub tears
-     off there's no leftover border line behind it (ODY-011f). */
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-hover);
+  /* Background + shadow live on each PIECE (main/stub), not the container, so
+     when the stub tears off it reveals the page beneath — no lighter ghost
+     panel is left in its slot (ODY-011f). */
   transform: rotate(-1.4deg);
 }
 /* On hover the stub tears off along the perforation. */
 .bp-stub { transition: transform .4s cubic-bezier(.34,1.2,.5,1), box-shadow .4s ease; transform-origin: left center; }
 .ld-ticket:hover .bp-stub {
   transform: translateX(14px) rotate(2.6deg);
-  box-shadow: -6px 0 14px rgba(31,34,56,.14);
+  box-shadow: var(--shadow-hover), -7px 0 16px rgba(31,34,56,.14);
 }
-.bp-main { flex: 1; min-width: 0; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
+.bp-main {
+  flex: 1; min-width: 0; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px;
+  background: var(--paper-2); box-shadow: var(--shadow-hover);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
 .bp-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .bp-brand { font-family: var(--font-display); font-size: 22px; color: var(--ink); }
 .bp-code { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
@@ -3918,6 +3921,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
    detachable, segmented stub rather than a solid block. */
 .bp-perf {
   position: relative; width: 5px; flex: none; margin: 8px 0;
+  background-color: var(--paper-2);
   background-image: radial-gradient(circle at center, var(--paper) 0 2px, transparent 2.4px);
   background-size: 5px 11px; background-repeat: repeat-y; background-position: center;
 }
@@ -3930,6 +3934,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .bp-stub {
   flex: none; width: 118px; padding: 22px 18px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  background: var(--paper-2); box-shadow: var(--shadow-hover);
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
 }
 .bp-gate { font-family: var(--font-display); font-size: 34px; line-height: 1; color: var(--ink); }
@@ -3976,8 +3981,15 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
    same footprint so there's no layout shift when it swaps in. */
 .user-btn-ph { width: 28px; height: 28px; border-radius: 50%; background: var(--paper-3); border: 1px solid var(--rule); }
 
-/* (5) Paint-in map (ODY-011f) — a blank dot-map that colors in on hover. */
-.ld-paint-band { max-width: 1040px; margin: 0 auto; padding: 24px 48px 84px; text-align: center; }
+/* (5) Water map (ODY-011f) — full-bleed backdrop with the copy centred over it. */
+.ld-paint-band {
+  position: relative; display: grid; place-items: center;
+  min-height: 600px; padding: 40px 20px; text-align: center; overflow: hidden;
+}
+.ld-paint-copy {
+  position: relative; z-index: 1; max-width: 640px; margin: 0 auto;
+  pointer-events: none; /* let ripples fire even under the text */
+}
 .ld-paint-copy h2 { font-family: var(--font-display); font-size: 40px; font-weight: 400; margin: 0 0 8px; color: var(--ink); }
 .ld-paint-copy p { color: var(--ink-2); font-size: 16px; margin: 0 0 8px; }
 .ld-paint-hint {
@@ -3985,9 +3997,9 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   text-transform: uppercase; color: var(--ink-3);
 }
 .ld-paintmap {
-  /* Full-bleed + edge-faded so the map dissolves into the page rather than
-     sitting in a rectangle (ODY-011f). */
-  display: block; width: 100vw; margin-left: calc(50% - 50vw); height: 620px; margin-top: 8px;
+  /* Absolute backdrop filling the band, behind the copy; edge-faded so it
+     dissolves into the page (ODY-011f). */
+  position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%;
   background: transparent; cursor: crosshair;
   /* farthest-side fades to transparent AT each edge, so there's no hard crop. */
   -webkit-mask-image: radial-gradient(ellipse farthest-side at 50% 46%, #000 30%, transparent 100%);
@@ -4001,9 +4013,8 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   .ld-paint-hint { display: none; }
 }
 @media (max-width: 560px) {
-  .ld-paint-band { padding-left: 20px; padding-right: 20px; }
+  .ld-paint-band { padding-left: 20px; padding-right: 20px; min-height: 440px; }
   .ld-paint-copy h2 { font-size: 32px; }
-  .ld-paintmap { height: 380px; }
 }
 
 /* (6) Scroll-drawn trajectory trails (ODY-011f) — plot in on scroll. */
