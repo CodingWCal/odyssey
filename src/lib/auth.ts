@@ -19,8 +19,19 @@ function displayNameFromClerk(user: ClerkNameFields): string {
  * failing on the unique-email constraint (P2002), it relinks that row to the
  * current clerkId. This is the single source of truth for user sync.
  *
- * Also refreshes a stale "Traveler" placeholder once Clerk has a real name
- * (ODY-044 — after the post-signup name step or dashboard Name fields).
+ * Also re-syncs the stored name whenever it's drifted from Clerk's — not just
+ * the literal "Traveler" placeholder (ODY-044), but any stale value: an invite
+ * placeholder named from the email prefix (e.g. "mandy.wong", set before the
+ * invitee ever signs in — see members/actions.ts), a name set later in Clerk,
+ * etc. `User.name` has exactly one other writer (onboarding/actions.ts), which
+ * mirrors into Clerk too, so Clerk's name is always the source of truth here —
+ * nothing else can legitimately diverge from it.
+ *
+ * Note the one real limit: this only runs for *this* signed-in user each call,
+ * so a stale name for a *different* trip member only self-heals the next time
+ * that member loads a page (there's no session to pull their fresh Clerk name
+ * from otherwise). If a name looks wrong on someone else's screen, having that
+ * member sign in once (or just load any page) fixes it everywhere they appear.
  */
 export async function getOrCreateDbUser() {
   const user = await currentUser();
@@ -32,7 +43,7 @@ export async function getOrCreateDbUser() {
 
   const byClerk = await db.user.findUnique({ where: { clerkId: user.id } });
   if (byClerk) {
-    if (name !== "Traveler" && byClerk.name === "Traveler") {
+    if (name !== "Traveler" && byClerk.name !== name) {
       return db.user.update({
         where: { id: byClerk.id },
         data: { name, avatarUrl },
