@@ -3018,15 +3018,40 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding: 14px 28px; border-radius: var(--radius-md);
   background: var(--ink); color: var(--paper);
   font-weight: 600; font-size: 15px; text-decoration: none;
-  transition: background .15s ease;
+  transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
 }
+.ld-cta-primary:hover {
+  background: #0F1226; transform: translateY(-2px);
+  box-shadow: 0 12px 26px -10px rgba(31,34,56,.5);
+}
+.ld-cta-primary:active { transform: translateY(0); }
+.ld-cta-primary svg { transition: transform .18s ease; }
+.ld-cta-primary:hover svg { transform: translateX(2px); }
+
 .ld-cta-ghost {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 14px 28px; border-radius: var(--radius-md);
   background: transparent; color: var(--ink-2);
   font-weight: 500; font-size: 15px; text-decoration: none;
   border: 1px solid var(--rule-2);
-  transition: all .15s ease;
+  transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.ld-cta-ghost:hover {
+  color: var(--peri); border-color: var(--peri); background: var(--peri-soft);
+  transform: translateY(-2px);
+}
+.ld-cta-ghost:active { transform: translateY(0); }
+
+/* Nav buttons — same language, lighter touch. */
+.ld-nav-signin { transition: color .15s ease; }
+.ld-nav-signin:hover { color: var(--ink); }
+.od-btn-cta { transition: background .15s ease, transform .15s ease, box-shadow .15s ease; }
+.ld-nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -8px rgba(31,34,56,.45); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-cta-primary, .ld-cta-ghost, .ld-cta-primary svg, .od-btn-cta { transition: none; }
+  .ld-cta-primary:hover, .ld-cta-ghost:hover, .ld-nav-cta:hover { transform: none; }
+  .ld-cta-primary:hover svg { transform: none; }
 }
 
 .ld-social {
