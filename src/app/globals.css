@@ -3042,16 +3042,31 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .ld-cta-ghost:active { transform: translateY(0); }
 
-/* Nav buttons — same language, lighter touch. */
-.ld-nav-signin { transition: color .15s ease; }
-.ld-nav-signin:hover { color: var(--ink); }
+/* Nav "Sign in" — editorial underline that grows from the left + peri tint. */
+.ld-nav-signin { position: relative; transition: color .15s ease; }
+.ld-nav-signin::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1.5px;
+  background: var(--peri); transform: scaleX(0); transform-origin: left;
+  transition: transform .22s ease;
+}
+.ld-nav-signin:hover { color: var(--peri); }
+.ld-nav-signin:hover::after { transform: scaleX(1); }
+
+/* Nav "Get started" — small lift + shadow (bg darken from .od-btn-cta:hover). */
 .od-btn-cta { transition: background .15s ease, transform .15s ease, box-shadow .15s ease; }
 .ld-nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -8px rgba(31,34,56,.45); }
 
+/* Logo micro-delight — the orb tilts a touch when you brush the wordmark. */
+.ld-nav .brand-mark { transition: transform .25s cubic-bezier(.34,1.2,.5,1); }
+.ld-nav .brand:hover .brand-mark { transform: rotate(18deg) scale(1.06); }
+
 @media (prefers-reduced-motion: reduce) {
-  .ld-cta-primary, .ld-cta-ghost, .ld-cta-primary svg, .od-btn-cta { transition: none; }
-  .ld-cta-primary:hover, .ld-cta-ghost:hover, .ld-nav-cta:hover { transform: none; }
+  .ld-cta-primary, .ld-cta-ghost, .ld-cta-primary svg, .od-btn-cta,
+  .ld-nav-signin::after, .ld-nav .brand-mark { transition: none; }
+  .ld-cta-primary:hover, .ld-cta-ghost:hover, .ld-nav-cta:hover,
+  .ld-nav .brand:hover .brand-mark { transform: none; }
   .ld-cta-primary:hover svg { transform: none; }
+  .ld-nav-signin:hover::after { transform: scaleX(1); }
 }
 
 .ld-social {
