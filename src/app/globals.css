@@ -908,6 +908,14 @@
   margin-left: auto;
 }
 .event-card:hover .event-actions { opacity: 1; }
+/* Touch devices can't hover, so hover-revealed row controls (edit/delete an
+   event, edit an expense) would be permanently invisible — i.e. unusable on
+   mobile. Reveal them wherever hovering isn't available. Width-independent
+   (a touch laptop counts too), which is why this isn't in the ≤768 block. */
+@media (hover: none) {
+  .event-actions,
+  .expense-row .row-actions { opacity: 1; }
+}
 .icon-btn {
   /* 40px per ODY-021's touch-target standard (ODY-108 F02) — this class
      backs every modal close button and several frequent row actions
@@ -1272,6 +1280,64 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     right: 12px;
     width: auto;
     bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  /* Day header: the desktop single-line row (day-num · title · date · count)
+     crams a long trip-day title against the date/count on a phone, orphaning
+     them into a narrow right-hand column. Wrap the title onto its own full
+     line, with the day number + date + count riding above it like an eyebrow. */
+  .day-head { flex-wrap: wrap; column-gap: 10px; row-gap: 2px; }
+  .day-head .day-title { flex: 0 0 100%; order: 5; font-size: 24px; }
+  .day-head .chev { order: 0; }
+  .day-head .day-num { order: 1; }
+  .day-head .day-date { order: 2; }
+  .day-head .day-count { order: 3; }
+
+  /* Event row: the fixed 88px time gutter starves the content column on a
+     phone, so titles/locations wrap far more than they need to. Stack the
+     time above the content as a compact single line, giving the body the
+     full card width. The drag handle (desktop reorder affordance, invisible
+     until hover) is dropped here so it doesn't add an empty stacked row. */
+  .event-top { flex-direction: column; gap: 7px; }
+  .event-top .drag-handle { display: none; }
+  .event-time {
+    min-width: 0; padding-top: 0;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .event-time .end { display: inline; margin-top: 0; }
+
+  /* Headline: on a narrow column a mid-length title placed beside the badge
+     (and now the always-visible edit/delete controls) overflows the flex line
+     instead of wrapping. Give the title its own full-width line, with the type
+     badge + actions sitting on a kicker row above it, so it can never clip. */
+  .event-headline { align-items: center; }
+  .event-headline .badge { order: 1; }
+  .event-headline .event-actions { order: 2; margin-left: auto; }
+  .event-headline .event-title {
+    order: 3; flex: 0 0 100%; min-width: 0; overflow-wrap: anywhere;
+  }
+
+  /* Location/cost sub-row: as a wrapping flex it lets an inline-flex child
+     (the origin→destination route) size to its un-wrapped max-content and
+     drag the whole card wider than the viewport. Stacking it into a column
+     with stretched items gives each meta a definite width to wrap within, so
+     long airport names/addresses break instead of overflowing. */
+  .event-sub { flex-direction: column; align-items: stretch; gap: 6px; }
+  .event-sub .meta { width: 100%; min-width: 0; }
+  /* Force the origin→destination route to occupy the meta's real width and
+     wrap, instead of sizing to its un-wrapped max-content (flex-basis:0 +
+     grow, rather than relying on shrink, which wasn't kicking in). */
+  .event-sub .meta.event-route { min-width: 0; }
+  .event-route .route-lines { flex: 1 1 0%; min-width: 0; }
+  .event-route .route-pt { overflow-wrap: anywhere; word-break: break-word; }
+
+  /* The collapsed note preview is a single-line nowrap+ellipsis truncation,
+     which needs a definite-width parent to clip against. In the stacked
+     mobile card that parent is shrink-to-fit, so the un-wrapped line expanded
+     to its full width and dragged the whole card past the viewport. Let the
+     preview wrap here — the "Show more" toggle still gates the full note. */
+  .event-card .event-notes .notes-preview {
+    white-space: normal; overflow: visible; text-overflow: clip;
   }
 }
 
@@ -2099,6 +2165,10 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-weight: 400;
   margin: 0;
   color: var(--ink);
+  /* Reserve room for the absolutely-positioned role badge (top-right) so a
+     long name wraps before it instead of running underneath (e.g.
+     "Bartholomew Vanderbilt-Fitzgerald III" colliding with EDITOR). */
+  padding-right: 72px;
 }
 .member-email {
   font-size: 12.5px;
