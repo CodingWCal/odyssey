@@ -164,6 +164,8 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 400;
+    /* Even out multi-line heading wraps and avoid one-word last lines. */
+    text-wrap: balance;
   }
 
   /* Leaflet tiles break when Tailwind's img reset clamps their size */
@@ -1131,7 +1133,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   color: var(--ink-2);
   text-transform: capitalize;
   font-weight: 500;
-  transition: all .18s ease;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 .type-chip .icon {
   width: 18px; height: 18px; color: var(--ink-3);
@@ -1645,7 +1647,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-size: 13px;
   text-align: left;
   margin-top: 4px;
-  transition: all .15s ease;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .cat-add:hover { background: var(--cat-soft); border-color: var(--cat-color); color: var(--cat-color); border-style: solid; }
 .cat-add .plus {
@@ -1932,7 +1934,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   color: var(--ink-2);
   cursor: pointer;
   display: inline-flex; align-items: center; gap: 6px;
-  transition: all .15s ease;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .chip:hover { color: var(--ink); border-color: var(--peri); }
 .chip.active {
@@ -2111,7 +2113,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-weight: 500;
   display: inline-flex; align-items: center; gap: 6px;
   cursor: pointer;
-  transition: all .15s ease;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .map-ctrl:hover { color: var(--ink); }
 .map-ctrl.active { background: var(--ink); color: var(--paper); }
@@ -2129,7 +2131,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: inline-flex; align-items: center; gap: 6px;
   box-shadow: 0 4px 16px rgba(31,34,56,.18);
   cursor: pointer;
-  transition: all .15s ease;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .map-overview-link:hover { color: var(--ink); }
 
@@ -2706,7 +2708,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: flex; align-items: center; justify-content: center; flex-direction: column;
   min-height: 380px;
   cursor: pointer;
-  transition: all .2s ease;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease;
   text-align: center;
   padding: 32px;
   gap: 16px;
@@ -2723,7 +2725,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   border: 1px solid var(--rule);
   display: flex; align-items: center; justify-content: center;
   color: var(--peri);
-  transition: all .2s ease;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 .new-trip-card:hover .plus-large {
   background: var(--peri); color: white; border-color: var(--peri);
@@ -2954,7 +2956,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .wz-bchip {
   padding: 6px 11px; border: 1px solid var(--rule); border-radius: var(--radius-pill);
   background: var(--paper); font-family: var(--font-mono); font-size: 12px;
-  color: var(--ink-2); cursor: pointer; transition: all .15s ease;
+  color: var(--ink-2); cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .wz-bchip:hover { border-color: var(--peri); }
 .wz-bchip.on { border-color: var(--ink); color: var(--ink); background: var(--paper-3); }
@@ -3386,7 +3388,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   padding: 4px 12px; font-size: 13px; border-radius: var(--radius-sm); cursor: pointer;
   border: 1px solid var(--rule-2); font-family: var(--font-mono);
   background: var(--paper); color: var(--ink-2);
-  transition: all .15s ease;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .tt-btn.active { background: var(--peri); color: white; }
 .tt-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 16px; }
