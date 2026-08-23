@@ -3685,6 +3685,13 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .trip-search-input {
   display: flex; align-items: center; gap: 10px;
   padding: 4px 4px 14px; border-bottom: 1px solid var(--rule); color: var(--ink-3);
+  transition: border-color .15s ease, color .15s ease;
+}
+/* The inner input clears its own outline, so surface keyboard focus on the
+   wrapper instead — the trip-search field had no visible focus state at all. */
+.trip-search-input:focus-within {
+  border-bottom-color: var(--peri);
+  color: var(--peri);
 }
 .trip-search-input input {
   flex: 1; border: 0; background: none; outline: none;
