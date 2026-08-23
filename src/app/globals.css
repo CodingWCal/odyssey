@@ -123,6 +123,14 @@
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
 
+  html {
+    /* App is light-only: keep native controls (selects, date pickers,
+       scrollbars) light even when the device is in dark mode. */
+    color-scheme: light;
+    /* Remove the grey iOS tap flash — feedback is handled by explicit
+       :active/:hover states instead. */
+    -webkit-tap-highlight-color: transparent;
+  }
   html, body {
     margin: 0;
     height: 100%;
@@ -131,6 +139,14 @@
     background: var(--paper);
     -webkit-font-smoothing: antialiased;
     font-feature-settings: "ss01", "cv11";
+  }
+
+  /* Kill the 300ms double-tap-zoom delay on tappable controls so touch feels
+     instant. Scoped to interactive elements (not html/body) so content stays
+     double-tap-zoomable and the Leaflet map keeps pinch/gesture handling. */
+  button, a, label, summary, select,
+  [role="button"], [role="tab"], [role="switch"], .btn, .icon-btn {
+    touch-action: manipulation;
   }
 
   button { font-family: inherit; cursor: pointer; }
@@ -980,6 +996,7 @@
   max-width: 520px;
   max-height: 92vh;
   overflow-y: auto;
+  overscroll-behavior: contain; /* don't chain scroll to the page behind */
   background: var(--paper-2);
   border-radius: var(--radius-xl);
   box-shadow: 0 30px 80px -20px rgba(20,22,38,.45);
@@ -1033,7 +1050,7 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 .sheet-panel .modal-head { padding: 18px 20px 14px; }
-.sheet-panel .modal-body { padding: 4px 20px; overflow-y: auto; gap: 20px; }
+.sheet-panel .modal-body { padding: 4px 20px; overflow-y: auto; overscroll-behavior: contain; gap: 20px; }
 .sheet-panel .modal-foot {
   padding: 14px 20px calc(16px + env(safe-area-inset-bottom));
   position: sticky; bottom: 0;

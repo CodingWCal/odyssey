@@ -48,6 +48,10 @@ export function InviteForm({ tripId }: InviteFormProps) {
           <input
             id="inv-email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             className="input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

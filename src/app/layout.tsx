@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Manrope, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/shared/Toast";
@@ -32,6 +32,21 @@ const SITE_URL =
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : "http://localhost:3000");
+
+// Viewport + chrome (ODY mobile polish). `viewportFit: "cover"` is what
+// actually activates the app's existing env(safe-area-inset-*) padding on
+// notched phones — without it those insets resolve to 0 and the fixed header /
+// tab bar ignore the notch and home indicator. `themeColor` tints the mobile
+// browser chrome to match the paper background; `colorScheme: "light"` keeps
+// native controls (selects, scrollbars) light since the app has no dark theme.
+// Zoom is intentionally left enabled (no maximum-scale / user-scalable=no).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#F7F1E6",
+  colorScheme: "light",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

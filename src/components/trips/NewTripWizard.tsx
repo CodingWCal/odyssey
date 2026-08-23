@@ -245,7 +245,8 @@ function WizardBody({ onClose }: { onClose: () => void }) {
 
             <label className="wz-label" htmlFor="wz-invite">Invite by email (optional)</label>
             <div className="wz-invite-row">
-              <input id="wz-invite" type="email" className="input" value={inviteInput}
+              <input id="wz-invite" type="email" inputMode="email" autoComplete="email"
+                autoCapitalize="none" spellCheck={false} className="input" value={inviteInput}
                 onChange={(e) => setInviteInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addInvite(); } }}
                 placeholder="friend@email.com" />
