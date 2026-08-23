@@ -1339,6 +1339,18 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   .event-card .event-notes .notes-preview {
     white-space: normal; overflow: visible; text-overflow: clip;
   }
+
+  /* Packing row: a long assignee name gives the <select> a wide intrinsic
+     min-width that overflows the row. Let the label shrink and cap the select
+     so it truncates its value instead of pushing the remove button off-screen. */
+  .packing-section li > button:first-child { min-width: 0; }
+  .packing-section li > select { min-width: 0; max-width: 42%; flex-shrink: 1; }
+
+  /* Collections saved place: body + a 150px action column side-by-side crushes
+     the place name to one word per line on a phone. Stack them — place details
+     lead full-width, add-to-day controls sit beneath. */
+  .collections-item { flex-direction: column; }
+  .collections-item-actions { width: 100%; min-width: 0; }
 }
 
 
@@ -2783,7 +2795,10 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 }
 .dash-greet .stat-strip { flex-wrap: nowrap; }
 .dash-greet .stat-strip > span { white-space: nowrap; }
-.trip-card .cover-bottom .dest { white-space: nowrap; flex-shrink: 0; }
+.trip-card .cover-bottom .dest {
+  white-space: nowrap; min-width: 0; flex-shrink: 1;
+  overflow: hidden; text-overflow: ellipsis;
+}
 .trip-card .cover-bottom .days { flex-shrink: 0; }
 .live-card .cover-info .dest { white-space: nowrap; }
 .live-card .body .footer { gap: 12px; }
