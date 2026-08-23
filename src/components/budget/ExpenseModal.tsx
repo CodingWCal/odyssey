@@ -234,6 +234,9 @@ export function ExpenseModal({
 
   function handleDelete() {
     if (!initial?.id) return;
+    // Confirm before an irreversible delete — matches the app's destructive-
+    // action convention (member removal / leave / event delete).
+    if (!window.confirm(`Delete "${initial.label ?? "this expense"}"? This can't be undone.`)) return;
     startTransition(async () => {
       try {
         await deleteExpense(initial.id!, tripId);

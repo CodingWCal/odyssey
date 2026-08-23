@@ -102,6 +102,10 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
 
   function handleDelete() {
+    // Confirm before an irreversible delete (ODY mobile polish) — the trash
+    // icon is a single tap, easy to hit by accident on a phone. Matches the
+    // app's existing destructive-action convention (member removal / leave).
+    if (!window.confirm(`Delete "${event.title}"? This can't be undone.`)) return;
     startTransition(async () => {
       try {
         await deleteEvent(event.id);
