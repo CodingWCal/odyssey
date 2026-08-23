@@ -947,6 +947,9 @@
 }
 .icon-btn:hover { background: rgba(31,34,56,.06); color: var(--ink); }
 .icon-btn.danger:hover { background: var(--coral-soft); color: var(--coral); }
+/* Tactile press feedback on touch, matching the .btn:active idiom — icon
+   buttons (edit/delete/close) are among the most-tapped controls on mobile. */
+.icon-btn:active { transform: scale(.9); }
 
 /* Add event button */
 .add-event {
@@ -1150,6 +1153,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   color: var(--type-color);
 }
 .type-chip.selected .icon { color: var(--type-color); }
+.type-chip:active { transform: scale(.97); }
 
 /* Buttons */
 .btn {
@@ -1286,6 +1290,8 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     border-radius: var(--radius-sm);
   }
   .mobile-tab-bar a.active { color: var(--peri); }
+  /* Instant feedback when a tab is tapped, so navigation feels responsive. */
+  .mobile-tab-bar a:active { background: rgba(31,34,56,.06); }
 
   /* Keep Leaflet's zoom controls clear of the fixed tab bar on the map page. */
   .leaflet-bottom { margin-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
@@ -3533,6 +3539,7 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   cursor: pointer; background: var(--paper); color: var(--ink-2);
 }
 .opt-chip.on { background: var(--ink); color: var(--paper); }
+.opt-chip:active { transform: scale(.96); }
 
 /* Per-expense split — participant chips + exact-amount rows (ODY-094) */
 .exact-split-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
