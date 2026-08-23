@@ -57,6 +57,13 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: "Odyssey",
+  // Home-screen install experience on iOS — launch standalone (no Safari
+  // chrome) with a light status bar matching the paper theme.
+  appleWebApp: {
+    capable: true,
+    title: "Odyssey",
+    statusBarStyle: "default",
+  },
   keywords: ["trip planner", "travel itinerary", "group travel", "trip budget", "travel planning"],
   openGraph: {
     type: "website",
