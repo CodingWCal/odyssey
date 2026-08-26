@@ -363,7 +363,7 @@ function SplitSection({
       <div className="split-head">
         <div className="left">
           <div className="label">Split between travelers</div>
-          <div className="sub">Balances reflect who&apos;s actually on each expense — weights below only set the default for new expenses you don&apos;t customize.</div>
+          <div className="sub">Balances reflect who&apos;s on each expense. Weights set the default split for new ones.</div>
         </div>
         <button className="btn btn-ghost" onClick={resetEqual} disabled={isPending} type="button">
           Reset to equal
@@ -646,7 +646,7 @@ export function BudgetClient({ tripId, totalBudget, eyebrow, members, tripMember
         <div className="budget-set">
           <div className="left">
             <div className="label">Trip budget</div>
-            <div className="sub">A soft ceiling — we&apos;ll warn before you blow past it.</div>
+            <div className="sub">A soft ceiling — we&apos;ll warn before you go over.</div>
           </div>
           <div className="right">
             <div className="input-with-prefix">

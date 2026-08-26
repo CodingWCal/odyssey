@@ -1420,9 +1420,11 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   font-variant-numeric: tabular-nums;
 }
 .hero-mine strong { font-family: var(--font-mono); font-weight: 500; }
-.hero-mine.owed { color: var(--teal); }
-.hero-mine.owe { color: var(--coral); }
-.hero-mine.settled { color: rgba(255,255,255,.75); }
+/* Lighter tints of teal/coral so the "you owe / you're owed" line stays legible
+   on the dark hero — the base tokens sit at ~2:1 there. */
+.hero-mine.owed { color: #79D6BC; }
+.hero-mine.owe { color: #F0A18C; }
+.hero-mine.settled { color: rgba(255,255,255,.8); }
 .budget-hero .progress {
   height: 6px;
   border-radius: var(--radius-pill);
