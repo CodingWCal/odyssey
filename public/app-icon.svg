@@ -1,0 +1,42 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Full-bleed sunset base: coral top-left → deep navy bottom-right. -->
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C9533F"/>
+      <stop offset="0.55" stop-color="#7B4A63"/>
+      <stop offset="1" stop-color="#2A2F58"/>
+    </linearGradient>
+    <!-- Periwinkle glow, lower-right. -->
+    <radialGradient id="peri" cx="0.72" cy="0.82" r="0.8">
+      <stop offset="0" stop-color="#6F66B7"/>
+      <stop offset="0.7" stop-color="#6F66B7" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Warm peach highlight, upper-left. -->
+    <radialGradient id="peach" cx="0.3" cy="0.28" r="0.62">
+      <stop offset="0" stop-color="#F8C49A"/>
+      <stop offset="0.62" stop-color="#F8C49A" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Soft corner vignette so the tile has depth under any mask. -->
+    <radialGradient id="vig" cx="0.5" cy="0.5" r="0.72">
+      <stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1A1730" stop-opacity="0.34"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Full-bleed background (fills corners → safe to mask to any shape). -->
+  <rect width="512" height="512" fill="url(#base)"/>
+  <rect width="512" height="512" fill="url(#peri)"/>
+  <rect width="512" height="512" fill="url(#peach)"/>
+
+  <!-- Globe graticule, centered inside the maskable safe zone (r ≈ 205). -->
+  <g fill="none" stroke="#FCEFE0" stroke-opacity="0.42" stroke-width="11" stroke-linecap="round">
+    <ellipse cx="256" cy="256" rx="82" ry="184"/>
+    <line x1="74" y1="256" x2="438" y2="256"/>
+    <path d="M104 188 H408 M104 324 H408"/>
+  </g>
+
+  <!-- Faint inner ring for a crafted, badge-like edge (still inside safe zone). -->
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="6"/>
+
+  <rect width="512" height="512" fill="url(#vig)"/>
+</svg>
