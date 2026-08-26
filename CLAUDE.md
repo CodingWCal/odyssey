@@ -13,7 +13,9 @@ and invite collaborators in real time.
 - Tailwind CSS v4 + shadcn/ui
 - Leaflet JS for maps (dynamic import, ssr: false)
 - dnd-kit for drag and drop
-- Tiptap for rich text (notes tab only)
+- Notes are plain auto-grow textareas; the data layer (lib/tripNotes.ts) still
+  reads legacy TipTap/ProseMirror `{doc}` JSON for backward compatibility, but no
+  TipTap runtime is used (the packages were removed as unused).
 - Vercel deployment target
 
 ## Key Conventions
