@@ -173,6 +173,22 @@
   .leaflet-tile { filter: saturate(.78) brightness(1.02); }
 }
 
+/* Global reduced-motion catch-all (WCAG 2.3.3). Neutralizes transitions,
+   animations, and smooth-scroll app-wide for users who set the OS "Reduce
+   Motion" preference — covering workspace motion (skeleton shimmer, modal-in,
+   card/toast entrances, day/category collapse, tap-scale, hover shifts) that
+   the component-specific blocks below don't reach. Durations drop to ~0 rather
+   than `none` so transitionend/animationend callbacks still fire. No effect on
+   the default motion-on experience. Kept unlayered so its !important wins. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ════════════════════════════════════════════════════════════════════
    Component layer — ported verbatim from the Odyssey design handoff
    (odyssey-redesign/styles.css). Tokens + base reset live in the header
