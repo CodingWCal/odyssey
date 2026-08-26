@@ -2,7 +2,7 @@
 
 import { useState, useRef, useLayoutEffect, useTransition } from "react";
 import { Icons } from "@/components/shared/Icons";
-import { AvatarStack } from "@/components/shared/AvatarStack";
+import { AvatarStack, avatarColor, initialsOf } from "@/components/shared/AvatarStack";
 import { CATEGORIES, CAT_LABEL, CAT_ICON, type Category } from "./categories";
 import { ExpenseModal, type ExpenseInitial } from "./ExpenseModal";
 import { updateTripBudget, updateSplitWeights, recordSettlement, deleteSettlement } from "@/app/trips/[tripId]/budget/actions";
@@ -266,6 +266,10 @@ function SplitSection({
   // way as pendingKey so at most one row edits at a time.
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [customAmount, setCustomAmount] = useState("");
+  // Progressive disclosure on mobile (approved redesign): the card shows just
+  // each traveler's net balance by default; "Adjust split" reveals the weights
+  // + per-person detail. Desktop ignores this and shows the detail always (CSS).
+  const [adjustOpen, setAdjustOpen] = useState(false);
   const [weights, setWeights] = useState<Record<string, string>>(
     Object.fromEntries(members.map((m) => [m.id, String(m.weight)]))
   );
@@ -359,7 +363,7 @@ function SplitSection({
   }
 
   return (
-    <div className="split-card">
+    <div className={`split-card${adjustOpen ? " adjust-open" : ""}`}>
       <div className="split-head">
         <div className="left">
           <div className="label">Split between travelers</div>
@@ -369,6 +373,37 @@ function SplitSection({
           Reset to equal
         </button>
       </div>
+
+      {/* Mobile: net-balance summary — just who owes / is owed. Desktop hides
+          this via CSS and shows the full detail below (approved redesign). */}
+      <ul className="split-summary" aria-label="Who owes what">
+        {members.map((m) => {
+          const rounded = Math.round(m.balance * 100) / 100;
+          return (
+            <li key={m.id}>
+              <span className="who">
+                <span className={`avatar sm ${avatarColor(m.id)}`} aria-hidden="true">{initialsOf(m.name)}</span>
+                <span className="nm">{m.name}</span>
+              </span>
+              <span className={`net ${rounded > 0 ? "pos" : rounded < 0 ? "neg" : "even"}`}>
+                {rounded > 0 ? `+${fmtMoney(rounded)}` : rounded < 0 ? `−${fmtMoney(Math.abs(rounded))}` : "settled"}
+                {rounded !== 0 && <span className="l">{rounded > 0 ? "owed" : "owes"}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Mobile-only toggle to reveal the weights/detail below. */}
+      <button
+        type="button"
+        className="adjust-toggle"
+        aria-expanded={adjustOpen}
+        onClick={() => setAdjustOpen((o) => !o)}
+      >
+        Adjust split <Icons.chevron size={13} />
+      </button>
+      <div className="split-detail-label">Weights &amp; per-person detail</div>
 
       <div className="split-rows">
         {members.map((m, i) => {
