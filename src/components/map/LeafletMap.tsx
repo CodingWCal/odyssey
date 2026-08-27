@@ -77,37 +77,51 @@ export function LeafletMap({
       if (claimed._leaflet_id) delete claimed._leaflet_id;
 
       const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([35.6, 139.5], 5);
-      // Basemap: Esri "World Light Gray" (base + reference labels). CARTO's
-      // Positron tiles started requiring an API key (they render an "API KEY
-      // REQUIRED" watermark otherwise), so we use Esri's token-free light-gray
-      // canvas, which keeps the same muted editorial look. Esri serves to z16;
-      // maxNativeZoom lets Leaflet upscale for closer zoom.
-      const esriCanvas = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
-      // maxNativeZoom 16 (Esri's ceiling) with the map allowed to z18; Leaflet
-      // upscales the top two levels. `updateWhenZooming: false` was tried here
-      // but left tiles stuck upscaled after the auto-fit — omitted deliberately.
-      const tileOpts = { maxZoom: 18, maxNativeZoom: 16, keepBuffer: 3 } as const;
-      const esriBase = L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, attribution: "Tiles &copy; Esri" }).addTo(map);
-      const esriLabels = L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, pane: "shadowPane" }).addTo(map);
+      // Basemap. Prefer Stadia Maps "Alidade Smooth": the clean editorial
+      // Positron look we originally had, with labels baked into ONE fast layer
+      // that stays crisp to z20 — no separate slow label tiles, no upscale blur
+      // on zoom-in. It needs a free, domain-restricted key exposed via
+      // NEXT_PUBLIC_STADIA_API_KEY. Without a key we fall back to Esri's
+      // token-free "World Light Gray" canvas (serves to z16, so Leaflet upscales
+      // the closest levels — mildly soft; this is the fallback, not the goal).
+      const swapToOsmOnError = (...layers: Layer[]) => {
+        // Providers gate their tiles over time (exactly how CARTO broke). If the
+        // primary basemap starts erroring, swap to OpenStreetMap so the map never
+        // renders blank — only after several errors (not a transient blip), once.
+        // `.map-osm-fallback` desaturates OSM toward the editorial look.
+        let errors = 0;
+        let swapped = false;
+        layers[0].on("tileerror", () => {
+          if (swapped || (errors += 1) < 5) return;
+          swapped = true;
+          layers.forEach((l) => map.removeLayer(l));
+          el.classList.add("map-osm-fallback");
+          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors",
+          }).addTo(map);
+        });
+      };
 
-      // Resilience: providers gate their tiles over time (this is exactly how
-      // CARTO broke). If the primary basemap starts failing, fall back to
-      // OpenStreetMap so the map never renders blank. Triggered only after
-      // several tile errors (not a transient blip), and only once. The
-      // `.map-osm-fallback` class desaturates OSM toward the editorial look.
-      let tileErrors = 0;
-      let swapped = false;
-      esriBase.on("tileerror", () => {
-        if (swapped || (tileErrors += 1) < 5) return;
-        swapped = true;
-        map.removeLayer(esriBase);
-        map.removeLayer(esriLabels);
-        el.classList.add("map-osm-fallback");
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: "&copy; OpenStreetMap contributors",
-        }).addTo(map);
-      });
+      const stadiaKey = process.env.NEXT_PUBLIC_STADIA_API_KEY;
+      if (stadiaKey) {
+        const stadia = L.tileLayer(
+          `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${stadiaKey}`,
+          {
+            maxZoom: 20,
+            detectRetina: true,
+            attribution:
+              "&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap contributors",
+          }
+        ).addTo(map);
+        swapToOsmOnError(stadia);
+      } else {
+        const esriCanvas = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
+        const tileOpts = { maxZoom: 18, maxNativeZoom: 16, keepBuffer: 3 } as const;
+        const esriBase = L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, attribution: "Tiles &copy; Esri" }).addTo(map);
+        const esriLabels = L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, pane: "shadowPane" }).addTo(map);
+        swapToOsmOnError(esriBase, esriLabels);
+      }
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
