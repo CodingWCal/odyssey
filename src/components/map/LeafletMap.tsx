@@ -77,8 +77,14 @@ export function LeafletMap({
       if (claimed._leaflet_id) delete claimed._leaflet_id;
 
       const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([35.6, 139.5], 5);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19 }).addTo(map);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19, pane: "shadowPane" }).addTo(map);
+      // Basemap: Esri "World Light Gray" (base + reference labels). CARTO's
+      // Positron tiles started requiring an API key (they render an "API KEY
+      // REQUIRED" watermark otherwise), so we use Esri's token-free light-gray
+      // canvas, which keeps the same muted editorial look. Esri serves to z16;
+      // maxNativeZoom lets Leaflet upscale for closer zoom.
+      const esriCanvas = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
+      L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, attribution: "Tiles &copy; Esri" }).addTo(map);
+      L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, pane: "shadowPane" }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       LRef.current = L;
