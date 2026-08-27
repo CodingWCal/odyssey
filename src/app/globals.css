@@ -2073,6 +2073,9 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 
 /* override Leaflet default tile filter so it harmonizes with our palette */
 .leaflet-tile { filter: saturate(.78) brightness(1.02); }
+/* OSM fallback (added at runtime only if the primary basemap provider fails) —
+   push the colorful OSM tiles toward the muted editorial gray. */
+.map-osm-fallback .leaflet-tile { filter: grayscale(.65) saturate(.5) brightness(1.06) contrast(.96); }
 
 /* Custom marker */
 .od-marker {

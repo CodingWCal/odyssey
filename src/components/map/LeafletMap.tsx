@@ -83,8 +83,28 @@ export function LeafletMap({
       // canvas, which keeps the same muted editorial look. Esri serves to z16;
       // maxNativeZoom lets Leaflet upscale for closer zoom.
       const esriCanvas = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
-      L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, attribution: "Tiles &copy; Esri" }).addTo(map);
-      L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, pane: "shadowPane" }).addTo(map);
+      const esriBase = L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, attribution: "Tiles &copy; Esri" }).addTo(map);
+      const esriLabels = L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, pane: "shadowPane" }).addTo(map);
+
+      // Resilience: providers gate their tiles over time (this is exactly how
+      // CARTO broke). If the primary basemap starts failing, fall back to
+      // OpenStreetMap so the map never renders blank. Triggered only after
+      // several tile errors (not a transient blip), and only once. The
+      // `.map-osm-fallback` class desaturates OSM toward the editorial look.
+      let tileErrors = 0;
+      let swapped = false;
+      esriBase.on("tileerror", () => {
+        if (swapped || (tileErrors += 1) < 5) return;
+        swapped = true;
+        map.removeLayer(esriBase);
+        map.removeLayer(esriLabels);
+        el.classList.add("map-osm-fallback");
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(map);
+      });
+
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       LRef.current = L;
