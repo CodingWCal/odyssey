@@ -1761,6 +1761,11 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .split-row .weight .pct {
   font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); width: 40px;
 }
+/* Let share/paid/balance become direct grid items of .split-row so they fill
+   the 5-column layout side-by-side (the wrapper otherwise collapses them into
+   one column, leaving the last two columns empty). The ≤768 block overrides
+   this back to `grid` so the mobile "metrics" area is unaffected. */
+.split-metrics { display: contents; }
 .split-row .share, .split-row .paid, .split-row .balance {
   display: flex; flex-direction: column; align-items: flex-end;
   font-family: var(--font-mono); font-size: 14px; color: var(--ink);
