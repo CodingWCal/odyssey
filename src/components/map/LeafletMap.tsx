@@ -83,12 +83,10 @@ export function LeafletMap({
       // canvas, which keeps the same muted editorial look. Esri serves to z16;
       // maxNativeZoom lets Leaflet upscale for closer zoom.
       const esriCanvas = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
-      // `updateWhenZooming: false` holds tile updates until the zoom animation
-      // settles (so labels aren't left scaled-up mid-zoom), and a larger
-      // keepBuffer avoids refetching neighbours. maxZoom capped at 17 (one step
-      // past Esri's native 16) so upscaled labels stay only mildly soft rather
-      // than the heavy 8× blur at 19.
-      const tileOpts = { maxZoom: 17, maxNativeZoom: 16, updateWhenZooming: false, keepBuffer: 4 } as const;
+      // maxNativeZoom 16 (Esri's ceiling) with the map allowed to z18; Leaflet
+      // upscales the top two levels. `updateWhenZooming: false` was tried here
+      // but left tiles stuck upscaled after the auto-fit — omitted deliberately.
+      const tileOpts = { maxZoom: 18, maxNativeZoom: 16, keepBuffer: 3 } as const;
       const esriBase = L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, attribution: "Tiles &copy; Esri" }).addTo(map);
       const esriLabels = L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, pane: "shadowPane" }).addTo(map);
 
