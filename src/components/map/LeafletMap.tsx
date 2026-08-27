@@ -83,8 +83,14 @@ export function LeafletMap({
       // canvas, which keeps the same muted editorial look. Esri serves to z16;
       // maxNativeZoom lets Leaflet upscale for closer zoom.
       const esriCanvas = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
-      const esriBase = L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, attribution: "Tiles &copy; Esri" }).addTo(map);
-      const esriLabels = L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, pane: "shadowPane" }).addTo(map);
+      // `updateWhenZooming: false` holds tile updates until the zoom animation
+      // settles (so labels aren't left scaled-up mid-zoom), and a larger
+      // keepBuffer avoids refetching neighbours. maxZoom capped at 17 (one step
+      // past Esri's native 16) so upscaled labels stay only mildly soft rather
+      // than the heavy 8× blur at 19.
+      const tileOpts = { maxZoom: 17, maxNativeZoom: 16, updateWhenZooming: false, keepBuffer: 4 } as const;
+      const esriBase = L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, attribution: "Tiles &copy; Esri" }).addTo(map);
+      const esriLabels = L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, pane: "shadowPane" }).addTo(map);
 
       // Resilience: providers gate their tiles over time (this is exactly how
       // CARTO broke). If the primary basemap starts failing, fall back to
