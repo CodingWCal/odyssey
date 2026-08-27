@@ -151,7 +151,7 @@ export function PackingClient({ tripId, items, members, hasLegacyPacking, readOn
       </header>
 
       {hasLegacyPacking && !readOnly && (
-        <button className="btn btn-ghost" onClick={importLegacy}>
+        <button type="button" className="btn btn-ghost" onClick={importLegacy}>
           Import existing packing notes
         </button>
       )}
@@ -208,7 +208,7 @@ export function PackingClient({ tripId, items, members, hasLegacyPacking, readOn
               aria-label={scope === "group" ? "Add a group packing item" : "Add a personal packing item"}
               maxLength={160}
             />
-            <button className="btn btn-primary" disabled={pending}>Add item</button>
+            <button type="submit" className="btn btn-primary" disabled={pending}>Add item</button>
           </div>
         </form>
       )}
