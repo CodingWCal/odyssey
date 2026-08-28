@@ -3,7 +3,7 @@
 import { db } from "@/lib/prisma/db";
 import { exploreVibeSchema } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
-import { searchPlaces } from "@/lib/geocode";
+import { searchPlacesByVibe } from "@/lib/places";
 import { createPlace } from "@/app/trips/[tripId]/collections/actions";
 import { createEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import type { EventType } from "@/types";
@@ -18,39 +18,11 @@ export type ExploreSuggestion = {
   lng: number;
 };
 
-const VIBE_CATEGORY: Record<string, EventType> = {
-  food: "restaurant",
-  cafe: "restaurant",
-  coffee: "restaurant",
-  restaurant: "restaurant",
-  eat: "restaurant",
-  museum: "activity",
-  hike: "activity",
-  park: "activity",
-  sunset: "activity",
-  nightlife: "activity",
-  beach: "activity",
-  hotel: "hotel",
-  stay: "hotel",
-};
-
-function guessCategory(vibe: string): EventType {
-  const lower = vibe.toLowerCase();
-  for (const [key, cat] of Object.entries(VIBE_CATEGORY)) {
-    if (lower.includes(key)) return cat;
-  }
-  return "activity";
-}
-
-function shortTitle(display: string): string {
-  const first = display.split(",")[0]?.trim() ?? display;
-  return first.slice(0, 80) || "Suggested place";
-}
-
 /**
- * Vibe-based place suggestions for a trip destination (ODY-049).
- * Uses Nominatim via shared geocode helper (no browser→Nominatim).
- * LLM path can plug in later when OPENAI_API_KEY is configured.
+ * Vibe-based place suggestions for a trip destination (ODY-049). Resolves the
+ * vibe to an OpenStreetMap category and pulls real, named points of interest
+ * near the destination via the Overpass API (see lib/places.ts). Keyless; an
+ * optional LLM ranking layer can plug in later when a provider key is added.
  */
 export async function exploreByVibe(input: unknown): Promise<ExploreSuggestion[]> {
   const dbUser = await getOrCreateDbUser();
@@ -63,18 +35,11 @@ export async function exploreByVibe(input: unknown): Promise<ExploreSuggestion[]
   });
   if (!trip) throw new Error("Not found");
 
-  const query = `${vibe} in ${trip.destination}`;
-  const results = await searchPlaces(query, 5, { userKey: dbUser.clerkId });
-  const category = guessCategory(vibe);
+  const results = await searchPlacesByVibe(vibe, trip.destination, dbUser.clerkId, 8);
 
   return results.map((r, i) => ({
     id: `sug-${i}-${r.lat}-${r.lng}`,
-    title: shortTitle(r.display),
-    location: r.display,
-    category,
-    blurb: `A ${vibe.toLowerCase()} find near ${trip.destination}.`,
-    lat: r.lat,
-    lng: r.lng,
+    ...r,
   }));
 }
 

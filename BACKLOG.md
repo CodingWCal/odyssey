@@ -932,7 +932,7 @@ userId, verb, subject, createdAt — db push), written from existing actions (on
 each), rendered as a quiet timeline on the trip overview page. Cap at last 50, prune
 older. Editorial tone: "Maya added *Sunset kayak* to Day 3."
 
-### ODY-049 · AI Explore — vibe-based local recommendations — L, sonnet — ✅ DONE (Nominatim MVP)
+### ODY-049 · AI Explore — vibe-based local recommendations — L, sonnet — ✅ DONE (Overpass POI search)
 > **In plain terms:** Tell the trip what vibe you're after ("cozy cafés", "sunset views") and get place ideas near the destination you can peek at and save into the plan.
 New Explore surface on a trip: travelers pick or type a vibe; the app suggests local places for the trip destination.
 - Route: `src/app/trips/[tripId]/explore/` + nav item (reuse editorial tokens; Leaflet stays `ssr:false` if map preview used).
@@ -941,6 +941,7 @@ New Explore surface on a trip: travelers pick or type a vibe; the app suggests l
 - Guardrails: no new deps without strong justification; rate-limit; no hardcoded hex; Prisma only via `db.ts`.
 - Acceptance: from Explore, a user sees vibe-based suggestions for the trip destination; empty/error states are branded, not silent.
 - **Shipped:** Nominatim vibe search MVP (no LLM key required). Optional LLM enhancement is a follow-up when a provider key is added.
+- **Fix (2026-08):** the Nominatim MVP never actually returned results — Nominatim is a geocoder (name/address → coordinates) and has no notion of a "vibe", so `"cozy cafés in <dest>"` matched nothing and every search fell through to the empty state. Rewired to the **Overpass API** (OSM's point-of-interest engine), still keyless: `src/lib/vibePresets.ts` (pure: vibe→OSM tag filters + query builder, unit-tested) and `src/lib/places.ts` (server-only: geocode the destination → Overpass `around` search → real named places, closest-to-centre first, cached + rate-limited, soft-fails to the empty state). Optional LLM ranking still layers on later.
 
 ### ODY-050 · Save Explore suggestions into the itinerary — M, sonnet — ✅ DONE
 > **In plain terms:** Liked a recommendation? One click adds it as a normal itinerary event (or collection place) so it shows up on the day plan and map.
