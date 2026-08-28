@@ -77,51 +77,37 @@ export function LeafletMap({
       if (claimed._leaflet_id) delete claimed._leaflet_id;
 
       const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([35.6, 139.5], 5);
-      // Basemap. Prefer Stadia Maps "Alidade Smooth": the clean editorial
-      // Positron look we originally had, with labels baked into ONE fast layer
-      // that stays crisp to z20 — no separate slow label tiles, no upscale blur
-      // on zoom-in. It needs a free, domain-restricted key exposed via
-      // NEXT_PUBLIC_STADIA_API_KEY. Without a key we fall back to Esri's
-      // token-free "World Light Gray" canvas (serves to z16, so Leaflet upscales
-      // the closest levels — mildly soft; this is the fallback, not the goal).
-      const swapToOsmOnError = (...layers: Layer[]) => {
-        // Providers gate their tiles over time (exactly how CARTO broke). If the
-        // primary basemap starts erroring, swap to OpenStreetMap so the map never
-        // renders blank — only after several errors (not a transient blip), once.
-        // `.map-osm-fallback` desaturates OSM toward the editorial look.
-        let errors = 0;
-        let swapped = false;
-        layers[0].on("tileerror", () => {
-          if (swapped || (errors += 1) < 5) return;
-          swapped = true;
-          layers.forEach((l) => map.removeLayer(l));
-          el.classList.add("map-osm-fallback");
-          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: "&copy; OpenStreetMap contributors",
-          }).addTo(map);
-        });
-      };
+      // Basemap: Stadia Maps "Alidade Smooth" — the clean editorial Positron
+      // look, with labels baked into ONE fast layer that stays crisp to z20 (no
+      // separate slow label tiles, no upscale blur on zoom-in). Authenticated by
+      // domain — Stadia's recommended method for browser maps, so no key is
+      // exposed in the bundle: localhost/127.0.0.1 work with no setup, and
+      // production domains are allow-listed in the Stadia dashboard. If tiles
+      // start erroring (an unlisted domain, or a provider gating its tiles the
+      // way CARTO did), we swap to OpenStreetMap so the map never renders blank.
+      const stadia = L.tileLayer(
+        "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+        {
+          maxZoom: 20,
+          detectRetina: true,
+          attribution: "&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap contributors",
+        }
+      ).addTo(map);
 
-      const stadiaKey = process.env.NEXT_PUBLIC_STADIA_API_KEY;
-      if (stadiaKey) {
-        const stadia = L.tileLayer(
-          `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${stadiaKey}`,
-          {
-            maxZoom: 20,
-            detectRetina: true,
-            attribution:
-              "&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap contributors",
-          }
-        ).addTo(map);
-        swapToOsmOnError(stadia);
-      } else {
-        const esriCanvas = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
-        const tileOpts = { maxZoom: 18, maxNativeZoom: 16, keepBuffer: 3 } as const;
-        const esriBase = L.tileLayer(`${esriCanvas}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, attribution: "Tiles &copy; Esri" }).addTo(map);
-        const esriLabels = L.tileLayer(`${esriCanvas}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { ...tileOpts, pane: "shadowPane" }).addTo(map);
-        swapToOsmOnError(esriBase, esriLabels);
-      }
+      let tileErrors = 0;
+      let swapped = false;
+      stadia.on("tileerror", () => {
+        // Only after several errors (not a transient blip), and only once.
+        // `.map-osm-fallback` desaturates OSM toward the editorial look.
+        if (swapped || (tileErrors += 1) < 5) return;
+        swapped = true;
+        map.removeLayer(stadia);
+        el.classList.add("map-osm-fallback");
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(map);
+      });
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
