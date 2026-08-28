@@ -112,7 +112,7 @@ async function fetchFoursquare(
   destination: string
 ): Promise<VibePlace[]> {
   const key = process.env.FOURSQUARE_API_KEY;
-  if (!key) throw new ExploreUnavailableError();
+  if (!key) throw new Error("FOURSQUARE_API_KEY not set");
 
   const params = new URLSearchParams({
     query: preset.fsqQuery,
@@ -131,7 +131,10 @@ async function fetchFoursquare(
     cache: "no-store",
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
-  if (!res.ok) throw new ExploreUnavailableError();
+  // Surface the status so a misconfigured key (401/403 — e.g. a legacy "Places
+  // API key" instead of a Service key) is diagnosable in the server logs rather
+  // than silently degrading to the Overpass fallback.
+  if (!res.ok) throw new Error(`Foursquare responded ${res.status}`);
 
   const json = (await res.json()) as { results?: FsqResult[] };
   const results = Array.isArray(json.results) ? json.results : [];
@@ -291,9 +294,11 @@ export async function searchPlacesByVibe(
     try {
       const places = await fetchFoursquareCached(preset, center.lat, center.lng, destination);
       return finalize(places, center, limit);
-    } catch {
+    } catch (err) {
       // Foursquare unavailable — fall through to the keyless Overpass path
-      // rather than failing the whole search.
+      // rather than failing the whole search. Logged so a misconfigured key or
+      // outage is visible in the server logs instead of silently degrading.
+      console.warn("[explore] Foursquare unavailable, using Overpass fallback:", err instanceof Error ? err.message : err);
     }
   }
 
