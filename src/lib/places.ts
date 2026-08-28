@@ -1,5 +1,6 @@
 import "server-only";
-import { geocode, assertGeocodeAllowed } from "@/lib/geocode";
+import { unstable_cache } from "next/cache";
+import { geocode } from "@/lib/geocode";
 import { haversineKm } from "@/lib/geoDistance";
 import { resolveVibe, buildOverpassQuery } from "@/lib/vibePresets";
 import type { EventType } from "@/types";
@@ -8,8 +9,11 @@ import type { EventType } from "@/types";
  * Real point-of-interest search for Explore (ODY-049), via the Overpass API
  * over OpenStreetMap data. Replaces the original Nominatim path, which could
  * only geocode names and so returned nothing for vibe phrases like "cozy cafés".
- * Keyless, and soft-fails to [] on network/quota trouble so the Explore UI
- * degrades to its "nothing turned up" state rather than throwing.
+ * Keyless. Results are cached persistently (Next Data Cache) so a given
+ * category + location hits the public Overpass servers at most once per TTL —
+ * important because those servers rate-limit per IP and Vercel's are shared. A
+ * moment where every mirror is busy throws OverpassUnavailableError (uncached)
+ * so the UI can invite a retry instead of claiming nothing matched.
  */
 
 export interface VibePlace {
@@ -22,9 +26,23 @@ export interface VibePlace {
 }
 
 const USER_AGENT = "Odyssey-TripPlanner/1.0 (collaborative itinerary app)";
-const SEARCH_RADIUS_M = 9000;
+// 6 km keeps dense categories (cafés, restaurants near a city centre) light
+// enough that Overpass answers within its timeout, while still covering the
+// walkable core of a destination.
+const SEARCH_RADIUS_M = 6000;
 const RAW_CAP = 40;
 const REQUEST_TIMEOUT_MS = 12_000;
+// POIs change slowly, so a fetched category+location stays cached for a month.
+const POI_TTL_SECONDS = 60 * 60 * 24 * 30;
+
+/** Every Overpass mirror refused or timed out — distinct from an empty result
+ *  so the UI can invite a retry instead of claiming nothing matched. */
+export class OverpassUnavailableError extends Error {
+  constructor() {
+    super("Explore search is busy right now — try again in a moment.");
+    this.name = "OverpassUnavailableError";
+  }
+}
 
 // Public Overpass instances, tried in order — any one can be busy or briefly
 // refuse a request, so we fail over across a few community mirrors.
@@ -39,32 +57,6 @@ interface OverpassElement {
   lon?: number;
   center?: { lat: number; lon: number };
   tags?: Record<string, string>;
-}
-
-// Best-effort in-memory TTL cache keyed on preset filters + rounded centre.
-// Serverless instances each get their own copy — a politeness cache, not a
-// correctness guarantee (same rationale as the geocode cache).
-const TTL_MS = 24 * 60 * 60 * 1000;
-const MAX_ENTRIES = 200;
-const cache = new Map<string, { expires: number; data: OverpassElement[] }>();
-
-function readCache(key: string): OverpassElement[] | null {
-  const hit = cache.get(key);
-  if (!hit) return null;
-  if (hit.expires < Date.now()) {
-    cache.delete(key);
-    return null;
-  }
-  return hit.data;
-}
-
-function writeCache(key: string, data: OverpassElement[]) {
-  while (cache.size >= MAX_ENTRIES) {
-    const oldest = cache.keys().next().value;
-    if (oldest === undefined) break;
-    cache.delete(oldest);
-  }
-  cache.set(key, { expires: Date.now() + TTL_MS, data });
 }
 
 async function fetchOverpass(query: string): Promise<OverpassElement[]> {
@@ -88,10 +80,27 @@ async function fetchOverpass(query: string): Promise<OverpassElement[]> {
       const json = (await res.json()) as { elements?: OverpassElement[] };
       return Array.isArray(json.elements) ? json.elements : [];
     } catch {
-      continue; // try the next mirror, then give up softly
+      continue; // try the next mirror
     }
   }
-  return [];
+  // No mirror served the request. Throw (rather than return []) so the failure
+  // isn't cached and the UI can invite a retry, distinct from a genuine miss.
+  throw new OverpassUnavailableError();
+}
+
+/**
+ * Overpass POIs for a filter set near a point, wrapped in Next's persistent
+ * Data Cache keyed on the rounded centre, so a category+location is fetched at
+ * most once per TTL across all invocations. Failures propagate uncached.
+ */
+function fetchPois(filters: string[], lat: number, lng: number): Promise<OverpassElement[]> {
+  const roundedLat = Number(lat.toFixed(3));
+  const roundedLng = Number(lng.toFixed(3));
+  return unstable_cache(
+    () => fetchOverpass(buildOverpassQuery(filters, roundedLat, roundedLng, SEARCH_RADIUS_M, RAW_CAP)),
+    ["explore-pois", filters.join("|"), String(roundedLat), String(roundedLng), String(SEARCH_RADIUS_M)],
+    { revalidate: POI_TTL_SECONDS }
+  )();
 }
 
 function cap(s: string): string {
@@ -99,8 +108,8 @@ function cap(s: string): string {
 }
 
 /**
- * Suggestions for a vibe near a destination, closest-to-centre first. `userKey`
- * bounds Overpass/geocode calls with the shared per-user politeness limit.
+ * Suggestions for a vibe near a destination, closest-to-centre first. Throws
+ * OverpassUnavailableError when the POI servers are all busy.
  */
 export async function searchPlacesByVibe(
   vibe: string,
@@ -115,20 +124,15 @@ export async function searchPlacesByVibe(
   const center = await geocode(destination, { userKey });
   if (!center) return [];
 
-  const key = `${preset.filters.join("|")}@${center.lat.toFixed(3)},${center.lng.toFixed(3)}`;
-  let elements = readCache(key);
-  if (!elements) {
-    assertGeocodeAllowed(userKey); // shared external-map politeness budget
-    const query = buildOverpassQuery(preset.filters, center.lat, center.lng, SEARCH_RADIUS_M, RAW_CAP);
-    elements = await fetchOverpass(query);
-    writeCache(key, elements);
-  }
+  const elements = await fetchPois(preset.filters, center.lat, center.lng);
 
   const seen = new Set<string>();
   const places: VibePlace[] = [];
   for (const el of elements) {
     const t = el.tags ?? {};
-    const name = t.name?.trim();
+    // Prefer the English name when OSM has one (name:en); fall back to the
+    // local-language name only when it doesn't.
+    const name = (t["name:en"] ?? t.name)?.trim();
     const lat = el.lat ?? el.center?.lat;
     const lng = el.lon ?? el.center?.lon;
     if (!name || lat == null || lng == null) continue;
@@ -138,6 +142,7 @@ export async function searchPlacesByVibe(
     seen.add(dedupe);
 
     const area =
+      t["addr:suburb:en"] || t["addr:neighbourhood:en"] || t["addr:city:en"] ||
       t["addr:suburb"] || t["addr:neighbourhood"] || t["addr:city"] || t["addr:town"] || destination;
     const cuisine = t.cuisine?.split(";")[0]?.replace(/_/g, " ");
     const blurb = cuisine ? `${cap(cuisine)} · near ${area}` : `${cap(preset.label)} near ${area}`;
