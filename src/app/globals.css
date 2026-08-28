@@ -2077,6 +2077,29 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
    push the colorful OSM tiles toward the muted editorial gray. */
 .map-osm-fallback .leaflet-tile { filter: grayscale(.65) saturate(.5) brightness(1.06) contrast(.96); }
 
+/* Tile attribution — required by the providers' licences (Stadia / OpenMapTiles
+   / OpenStreetMap). Kept deliberately tiny and muted so the credit is present
+   without competing with the editorial map; it lifts to legible on hover. */
+.leaflet-control-attribution {
+  background: transparent;
+  margin: 0 0 2px 4px;
+  padding: 0 4px;
+  font-family: var(--font-sans);
+  font-size: 8.5px;
+  line-height: 1.5;
+  letter-spacing: .01em;
+  color: var(--ink-3);
+  opacity: .34;
+  border-radius: var(--radius-md);
+  transition: opacity .18s ease, background-color .18s ease;
+}
+.leaflet-control-attribution:hover {
+  opacity: .7;
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+}
+.leaflet-control-attribution a { color: inherit; text-decoration: none; }
+.leaflet-control-attribution a:hover { text-decoration: underline; }
+
 /* Custom marker */
 .od-marker {
   width: 32px; height: 32px;

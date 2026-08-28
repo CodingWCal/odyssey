@@ -109,6 +109,12 @@ export function LeafletMap({
         }).addTo(map);
       });
 
+      // Tile providers (Stadia/OpenMapTiles/OSM) require visible attribution.
+      // Keep it — but tiny and muted via `.leaflet-control-attribution` in
+      // globals.css so it satisfies the licence without disturbing the layout.
+      // Bottom-left keeps it clear of the zoom control on the bottom-right.
+      L.control.attribution({ prefix: false, position: "bottomleft" }).addTo(map);
+
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       LRef.current = L;
