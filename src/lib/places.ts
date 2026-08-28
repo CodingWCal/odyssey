@@ -24,12 +24,14 @@ export interface VibePlace {
 const USER_AGENT = "Odyssey-TripPlanner/1.0 (collaborative itinerary app)";
 const SEARCH_RADIUS_M = 9000;
 const RAW_CAP = 40;
-const REQUEST_TIMEOUT_MS = 20_000;
+const REQUEST_TIMEOUT_MS = 12_000;
 
-// Public Overpass instances, tried in order — the primary is often busy.
+// Public Overpass instances, tried in order — any one can be busy or briefly
+// refuse a request, so we fail over across a few community mirrors.
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
 ];
 
 interface OverpassElement {
@@ -72,6 +74,10 @@ async function fetchOverpass(query: string): Promise<OverpassElement[]> {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
+          // Explicitly accept JSON: overpass-api.de front-ends with Apache
+          // content-negotiation and answers 406 "Not Acceptable" when the
+          // caller does not clearly ask for a representation it can serve.
+          Accept: "application/json",
           "User-Agent": USER_AGENT,
         },
         body: `data=${encodeURIComponent(query)}`,
