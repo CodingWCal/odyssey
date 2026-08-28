@@ -11,6 +11,14 @@ describe("resolveVibe (ODY-049)", () => {
     expect(resolveVibe("nightlife").filters).toEqual(['["amenity"~"^(bar|pub|nightclub)$"]']);
   });
 
+  it("carries a non-empty Foursquare query for every resolved preset", () => {
+    for (const vibe of ["cozy cafés", "local eats", "sunset views", "museums", "nightlife", "something whimsical"]) {
+      expect(resolveVibe(vibe).fsqQuery.length).toBeGreaterThan(0);
+    }
+    expect(resolveVibe("cozy cafés").fsqQuery).toBe("coffee");
+    expect(DEFAULT_PRESET.fsqQuery).toBe("tourist attraction");
+  });
+
   it("is case-insensitive and matches on substrings of free text", () => {
     expect(resolveVibe("Somewhere for great COFFEE").filters).toEqual(['["amenity"="cafe"]']);
     expect(resolveVibe("a scenic lookout at dusk").filters).toEqual(['["tourism"="viewpoint"]']);

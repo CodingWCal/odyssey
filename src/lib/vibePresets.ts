@@ -13,6 +13,8 @@ import type { EventType } from "@/types";
 export interface VibePreset {
   /** Lowercase keywords; the first preset with any substring match wins. */
   keywords: string[];
+  /** Free-text query for the Foursquare Places search (the primary provider). */
+  fsqQuery: string;
   /** Overpass tag filters, e.g. `["amenity"="cafe"]`. Unioned in the query. */
   filters: string[];
   /** Event type a saved suggestion inherits (drives colour + map pin). */
@@ -24,42 +26,49 @@ export interface VibePreset {
 const PRESETS: VibePreset[] = [
   {
     keywords: ["café", "cafe", "coffee", "espresso", "tea"],
+    fsqQuery: "coffee",
     filters: ['["amenity"="cafe"]'],
     category: "restaurant",
     label: "café",
   },
   {
     keywords: ["eat", "food", "restaurant", "dining", "dinner", "lunch", "ramen", "sushi", "noodle", "bistro", "brunch"],
+    fsqQuery: "restaurant",
     filters: ['["amenity"="restaurant"]'],
     category: "restaurant",
     label: "place to eat",
   },
   {
     keywords: ["sunset", "view", "scenic", "lookout", "viewpoint", "panorama", "skyline"],
+    fsqQuery: "scenic lookout",
     filters: ['["tourism"="viewpoint"]'],
     category: "activity",
     label: "viewpoint",
   },
   {
     keywords: ["museum", "gallery", "art", "exhibit", "history"],
+    fsqQuery: "museum",
     filters: ['["tourism"="museum"]', '["tourism"="gallery"]'],
     category: "activity",
     label: "museum or gallery",
   },
   {
     keywords: ["park", "walk", "garden", "nature", "outdoor", "green", "stroll"],
+    fsqQuery: "park",
     filters: ['["leisure"="park"]', '["leisure"="garden"]'],
     category: "activity",
     label: "park or garden",
   },
   {
     keywords: ["nightlife", "bar", "pub", "drink", "club", "cocktail", "night"],
+    fsqQuery: "bar",
     filters: ['["amenity"~"^(bar|pub|nightclub)$"]'],
     category: "activity",
     label: "nightlife spot",
   },
   {
     keywords: ["shop", "market", "boutique", "mall", "store"],
+    fsqQuery: "shopping",
     filters: ['["shop"~"^(mall|department_store|gift|boutique|books)$"]', '["amenity"="marketplace"]'],
     category: "activity",
     label: "place to shop",
@@ -69,6 +78,7 @@ const PRESETS: VibePreset[] = [
 /** General attractions — the fallback when a vibe matches no specific preset. */
 export const DEFAULT_PRESET: VibePreset = {
   keywords: [],
+  fsqQuery: "tourist attraction",
   filters: ['["tourism"="attraction"]'],
   category: "activity",
   label: "local highlight",
