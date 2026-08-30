@@ -61,14 +61,25 @@ with a tiny tasteful attribution credit styled in `src/app/globals.css`.
 pushed, merged to `main`, and owner-verified. The next thread should:
 
 1. Ask the owner for the next hyper-polish target. If none is offered, propose
-   from the backlog's stale-but-open "Next up" candidates:
-   - Landing-page **F07** icon swap (six feature cards reuse one bare-circle icon
-     though six distinct icons already exist) — *safe, ready, no owner decision*.
+   from the backlog's genuinely-open candidates (reconciled 2026-08-30 — the
+   list this handoff first shipped with was stale; see note below):
+   - **ODY-109** remaining — bulk row/column/"free the whole range" marking +
+     mobile sticky day column. Code-only, shippable without a browser.
+   - **ODY-118 F2** — `:focus-visible` rings on the seamless inline note editors
+     (a visual-taste judgment, but code-shippable). **ODY-085** — post-invite
+     "you're in" welcome, small.
    - Landing-page **F01** fabricated social proof ("★★★★★ · Loved by 4,200
      travelers" + invented "Maya R." testimonial under a "Now in beta" badge) —
      *needs an owner content decision, do not auto-remove*.
-   - **ODY-064** dead-code dedupe · **ODY-067** packing checklist Stage B ·
-     **ODY-075** mobile-drawer follow-up.
+   - Browser-dependent (owner or a browser-capable session): **ODY-118 F10** +
+     **ODY-022** axe/contrast sweep · **ODY-097** budget IA/mobile judgment.
+
+   > **Stale-list correction (2026-08-30):** the original candidates this handoff
+   > named are already shipped — **F07** landing icon swap (done 2026-08-09; each
+   > card already uses `Icons.itinerary/map/budget/members/note/weather`),
+   > **ODY-064** (done 2026-08-11), **ODY-075** (done 2026-08-09), **ODY-117**
+   > (done 2026-08-11). **ODY-067** is Stage A done; only Stage B remains.
+   > `BACKLOG.md`'s "Next up" pointer was corrected to match.
 2. **Do NOT start ODY-119** (Explore enrichment: price/rating/parking + translated
    names). It is filed and explicitly **deferred pending owner cost approval** —
    Foursquare Premium fields are paid (no free tier), and translated names need a
