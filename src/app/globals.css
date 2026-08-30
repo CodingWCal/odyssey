@@ -3545,6 +3545,54 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .av-legend-note { font-size: 12px; color: var(--ink-3); margin: 0 0 10px; }
 .av-heat-maybe { margin-left: 3px; font-weight: 500; color: var(--peach); }
 
+/* ── Bulk "free" fills (ODY-109) ── */
+.av-bulk {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 12px 18px; border-top: 1px solid var(--rule);
+}
+.av-bulk-label {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--ink-3); margin-right: 2px;
+}
+.av-bulk-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; padding: 7px 12px;
+  border-radius: var(--radius-pill); border: 1px solid var(--teal);
+  background: var(--teal); color: var(--on-fill);
+}
+.av-bulk-btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--rule-2); }
+
+/* Day and block headers become "fill free" buttons. The hint only shows on
+   hover/focus so the grid reads exactly as before at rest. */
+.av-col-btn, .av-day-btn {
+  width: 100%; display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 6px; border: 1px dashed transparent; border-radius: var(--radius-md);
+  background: transparent; color: inherit; font: inherit; text-align: inherit;
+}
+.av-col-btn { align-items: center; }
+.av-day-btn { align-items: flex-start; }
+.av-col-cap { font-size: 12px; font-weight: 500; }
+.av-col-btn:hover, .av-day-btn:hover { border-color: var(--rule-2); background: var(--paper-3); }
+.av-fill-hint {
+  font-family: var(--font-mono); font-size: 8.5px; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--teal); opacity: 0;
+}
+.av-col-btn:hover .av-fill-hint, .av-day-btn:hover .av-fill-hint,
+.av-col-btn:focus-visible .av-fill-hint, .av-day-btn:focus-visible .av-fill-hint { opacity: 1; }
+.av-bulk-btn:focus-visible, .av-col-btn:focus-visible, .av-day-btn:focus-visible {
+  outline: 2px solid var(--peri); outline-offset: 2px;
+}
+
+/* Mobile: keep the day column pinned while the blocks scroll, so the labels
+   never scroll out of view at 375px (ODY-109). */
+@media (max-width: 640px) {
+  .av-th-day {
+    position: sticky; left: 0; z-index: var(--z-sticky);
+    background: var(--paper-2);
+  }
+  .av-table thead .av-th { position: sticky; left: 0; z-index: var(--z-sticky); background: var(--paper-2); }
+}
+
 /* ── Map client (ODY-011c — migrated from inline styles) ── */
 .map-loading { position: absolute; inset: 0; background: var(--paper-3); }
 

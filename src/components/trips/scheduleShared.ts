@@ -1,4 +1,4 @@
-import type { AvailabilityBlock } from "@/types";
+import type { AvailabilityBlock, AvailabilityStatus } from "@/types";
 
 // UTC calendar-day key (YYYY-MM-DD). Must match the backend's date key logic.
 export function toDateKey(date: Date | string): string {
@@ -34,4 +34,20 @@ export function formatDayLabel(date: Date): { weekday: string; day: string } {
     weekday: date.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }),
     day: date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
   };
+}
+
+export type FillSlot = { date: string; block: AvailabilityBlock; status: AvailabilityStatus };
+
+/**
+ * Build the {date, block, status} list for a bulk fill (ODY-109): the cartesian
+ * product of the given date keys and blocks at one status. Used for the
+ * "whole day", "whole block column", and "whole range" free shortcuts, so the
+ * grid and any test agree on exactly which cells a bulk action touches.
+ */
+export function fillSlots(
+  dateKeys: string[],
+  blocks: AvailabilityBlock[],
+  status: AvailabilityStatus,
+): FillSlot[] {
+  return dateKeys.flatMap((date) => blocks.map((block) => ({ date, block, status })));
 }
