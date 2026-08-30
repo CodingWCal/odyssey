@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma/db";
 import { createTripSchema, updateTripSchema, createTripWizardSchema, type CreateTripWizardInput } from "@/lib/validations";
@@ -12,6 +13,10 @@ import { parseDateString, enumerateDays, dayKey, shiftDateUTC, daysBetweenUTC } 
 import { syncLinkedExpense } from "@/lib/expenses";
 
 const getOrCreateUser = getOrCreateDbUser;
+
+// Per-trip cookie that records a member dismissing the ODY-085 join welcome,
+// so it stays gone across reloads (not just the session).
+const joinWelcomeCookie = (tripId: string) => `ody-welcomed-${tripId}`;
 
 export async function getTripsByUser() {
   // Resolve via getOrCreateUser (not a raw clerkId lookup) so an invited user's
@@ -71,16 +76,43 @@ export async function getTripById(tripId: string) {
   const myRole = (me?.role ?? "viewer") as "owner" | "editor" | "viewer";
 
   // First-visit welcome for freshly-joined members (ODY-085): a non-owner
-  // within a week of joining. myName seeds the greeting. The time read lives
-  // here, in a plain server function, to keep it out of the page's render
-  // (react-hooks/purity). Session-dismissible client-side; ages out on its own.
+  // within a week of joining who hasn't dismissed it. myName seeds the
+  // greeting. The time read lives here, in a plain server function, to keep it
+  // out of the page's render (react-hooks/purity). Dismissal persists via a
+  // per-trip cookie (dismissJoinWelcome); the window also ages it out on its own.
   const WELCOME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  const welcomeDismissed = (await cookies()).has(joinWelcomeCookie(tripId));
   const joinWelcome =
+    !welcomeDismissed &&
     myRole !== "owner" &&
     me?.joinedAt != null &&
     Date.now() - me.joinedAt.getTime() < WELCOME_WINDOW_MS;
 
   return { ...trip, myRole, joinWelcome, myName: me?.user?.name ?? null };
+}
+
+/**
+ * Persist a member's dismissal of the ODY-085 join welcome so it stays gone on
+ * later visits. Gated on membership so the cookie can't be set for a trip the
+ * caller isn't on. Best-effort: failure just means the banner may reappear.
+ */
+export async function dismissJoinWelcome(tripId: string) {
+  let dbUser;
+  try {
+    dbUser = await getOrCreateUser();
+  } catch {
+    return;
+  }
+  const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
+  if (!member) return;
+
+  (await cookies()).set(joinWelcomeCookie(tripId), "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 180, // 180 days — a one-time greeting, not a session flag
+  });
 }
 
 export async function createTrip(formData: FormData) {
