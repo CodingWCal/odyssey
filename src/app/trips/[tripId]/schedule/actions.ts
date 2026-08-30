@@ -253,12 +253,12 @@ export async function deleteMySlot(data: DeleteSlotInput) {
  * else's availability; a no-op if they had nothing recorded. */
 export async function clearMySlots(data: ClearSlotsInput) {
   const dbUser = await getDbUser();
+  const validated = clearSlotsSchema.parse(data);
+
   const member = await db.tripMember.findFirst({
-    where: { tripId: data.tripId, userId: dbUser.id },
+    where: { tripId: validated.tripId, userId: dbUser.id },
   });
   if (!member) throw new Error("Unauthorized");
-
-  const validated = clearSlotsSchema.parse(data);
 
   await db.availabilitySlot.deleteMany({
     where: { tripId: validated.tripId, userId: dbUser.id },
