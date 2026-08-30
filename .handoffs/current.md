@@ -62,18 +62,24 @@ pushed, merged to `main`, and owner-verified.
 
 ⚠️ **Ground yourself in git before proposing anything** (per the handoff-protocol
 block in CLAUDE.md/AGENTS.md): run `git log --oneline -30`, treat BACKLOG.md as a
-claim to verify, and confirm each candidate is still open before naming it. An
-earlier draft of this doc listed already-shipped work (landing F01/F07, ODY-064,
-ODY-075) and wasted a thread — those are DONE/obsolete; do not resurrect them.
+claim to verify, and confirm each candidate is still open before naming it. This
+doc's first draft named already-shipped work and wasted a thread; a parallel thread
+then shipped **ODY-109** and **ODY-085** on 2026-08-30 — both are DONE now. Do not
+resurrect anything below without confirming it against `git log` first.
 
 The next thread should **ask the owner for the next hyper-polish target.** If none
 is offered, the reconciled backlog (BACKLOG.md, "Status as of 2026-08-30") lists
 the genuinely-open, polish-appropriate candidates — verify each against git first:
-- **ODY-109 residual** — scheduling poll: bulk availability marking + mobile
-  sticky day-column (correctness slice already shipped).
-- **ODY-118 close-out** — verify a11y findings F2/F5/F10; fold in ODY-022.
-- **ODY-097 residual** — budget per-event / restaurant split-view polish.
+- **ODY-118 F2** — `:focus-visible` rings on the seamless inline note editors.
+  Code-only, shippable without a browser. Smallest next step.
+- **ODY-118 F10 + ODY-022** — axe/contrast sweep across the 5 main routes. Needs a
+  rendered browser (owner or a browser-capable session).
+- **ODY-097 residual** — budget per-event / restaurant split-view IA + mobile judgment.
 - **ODY-046** — full user-journey QA audit (new + returning users).
+
+**Owner decision, not code:** landing **F01** social proof — the old fabricated
+"4,200 travelers" / "Maya R." lines were removed in the landing rebuild; decide
+whether to add real proof later or leave it out. Nothing to action until you say so.
 
 **Do NOT start ODY-119** (Explore enrichment: price/rating/parking + translated
 names) — filed and explicitly **deferred pending owner cost approval** (Foursquare

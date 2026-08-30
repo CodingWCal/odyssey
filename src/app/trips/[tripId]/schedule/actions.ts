@@ -5,10 +5,12 @@ import { db } from "@/lib/prisma/db";
 import {
   applyWindowSchema,
   createPollSchema,
+  clearSlotsSchema,
   deleteSlotSchema,
   setSlotsSchema,
   type ApplyWindowInput,
   type CreatePollInput,
+  type ClearSlotsInput,
   type DeleteSlotInput,
   type SetSlotsInput,
 } from "@/lib/validations";
@@ -241,6 +243,25 @@ export async function deleteMySlot(data: DeleteSlotInput) {
       date: new Date(validated.date),
       block: validated.block,
     },
+  });
+
+  revalidatePath(`/trips/${validated.tripId}/schedule`);
+}
+
+/** Clear every one of the caller's own slots for a trip (ODY-109 "clear the
+ * whole range"). Scoped to the caller's userId, so it can't touch anyone
+ * else's availability; a no-op if they had nothing recorded. */
+export async function clearMySlots(data: ClearSlotsInput) {
+  const dbUser = await getDbUser();
+  const validated = clearSlotsSchema.parse(data);
+
+  const member = await db.tripMember.findFirst({
+    where: { tripId: validated.tripId, userId: dbUser.id },
+  });
+  if (!member) throw new Error("Unauthorized");
+
+  await db.availabilitySlot.deleteMany({
+    where: { tripId: validated.tripId, userId: dbUser.id },
   });
 
   revalidatePath(`/trips/${validated.tripId}/schedule`);

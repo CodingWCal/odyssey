@@ -3,6 +3,7 @@ import { DayBlock } from "@/components/itinerary/DayBlock";
 import { TripNotes } from "@/components/itinerary/TripNotes";
 import { FirstSteps } from "@/components/itinerary/FirstSteps";
 import { ItineraryHero } from "@/components/itinerary/ItineraryHero";
+import { JoinWelcome } from "@/components/trips/JoinWelcome";
 import { fetchWeather } from "@/components/shared/WeatherBanner";
 import { notFound } from "next/navigation";
 import type { TripDay } from "@/types";
@@ -34,8 +35,22 @@ export default async function ItineraryPage({ params }: Props) {
   const note = normalizeTripNoteContent(trip.note?.content);
   const readOnly = trip.myRole === "viewer"; // ODY-001
 
+  // First-visit welcome for a freshly-joined member (ODY-085); eligibility
+  // (non-owner, joined within a week) is computed in getTripById.
+  const ownerName =
+    trip.members.find((m: (typeof trip.members)[number]) => m.userId === trip.ownerId)?.user?.name ?? null;
+
   return (
     <div className="canvas">
+      {trip.joinWelcome && (
+        <JoinWelcome
+          tripId={tripId}
+          tripTitle={trip.title}
+          role={trip.myRole as "editor" | "viewer"}
+          memberName={trip.myName}
+          ownerName={ownerName}
+        />
+      )}
       <ItineraryHero
         tripId={tripId}
         destination={trip.destination}

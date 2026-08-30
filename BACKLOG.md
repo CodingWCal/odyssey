@@ -558,7 +558,7 @@ Filed from the ODY-108 audit (findings F04-F06) — three small, mechanical, sam
 >
 > **Completed (2026-08-11).** The remaining radius values are now named compact tokens (`--radius-focus/inline/control/field/icon/sheet`) and every literal `border-radius: <n>px` use was replaced without changing its numeric value. The 2px drop indicator now uses the existing pill token, which produces the same fully rounded shape. `eslint`, **191 tests**, and the production build all pass.
 
-### ODY-109 · Scheduling poll UX — the vote is ambiguous and easy to lose — M, sonnet — 🟡 PARTIAL
+### ODY-109 · Scheduling poll UX — the vote is ambiguous and easy to lose — M, sonnet — ✅ DONE (2026-08-30)
 > **In plain terms:** The Schedule tab lets people tap cells to say when they're free, but the result is genuinely ambiguous: "I'm busy" looks exactly the same as "I haven't answered yet," and "maybe" is collected but then never shown to anyone. You also can't tell who still hasn't voted, there's no way to mark a whole week at once, and if a save fails the app says nothing — you think you voted when you didn't. This makes the poll trustworthy to read and quicker to fill in.
 Concrete defects found in the 2026-08-08 audit of `AvailabilityGrid.tsx` / `AvailabilityHeatmap.tsx` / `schedule/actions.ts`:
 - **"Busy" and "unset" are visually identical.** `cellClass()` returns `is-unset` for both `"unavailable"` and `undefined`, and the legend collapses them into one swatch labelled "Busy / unset". The four-state tap cycle (unset → free → maybe → busy → unset) therefore has only three visual states, and an explicit "I can't make it" is indistinguishable from silence — the single most important distinction in a scheduling poll. Give `unavailable` its own treatment (`--coral`-family, per the palette's alert role) and leave unset visually empty.
@@ -574,7 +574,7 @@ Concrete defects found in the 2026-08-08 audit of `AvailabilityGrid.tsx` / `Avai
 - Guardrails: no new deps; the schedule tab currently mixes raw Tailwind utilities with the globals.css class system — migrate the touched markup to `.av-*` classes rather than adding more utilities (ODY-011/012 posture); keep one-tap "free" as the fastest path.
 - Acceptance: busy, maybe, free and unanswered are four visually distinct states in both the personal grid and the group heatmap; the group view shows who hasn't responded; a failed save is visible; a traveler can mark a whole day or the whole range without tapping every cell; no horizontal scroll traps the day labels at 375px.
 > **Shipped (2026-08-08):** busy vs. unset are now visually distinct — `.av-cell-btn.is-busy` uses the `--coral` alert family (matches the palette's semantic role) instead of collapsing into `.is-unset`; legend splits into separate Busy / Unset swatches. Maybe now reaches the group: the heatmap tallies `available` and `maybe` counts separately and renders `"N +M?"` per cell (a small `.av-heat-maybe` span, `--peach`), with a one-line legend explaining the notation — `computeBestWindow`'s existing 0.5 weighting was already correct, only the display was hiding it. "Who hasn't voted" ships as a quiet `av-not-responded` line ("Waiting on: Alice, Bob") derived from which member IDs have zero slots recorded at all, not tied to the ODY-034 email-nudge idea (that stays there — this is in-app only). `AvailabilityGrid`'s `persist()` no longer swallows failures — a failed save now toasts ("Couldn't save that — try again.") and reverts the optimistic cell back to its actual prior value (including correctly reverting to *unset*, not just the previous status — a naive revert would have missed that case). Payload reduced to the single changed cell per tap instead of resending the whole slot map (`setMySlots` already upserted per-slot server-side, so this was a client-only fix, no schema/action change). `all_day` and the granular blocks are now mutually exclusive in `PollSetupForm` (turning one on turns the others off), which resolves the precedence ambiguity by construction rather than by defining tie-break rules in `computeBestWindow`. Landed with **ODY-110** in the same change, since it's the same best-window card.
-> **Not done — still open:** bulk marking (row/column/"free the whole range" shortcuts) and the mobile sticky-day-column / no-horizontal-scroll-trap fix are both still outstanding — both are larger, self-contained UI work the ticket itself flagged as the biggest remaining time costs. A cleared cell also still doesn't delete its server-side row (see new **ODY-113**, filed separately) — `AvailabilityGrid` now skips the network call on clear instead of silently no-op'ing over the wire, but the underlying gap remains.
+> **Completed (2026-08-30).** Bulk marking shipped: a "Quick fill" toolbar ("I'm free the whole range" + "Clear all"), plus every day-row label and block-column label is now a one-tap "free" button (whole day / that block every day). All the fills set `available` through the existing `setMySlots` batch (one call, optimistic, revert-and-toast on failure); the fill builder is extracted as pure `fillSlots` in `scheduleShared.ts` with 4 unit tests. "Clear all" uses a new membership-gated `clearMySlots` action scoped to the caller's own slots. The mobile half is done too: at ≤640px the day column is `position: sticky; left: 0` so the labels stay pinned while the blocks scroll — no more day labels scrolling out of view at 375px. Headers get `:focus-visible` rings and full aria-labels. The cleared-cell row-deletion gap was **ODY-113**, already resolved. tsc / eslint / 260 tests / build all clean.
 
 ### ODY-113 · Clearing an availability cell doesn't delete the underlying row — S, haiku — ✅ DONE
 > **In plain terms:** Tapping a schedule cell back to "unset" only changes what you see on your own screen right now — the server still remembers your last real answer. Reload the page, or have someone else load the poll, and your "cleared" answer reappears exactly as it was before you cleared it.
@@ -744,8 +744,9 @@ No way to search inside a trip.
 > **In plain terms:** A collaborator can be removed by the owner, but can't leave on their own. Add a clear "Leave trip" for non-owners.
 - `leaveTrip` action + `LeaveTripButton` on Members (non-owners only); confirm → dashboard.
 
-### ODY-085 · Post-invite "you're in" welcome on the joined trip — S, sonnet
-> **In plain terms:** After accepting an invite you get dropped on a generic screen. A short welcome on *that trip* (your role, who's hosting, "start on the itinerary") makes joining feel warm and oriented. Pairs with ODY-037.
+### ODY-085 · Post-invite "you're in" welcome on the joined trip — S, sonnet — ✅ DONE (2026-08-30)
+> **Shipped.** A freshly-joined member landing on the itinerary now sees a slim, dismissible "you're aboard" banner (`JoinWelcome`) carrying the ticket's three asks: their role, who's hosting, and a primary action ("Meet the crew" → members). Eligibility is computed in `getTripById` — a non-owner within 7 days of `joinedAt` who hasn't dismissed it — so there's no schema change and no localStorage. Dismissal persists via an httpOnly per-trip cookie (`ody-welcomed-<tripId>`, set by a membership-gated `dismissJoinWelcome` action); the 7-day window also ages it out on its own. Editor gets a peri accent, viewer a slate accent with view-only wording; both accents and the `--on-fill` button token already exist (no new palette). Rendered at the top of the itinerary canvas (the trip root redirects there), so it inherits the mobile-header/safe-area handling. Owner-reviewed via mockup first. tsc / eslint / 256 tests / build all clean.
+> **In plain terms:** After accepting an invite you get dropped on a generic screen. A short welcome on *that trip* (your role, who's hosting, a next step) makes joining feel warm and oriented. Pairs with ODY-037.
 Invite deep-links land on the trip, but there's no first-visit context for a joiner.
 - On a member's first visit to a trip they just joined (detect via `joinedAt` recency or a one-time session flag — no localStorage), show a dismissible welcome banner: role, owner name, one primary CTA.
 - Files: `src/app/trips/[tripId]/` layout or itinerary page, a small `JoinWelcome` component, `globals.css`.
@@ -1131,37 +1132,45 @@ Collaboration feels static without realtime (ODY-070).
 `git log --oneline -40` and confirm the ticket isn't already shipped — the trail
 of dated "Next up" notes this section used to carry went stale and sent a fresh
 thread chasing work that had merged weeks earlier. Treat every candidate here as a
-*claim to verify*, and confirm the next unit with the owner before coding.
+*claim to verify*, and confirm the next unit with the owner before coding. (This
+backlog is edited by parallel threads — two independent reconciliations merged
+here on 2026-08-30 — so git remains the only reliable source of truth.)
 
 Since the 2026-08-08 review, ~70 commits shipped. The numbered session order above
 is complete through its polish steps, **plus** (all ✅ DONE, verified in git):
 the ODY-011e/f **landing rebuild** (boarding-pass hero, animated routes, hover
 polish); **ODY-118** accessibility remediation (F1/F3/F4/F6/F7/F8/F9/F11 + a global
-reduced-motion catch-all + WCAG-AA muted text + focus states); features
-ODY-032/033/060/069/072/078/082/083/086/087/093/096/097; the **ODY-094** Splitwise
-Stage A+B per-expense split engine (C/D still future); the **map** basemap move to
-Stadia "Alidade Smooth"; and the **Explore** migration to **Foursquare Places**
-(ODY-049 — enrichment filed as ODY-119).
+reduced-motion catch-all + WCAG-AA muted text + focus states); **ODY-085**
+post-invite "you're in" welcome (2026-08-30); **ODY-109** scheduling-poll UX now
+fully done (2026-08-30 — bulk "free" fills + Clear all + mobile sticky day column);
+features ODY-032/033/060/069/072/078/082/083/086/087/093/096/097; the **ODY-094**
+Splitwise Stage A+B per-expense split engine (C/D still future); the **map** basemap
+move to Stadia "Alidade Smooth"; and the **Explore** migration to **Foursquare
+Places** (ODY-049 — enrichment filed as ODY-119).
 
 **Obsolete — do NOT action (checked against current code 2026-08-30):**
-- Landing **F01** ("4,200 travelers" fake stat + "Maya R." testimonial): the string
-  is gone — the landing page was rebuilt (ODY-011e/f). Nothing to remove.
-- Landing **F07** (six feature cards share one bare-circle icon): obsolete after the
-  same rebuild. Re-audit the *live* page before treating any pre-rebuild ODY-108
-  finding as open.
+- Landing **F07** (six feature cards share one bare-circle icon): ✅ already done
+  2026-08-09 — each card uses its own purpose-built icon
+  (`Icons.itinerary/map/budget/members/note/weather`); see `docs/ody-108-design-audit.md` F07.
 - **ODY-064** (dead-code dedupe) ✅ DONE 2026-08-11 · **ODY-075** (progressive tabs)
   ✅ DONE 2026-08-09. Both showed up in the old "Next up" note as if still open. They aren't.
+- The fabricated-social-proof string ("4,200 travelers" / "Maya R.") is already gone
+  from the rebuilt landing page — see F01 below (kept as an owner decision, not a code task).
 
 **Genuinely open + polish-appropriate (fits the "no new features, hyper-polish only"
 directive — verify each against git first):**
-- **ODY-109 residual** — scheduling poll: bulk availability marking + the mobile
-  sticky day-column (the correctness/clarity slice already shipped).
-- **ODY-118 close-out** — verify findings F2/F5/F10 and fold in **ODY-022** (a11y
-  PARTIAL) for a final accessibility pass.
-- **ODY-097 residual** — budget per-event / restaurant split-view polish (the
-  read-only breakdown shipped; the fuller view is the remainder).
-- **ODY-046** — full user-journey QA audit (new + returning users), now that nearly
-  every surface exists.
+- **ODY-118 F2** — `:focus-visible` rings on the seamless inline note editors.
+  Shippable here, no browser needed. Smallest next step.
+- **ODY-118 F10 + ODY-022** — axe/contrast sweep across the 5 main routes. Needs a
+  rendered browser (owner or a browser-capable session).
+- **ODY-097 residual** — budget per-event / restaurant split-view IA + mobile
+  judgment (read-only breakdown shipped; the fuller view is the remainder).
+- **ODY-046** — full user-journey QA audit (new + returning users).
+
+**Owner decision, not code:**
+- **F01** — the landing page's old fabricated "4,200 travelers" stat + "Maya R."
+  testimonial were removed in the rebuild; decide whether to add real social proof
+  later or leave it out. Nothing to action until you say so.
 
 **Bigger / gated — NOT hyper-polish; need explicit owner greenlight before building:**
 ODY-119 (Explore enrichment — deferred pending cost approval) · ODY-067 Stage B
