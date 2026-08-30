@@ -4,6 +4,7 @@ import { db } from "@/lib/prisma/db";
 import { exploreVibeSchema } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 import { searchPlacesByVibe } from "@/lib/places";
+import { splitDestinations } from "@/lib/destinations";
 import { createPlace } from "@/app/trips/[tripId]/collections/actions";
 import { createEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import type { EventType } from "@/types";
@@ -26,7 +27,7 @@ export type ExploreSuggestion = {
  */
 export async function exploreByVibe(input: unknown): Promise<ExploreSuggestion[]> {
   const dbUser = await getOrCreateDbUser();
-  const { tripId, vibe } = exploreVibeSchema.parse(input);
+  const { tripId, vibe, place } = exploreVibeSchema.parse(input);
   await assertTripRole(tripId, dbUser.id, "viewer");
 
   const trip = await db.trip.findUnique({
@@ -35,7 +36,13 @@ export async function exploreByVibe(input: unknown): Promise<ExploreSuggestion[]
   });
   if (!trip) throw new Error("Not found");
 
-  const results = await searchPlacesByVibe(vibe, trip.destination, dbUser.clerkId, 8);
+  // Anchor on a chosen destination segment for a multi-city trip, but only
+  // when it's genuinely one of this trip's destinations — never geocode an
+  // arbitrary caller-supplied string. Otherwise search the full destination.
+  const anchor =
+    place && splitDestinations(trip.destination).includes(place) ? place : trip.destination;
+
+  const results = await searchPlacesByVibe(vibe, anchor, dbUser.clerkId, 8);
 
   return results.map((r, i) => ({
     id: `sug-${i}-${r.lat}-${r.lng}`,

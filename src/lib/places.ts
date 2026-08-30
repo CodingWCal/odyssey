@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { geocode } from "@/lib/geocode";
 import { haversineKm } from "@/lib/geoDistance";
 import { resolveVibe, buildOverpassQuery, type VibePreset } from "@/lib/vibePresets";
+import { geocodeCandidates } from "@/lib/destinations";
 import type { EventType } from "@/types";
 
 /**
@@ -285,9 +286,15 @@ export async function searchPlacesByVibe(
 ): Promise<VibePlace[]> {
   const preset = resolveVibe(vibe);
 
-  // Anchor on the destination's coordinates (one geocode — cached and
-  // rate-limited by the shared helper).
-  const center = await geocode(destination, { userKey });
+  // Anchor on the destination's coordinates. A compound destination
+  // ("Lisbon and Crete") won't geocode as one phrase, so try the full string
+  // first and fall back to each segment — otherwise Explore returns nothing
+  // for a multi-city trip even with a valid provider key.
+  let center: { lat: number; lng: number } | null = null;
+  for (const candidate of geocodeCandidates(destination)) {
+    center = await geocode(candidate, { userKey });
+    if (center) break;
+  }
   if (!center) return [];
 
   if (process.env.FOURSQUARE_API_KEY) {

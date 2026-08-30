@@ -30,18 +30,22 @@ interface DayOption {
 interface ExploreClientProps {
   tripId: string;
   destination: string;
+  /** The trip's destination split into distinct places (multi-city trips). */
+  destinations: string[];
   days: DayOption[];
   readOnly?: boolean;
 }
 
-export function ExploreClient({ tripId, destination, days, readOnly = false }: ExploreClientProps) {
+export function ExploreClient({ tripId, destination, destinations, days, readOnly = false }: ExploreClientProps) {
+  const multiDest = destinations.length > 1;
+  const [activeDest, setActiveDest] = useState(destinations[0] ?? destination);
   const [vibe, setVibe] = useState("");
   const [results, setResults] = useState<ExploreSuggestion[]>([]);
   const [searched, setSearched] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [dayPick, setDayPick] = useState<Record<string, string>>({});
 
-  function runSearch(q: string) {
+  function runSearch(q: string, dest = activeDest) {
     const next = q.trim();
     if (next.length < 2) {
       toast("Pick or type a vibe first.");
@@ -50,7 +54,7 @@ export function ExploreClient({ tripId, destination, days, readOnly = false }: E
     setVibe(next);
     startTransition(async () => {
       try {
-        const list = await exploreByVibe({ tripId, vibe: next });
+        const list = await exploreByVibe({ tripId, vibe: next, place: multiDest ? dest : undefined });
         setResults(list);
         setSearched(true);
         if (list.length === 0) toast("No places matched that vibe — try another.");
@@ -58,6 +62,14 @@ export function ExploreClient({ tripId, destination, days, readOnly = false }: E
         toast("Explore couldn't search right now — try again.");
       }
     });
+  }
+
+  // Switch which city a multi-destination trip explores; re-run the current
+  // vibe against the newly picked place so the list updates in one tap.
+  function pickDest(dest: string) {
+    if (dest === activeDest) return;
+    setActiveDest(dest);
+    if (searched && vibe.trim().length >= 2) runSearch(vibe, dest);
   }
 
   function handleSaveCollection(s: ExploreSuggestion) {
@@ -110,7 +122,7 @@ export function ExploreClient({ tripId, destination, days, readOnly = false }: E
     <div className="explore-page">
       <header className="explore-head">
         <div>
-          <div className="eyebrow">Near {destination}</div>
+          <div className="eyebrow">Near {multiDest ? activeDest : destination}</div>
           <h1 className="explore-title">
             Explore by <em>vibe</em>
           </h1>
@@ -119,6 +131,23 @@ export function ExploreClient({ tripId, destination, days, readOnly = false }: E
           </p>
         </div>
       </header>
+
+      {multiDest && (
+        <div className="explore-dests" role="group" aria-label="Which destination to explore">
+          {destinations.map((d) => (
+            <button
+              key={d}
+              type="button"
+              className={`chip ${d === activeDest ? "active" : ""}`}
+              onClick={() => pickDest(d)}
+              disabled={isPending}
+              aria-pressed={d === activeDest}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="explore-search">
         <div className="explore-chips">

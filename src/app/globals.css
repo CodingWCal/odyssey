@@ -3904,6 +3904,8 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 /* Explore (ODY-049/050) */
 .explore-page { max-width: 720px; }
 .explore-head { margin-bottom: 24px; }
+/* Destination filter for multi-city trips — a quiet chip row above the search. */
+.explore-dests { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 20px; }
 .explore-title {
   font-family: var(--font-display); font-size: 36px; font-weight: 400;
   color: var(--ink); margin: 4px 0 8px; line-height: 1.1;
