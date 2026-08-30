@@ -176,12 +176,6 @@ export const deleteSlotSchema = z.object({
   block: z.enum(["all_day", "morning", "afternoon", "evening"]),
 });
 
-// Clear all of the caller's own slots for a trip (ODY-109 "clear the whole
-// range"). userId is always the caller's, resolved server-side.
-export const clearSlotsSchema = z.object({
-  tripId: z.string().min(1),
-});
-
 export const applyWindowSchema = z.object({
   tripId: z.string().min(1),
   startDate: dateString,
@@ -273,7 +267,6 @@ export type CreateTripWizardInput = z.infer<typeof createTripWizardSchema>;
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 export type SetSlotsInput = z.infer<typeof setSlotsSchema>;
 export type DeleteSlotInput = z.infer<typeof deleteSlotSchema>;
-export type ClearSlotsInput = z.infer<typeof clearSlotsSchema>;
 export type ApplyWindowInput = z.infer<typeof applyWindowSchema>;
 export type UpdateDisplayNameInput = z.infer<typeof updateDisplayNameSchema>;
 export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
