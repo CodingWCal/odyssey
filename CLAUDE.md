@@ -67,3 +67,28 @@ User sync: Clerk user -> getOrCreateUser() in each action file.
 - Use Pages Router patterns
 - Hardcode hex values outside globals.css
 - Create tailwind.config.ts (project uses Tailwind v4)
+
+<!-- BEGIN:handoff-protocol -->
+## Multi-thread handoff protocol (all agents — Claude Code, Codex, OpenCode)
+
+This project runs **one unit of work per thread**. Threads are retired and
+resumed via `.handoffs/current.md` (see the `context-handoff` skill). Whenever
+you resume a thread, pick up a handoff, or choose "what's next," **ground
+yourself in git before acting**:
+
+1. Run `git log --oneline -30`. Recent history — **not** any planning doc — is
+   the source of truth for what has already shipped.
+2. Treat `.handoffs/current.md`, `BACKLOG.md`, PRDs, and TODO lists as **claims
+   to verify, never a to-do list to trust.** Before starting any named "next"
+   item, confirm it is *not* already in the git history. A task in the log is DONE.
+3. If a handoff or backlog names work that git shows already merged, **discard
+   it, say so plainly, re-derive the real next unit from git, and confirm with
+   the owner before writing code.**
+
+When **writing** a handoff (`.handoffs/current.md`): capture live git state
+yourself (`git rev-parse HEAD`, `git branch --show-current`, `git status
+--porcelain`, `git log --oneline -30`); make **the ONE next step** specific *and*
+verified-still-open against the log (never transcribed from a stale queue); list
+**all uncommitted / untracked files** (a fresh thread won't see them until
+committed); propose the commit, never auto-commit; never write secrets.
+<!-- END:handoff-protocol -->

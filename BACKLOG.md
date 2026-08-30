@@ -817,7 +817,7 @@ category label.
 > **In plain terms:** The budget shows who's over or under, but not what to do about it. This adds concrete suggestions: "Alex pays Maya $120" — the fewest transfers that settle everyone up.
 - Shipped: `suggestSettlements` in `src/lib/budget.ts` + unit tests; quiet list under the split card (teal accent). Cent-reconciled shares via largest-remainder.
 
-### ODY-094 · Expense splitting audit → Splitwise-grade gaps — L, sonnet (P1)
+### ODY-094 · Expense splitting audit → Splitwise-grade gaps — L, sonnet (P1) — 🟡 STAGE A+B DONE (2026-08); C/D (itemized lines, tax/tip) future
 > **In plain terms:** Odyssey can track trip spend and a trip-level weighted split, but it is not yet a full Splitwise replacement (no per-bill payer, selected participants, itemized restaurant math, tax/tip).
 **Audit (2026-07-26) — what exists today:**
 - Works: expense CRUD (label/amount/category), event-linked costs, trip-level weights + equal reset, balances (paid − share), persistence of weights + expenses, settle-up suggestions (ODY-030), cent-reconciled shares.
@@ -1113,7 +1113,7 @@ Collaboration feels static without realtime (ODY-070).
 - Supabase advisor: 2 warnings on `rls_auto_enable()` (accepted risk — Prisma bypasses RLS by design; see security memo).
 - Clerk production instance + `pk_live` keys before real-domain launch (see deploy notes).
 - Google Calendar **two-way** sync for Schedule tab — explicitly deferred by product decision (see ODY-069 for export-only).
-- Full LLM Explore ranking — optional once a provider key exists (ODY-049 MVP already ships Nominatim).
+- Full LLM Explore ranking — optional layer on top of the current Foursquare Places search (ODY-049 shipped; enrichment is ODY-119).
 
 ## Suggested session order
 1. **P0 security/correctness:** ODY-052 (IDOR) ✅ → ODY-051 (notes clobber) ✅ → ODY-098 (weekday label off-by-one) ✅ → ODY-099 (wizard submit button unreachable, mobile) ✅
@@ -1126,16 +1126,45 @@ Collaboration feels static without realtime (ODY-070).
 8. **Competitive / later:** ODY-066 · ODY-068–071
 9. **Post-MVP:** ODY-073 native (after mobile web + offline foundations)
 
-**Added by the 2026-08-08 review pass** (backlog reconciliation + four product questions):
-- ~~**Fix first (small, concrete bug):** ODY-110~~ — ✅ done (2026-08-08), landed with ODY-109.
-- ~~**Then the scheduling pass:** ODY-109~~ — 🟡 the correctness/clarity slice shipped (2026-08-08): busy/unset distinct, maybe surfaced, responded roster, failed-save toast, single-cell payload, block mutual-exclusivity. Bulk marking and the mobile sticky-day-column fix are still open — see the ticket's own status note. Incidentally surfaced **ODY-113** (clearing a slot doesn't delete the row) — filed, not fixed.
-- ~~**Next up:** ODY-113~~ — ✅ done (2026-08-08). ~~Resume at step 3 (ODY-062/063)~~ — both were already ✅ DONE; step 3 of the numbered order is complete.
-- ~~**Next up:** ODY-075~~ — ✅ done (2026-08-09): desktop sidebar now reveals tabs progressively (fresh trip shows 4, not 7) with a "More" disclosure; state-driven, no user toggle. Directly addressed the nav-bloat/information-overload concern.
-- ~~**Next up:** ODY-024~~ — ✅ done (2026-08-09): one cents-honest `formatMoney` + trip currency across all 5 money surfaces. `prisma db push` already run against Supabase — deploy step complete.
-- ~~**Next up:** ODY-116~~ — ✅ done (2026-08-09): personal "you owe / you're owed" line in the budget hero + settle-up honesty caption.
-- ~~**Next up:** ODY-115~~ — ✅ done (2026-08-09): partial settle-up amount, inline edit next to "Mark as paid."
-- ~~**Next up:** ODY-114~~ — ✅ done (2026-08-09): adjustment split ("Adjust one person" mode) in `ExpenseModal`. **The entire ODY-111 money queue (ODY-024, 116, 115, 114) is now shipped.**
-- ~~**Next up:** ODY-108~~ — ✅ done (2026-08-09): full UI/UX audit, `docs/ody-108-design-audit.md`. **Both remaining audits from the 2026-08-08 review (ODY-108, ODY-111) are now complete.** Shipped alongside it: `.icon-btn`/`.opt-chip` bumped to the 40px touch-target standard. Spawned **ODY-117** (token drift cleanup). One P0 finding needs a human decision, not code: the landing page's fabricated "4,200 travelers" stat and invented testimonial (see the audit doc's F01).
-- **Next up:** no audits left in the queue. Pick from: **ODY-117** (token drift — S, small/mechanical) · the landing-page fixes the audit named but didn't auto-apply (F01 needs your call, F07's icon swap is safe and ready) · or a fresh P2/P3 ticket (ODY-064 dead-code dedupe, ODY-075's mobile-drawer follow-up, ODY-067 packing list).
-- **Audits, run before the polish they'd feed:** ODY-108 (whole-app UI/UX + brand-drift sweep, desktop and mobile — supersedes doing ODY-020/022/023/026 blind) · ~~ODY-111~~ ✅ done 2026-08-09 (gap table + verdicts in-ticket; spawned ODY-114/115/116, promoted ODY-024, deferred per-expense FX).
-- **Bigger swings, both with prerequisites:** ODY-067 (packing — now has a concrete private/shared design) · ODY-112 (receipt capture — needs a provider API key, and wants ODY-094 Stage C first for the itemized payoff).
+**Status as of 2026-08-30 — reconciled against git history.** ⚠️ Ground truth is
+`git log`, not this list. Before starting anything below, run
+`git log --oneline -40` and confirm the ticket isn't already shipped — the trail
+of dated "Next up" notes this section used to carry went stale and sent a fresh
+thread chasing work that had merged weeks earlier. Treat every candidate here as a
+*claim to verify*, and confirm the next unit with the owner before coding.
+
+Since the 2026-08-08 review, ~70 commits shipped. The numbered session order above
+is complete through its polish steps, **plus** (all ✅ DONE, verified in git):
+the ODY-011e/f **landing rebuild** (boarding-pass hero, animated routes, hover
+polish); **ODY-118** accessibility remediation (F1/F3/F4/F6/F7/F8/F9/F11 + a global
+reduced-motion catch-all + WCAG-AA muted text + focus states); features
+ODY-032/033/060/069/072/078/082/083/086/087/093/096/097; the **ODY-094** Splitwise
+Stage A+B per-expense split engine (C/D still future); the **map** basemap move to
+Stadia "Alidade Smooth"; and the **Explore** migration to **Foursquare Places**
+(ODY-049 — enrichment filed as ODY-119).
+
+**Obsolete — do NOT action (checked against current code 2026-08-30):**
+- Landing **F01** ("4,200 travelers" fake stat + "Maya R." testimonial): the string
+  is gone — the landing page was rebuilt (ODY-011e/f). Nothing to remove.
+- Landing **F07** (six feature cards share one bare-circle icon): obsolete after the
+  same rebuild. Re-audit the *live* page before treating any pre-rebuild ODY-108
+  finding as open.
+- **ODY-064** (dead-code dedupe) ✅ DONE 2026-08-11 · **ODY-075** (progressive tabs)
+  ✅ DONE 2026-08-09. Both showed up in the old "Next up" note as if still open. They aren't.
+
+**Genuinely open + polish-appropriate (fits the "no new features, hyper-polish only"
+directive — verify each against git first):**
+- **ODY-109 residual** — scheduling poll: bulk availability marking + the mobile
+  sticky day-column (the correctness/clarity slice already shipped).
+- **ODY-118 close-out** — verify findings F2/F5/F10 and fold in **ODY-022** (a11y
+  PARTIAL) for a final accessibility pass.
+- **ODY-097 residual** — budget per-event / restaurant split-view polish (the
+  read-only breakdown shipped; the fuller view is the remainder).
+- **ODY-046** — full user-journey QA audit (new + returning users), now that nearly
+  every surface exists.
+
+**Bigger / gated — NOT hyper-polish; need explicit owner greenlight before building:**
+ODY-119 (Explore enrichment — deferred pending cost approval) · ODY-067 Stage B
+(per-event packing) · ODY-065 (routed travel-time — needs a routing provider) ·
+ODY-112 (receipt capture — needs an API key) · ODY-036/037 (launch blockers: Clerk
+prod + real invitations) · ODY-031/034/035/066/068/070/071/088/089.

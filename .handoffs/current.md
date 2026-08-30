@@ -58,21 +58,29 @@ with a tiny tasteful attribution credit styled in `src/app/globals.css`.
 
 ## THE ONE NEXT STEP
 **There is no in-flight task.** The Explore→Foursquare unit is done, committed,
-pushed, merged to `main`, and owner-verified. The next thread should:
+pushed, merged to `main`, and owner-verified.
 
-1. Ask the owner for the next hyper-polish target. If none is offered, propose
-   from the backlog's stale-but-open "Next up" candidates:
-   - Landing-page **F07** icon swap (six feature cards reuse one bare-circle icon
-     though six distinct icons already exist) — *safe, ready, no owner decision*.
-   - Landing-page **F01** fabricated social proof ("★★★★★ · Loved by 4,200
-     travelers" + invented "Maya R." testimonial under a "Now in beta" badge) —
-     *needs an owner content decision, do not auto-remove*.
-   - **ODY-064** dead-code dedupe · **ODY-067** packing checklist Stage B ·
-     **ODY-075** mobile-drawer follow-up.
-2. **Do NOT start ODY-119** (Explore enrichment: price/rating/parking + translated
-   names). It is filed and explicitly **deferred pending owner cost approval** —
-   Foursquare Premium fields are paid (no free tier), and translated names need a
-   new translation provider. See the ticket for the full research/cost/plan.
+⚠️ **Ground yourself in git before proposing anything** (per the handoff-protocol
+block in CLAUDE.md/AGENTS.md): run `git log --oneline -30`, treat BACKLOG.md as a
+claim to verify, and confirm each candidate is still open before naming it. An
+earlier draft of this doc listed already-shipped work (landing F01/F07, ODY-064,
+ODY-075) and wasted a thread — those are DONE/obsolete; do not resurrect them.
+
+The next thread should **ask the owner for the next hyper-polish target.** If none
+is offered, the reconciled backlog (BACKLOG.md, "Status as of 2026-08-30") lists
+the genuinely-open, polish-appropriate candidates — verify each against git first:
+- **ODY-109 residual** — scheduling poll: bulk availability marking + mobile
+  sticky day-column (correctness slice already shipped).
+- **ODY-118 close-out** — verify a11y findings F2/F5/F10; fold in ODY-022.
+- **ODY-097 residual** — budget per-event / restaurant split-view polish.
+- **ODY-046** — full user-journey QA audit (new + returning users).
+
+**Do NOT start ODY-119** (Explore enrichment: price/rating/parking + translated
+names) — filed and explicitly **deferred pending owner cost approval** (Foursquare
+Premium fields are paid; translated names need a new translation provider).
+**Do NOT treat launch blockers / bigger features** (ODY-036/037, 031/034/035/066/
+068/070/071/088/089, 065, 067 Stage B, 112) as hyper-polish — they need explicit
+owner greenlight against the standing "no new features" directive.
 
 ## Uncommitted / in-flight work
 **None.** `git status --porcelain` is empty; branch is in sync with
