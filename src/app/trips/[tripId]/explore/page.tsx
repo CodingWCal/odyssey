@@ -1,5 +1,6 @@
 import { getTripById } from "@/app/trips/actions";
 import { ExploreClient } from "@/components/explore/ExploreClient";
+import { splitDestinations } from "@/lib/destinations";
 import { notFound } from "next/navigation";
 
 interface Props {
@@ -22,6 +23,7 @@ export default async function ExplorePage({ params }: Props) {
       <ExploreClient
         tripId={tripId}
         destination={trip.destination}
+        destinations={splitDestinations(trip.destination)}
         days={days}
         readOnly={trip.myRole === "viewer"}
       />

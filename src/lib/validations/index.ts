@@ -215,6 +215,9 @@ export const updatePlaceSchema = createPlaceSchema.omit({ tripId: true }).partia
 export const exploreVibeSchema = z.object({
   tripId: z.string().min(1),
   vibe: z.string().trim().min(2, "Pick or type a vibe").max(80),
+  // Optional destination segment to anchor on for a multi-city trip; validated
+  // server-side against the trip's own destination before use.
+  place: z.string().trim().min(1).max(200).optional(),
 });
 
 export const createChecklistItemSchema = z.object({
