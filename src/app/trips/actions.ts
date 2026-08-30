@@ -67,10 +67,20 @@ export async function getTripById(tripId: string) {
 
   // Surface the caller's own role so pages can hide edit affordances for
   // viewers (ODY-001). Server actions enforce this regardless.
-  const myRole = (trip.members.find((m) => m.userId === dbUser.id)?.role ??
-    "viewer") as "owner" | "editor" | "viewer";
+  const me = trip.members.find((m) => m.userId === dbUser.id);
+  const myRole = (me?.role ?? "viewer") as "owner" | "editor" | "viewer";
 
-  return { ...trip, myRole };
+  // First-visit welcome for freshly-joined members (ODY-085): a non-owner
+  // within a week of joining. myName seeds the greeting. The time read lives
+  // here, in a plain server function, to keep it out of the page's render
+  // (react-hooks/purity). Session-dismissible client-side; ages out on its own.
+  const WELCOME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  const joinWelcome =
+    myRole !== "owner" &&
+    me?.joinedAt != null &&
+    Date.now() - me.joinedAt.getTime() < WELCOME_WINDOW_MS;
+
+  return { ...trip, myRole, joinWelcome, myName: me?.user?.name ?? null };
 }
 
 export async function createTrip(formData: FormData) {

@@ -377,6 +377,129 @@
   padding: 32px 48px 120px;
 }
 
+/* ─── Join welcome (ODY-085) ──────────────────────────────────────────
+   A slim "you're aboard" banner for a freshly-joined member, shown at the
+   top of the itinerary canvas. Accent is peri for editors, slate for
+   viewers; both tokens already exist, so there's no new palette. */
+.jw {
+  --jw-accent: var(--peri);
+  --jw-accent-soft: var(--peri-soft);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 20px;
+  padding: 16px 18px 16px 22px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.jw.is-viewer {
+  --jw-accent: var(--slate);
+  --jw-accent-soft: var(--slate-soft);
+}
+/* Boarding-pass stub edge + perforation, echoing the ticket metaphor. */
+.jw::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--jw-accent);
+}
+.jw-perf {
+  position: absolute;
+  left: 11px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-image: radial-gradient(var(--rule-2) 1px, transparent 1.2px);
+  background-size: 2px 8px;
+}
+.jw-badge {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-left: 6px;
+  border-radius: var(--radius-pill);
+  display: grid;
+  place-items: center;
+  background: var(--jw-accent-soft);
+  color: var(--jw-accent);
+}
+.jw-body { flex: 1; min-width: 0; }
+.jw-eyebrow {
+  margin: 0 0 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--jw-accent);
+}
+.jw-title {
+  margin: 0 0 3px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 19px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.jw-title em { font-style: italic; color: var(--jw-accent); }
+.jw-sub {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.jw-role-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--jw-accent-soft);
+  color: var(--jw-accent);
+}
+.jw-cta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: var(--radius-pill);
+  background: var(--jw-accent);
+  color: var(--on-fill);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.jw-dismiss {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-left: -4px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.jw-dismiss:hover { background: var(--paper-3); color: var(--ink); }
+@media (max-width: 560px) {
+  .jw { flex-wrap: wrap; gap: 12px; padding: 14px 14px 14px 20px; }
+  .jw-cta { order: 3; width: 100%; justify-content: center; }
+  .jw-dismiss { position: absolute; top: 10px; right: 10px; margin: 0; }
+}
+
 /* ─── Hero ────────────────────────────────────────────────────────── */
 
 .hero {
