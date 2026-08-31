@@ -3545,44 +3545,6 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .av-legend-note { font-size: 12px; color: var(--ink-3); margin: 0 0 10px; }
 .av-heat-maybe { margin-left: 3px; font-weight: 500; color: var(--peach); }
 
-/* ── Bulk "free" fills (ODY-109) ── */
-.av-bulk {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-  padding: 12px 18px; border-top: 1px solid var(--rule);
-}
-.av-bulk-label {
-  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
-  letter-spacing: 0.1em; color: var(--ink-3); margin-right: 2px;
-}
-.av-bulk-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12.5px; font-weight: 600; padding: 7px 12px;
-  border-radius: var(--radius-pill); border: 1px solid var(--teal);
-  background: var(--teal); color: var(--on-fill);
-}
-.av-bulk-btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--rule-2); }
-
-/* Day and block headers become "fill free" buttons. The hint only shows on
-   hover/focus so the grid reads exactly as before at rest. */
-.av-col-btn, .av-day-btn {
-  width: 100%; display: flex; flex-direction: column; gap: 1px;
-  padding: 6px 6px; border: 1px dashed transparent; border-radius: var(--radius-md);
-  background: transparent; color: inherit; font: inherit; text-align: inherit;
-}
-.av-col-btn { align-items: center; }
-.av-day-btn { align-items: flex-start; }
-.av-col-cap { font-size: 12px; font-weight: 500; }
-.av-col-btn:hover, .av-day-btn:hover { border-color: var(--rule-2); background: var(--paper-3); }
-.av-fill-hint {
-  font-family: var(--font-mono); font-size: 8.5px; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--teal); opacity: 0;
-}
-.av-col-btn:hover .av-fill-hint, .av-day-btn:hover .av-fill-hint,
-.av-col-btn:focus-visible .av-fill-hint, .av-day-btn:focus-visible .av-fill-hint { opacity: 1; }
-.av-bulk-btn:focus-visible, .av-col-btn:focus-visible, .av-day-btn:focus-visible {
-  outline: 2px solid var(--peri); outline-offset: 2px;
-}
-
 /* Mobile: keep the day column pinned while the blocks scroll, so the labels
    never scroll out of view at 375px (ODY-109). */
 @media (max-width: 640px) {
@@ -3591,6 +3553,66 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
     background: var(--paper-2);
   }
   .av-table thead .av-th { position: sticky; left: 0; z-index: var(--z-sticky); background: var(--paper-2); }
+}
+
+/* ── Availability calendar (whole-day poll redesign) ── */
+.av-cal { padding: 18px; }
+.av-cal-hero {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; justify-content: space-between;
+  background: var(--teal-soft); border: 1px solid var(--rule-2); border-radius: var(--radius-lg);
+  padding: 16px 18px; margin-bottom: 18px;
+}
+.av-cal-hero-k { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); margin-bottom: 4px; }
+.av-cal-hero-dates { font-family: var(--font-display); font-size: 22px; line-height: 1.05; color: var(--ink); }
+.av-cal-hero-count { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+
+.av-cal-lead { margin-bottom: 8px; }
+.av-cal-title { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin: 0 0 2px; }
+.av-cal-sub { font-size: 12.5px; color: var(--ink-3); margin: 0; }
+
+.av-cal-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-2); margin: 12px 0; }
+.av-cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.av-cal-legend .sw { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.av-cal-legend .sw-free { background: var(--teal); }
+.av-cal-legend .sw-busy { background: var(--coral); }
+.av-cal-legend .sw-unset { background: var(--paper-3); border: 1px solid var(--rule-2); }
+
+.av-cal-monthcap { font-family: var(--font-display); font-size: 16px; color: var(--ink); margin: 6px 0 8px; }
+
+.av-cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+  touch-action: none; /* let drag-to-paint work without the page scrolling */
+}
+.av-cal-dow {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-3); text-align: center; padding-bottom: 2px;
+}
+.av-cal-day {
+  position: relative; aspect-ratio: 1 / 1; min-height: 44px;
+  border: 1px solid var(--rule); border-radius: var(--radius-md); background: var(--paper-2);
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+  padding: 6px 7px; font: inherit; color: var(--ink); user-select: none;
+}
+.av-cal-day.out { background: transparent; border-color: transparent; opacity: 0.32; }
+.av-cal-day.pick { cursor: pointer; }
+.av-cal-day.pick:hover { border-color: var(--rule-2); }
+.av-cal-day.pick:focus-visible { outline: 2px solid var(--peri); outline-offset: 2px; }
+.av-cal-num { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.av-cal-grp { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.02em; color: var(--ink-3); }
+.av-cal-mine { font-size: 11px; font-weight: 600; }
+.av-cal-day.free { background: var(--teal); border-color: var(--teal); color: var(--on-fill); }
+.av-cal-day.busy { background: var(--coral-soft); border-color: var(--coral); color: var(--coral); }
+/* group-consensus bar (share of travelers free), hidden once you paint the day */
+.av-cal-heat { position: absolute; left: 7px; right: 7px; bottom: 6px; height: 3px; border-radius: 2px; background: var(--rule); overflow: hidden; }
+.av-cal-heat > i { display: block; height: 100%; width: var(--w, 0%); background: var(--teal); opacity: 0.55; }
+
+.av-cal-roster { margin-top: 16px; font-size: 12.5px; color: var(--ink-3); }
+.av-cal-roster b { color: var(--ink-2); }
+
+@media (max-width: 560px) {
+  .av-cal { padding: 14px; }
+  .av-cal-day { padding: 4px 5px; }
+  .av-cal-grp, .av-cal-mine { font-size: 8px; }
 }
 
 /* ── Map client (ODY-011c — migrated from inline styles) ── */

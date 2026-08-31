@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { PollSetupForm } from "@/components/trips/PollSetupForm";
 import { AvailabilityGrid } from "@/components/trips/AvailabilityGrid";
 import { AvailabilityHeatmap } from "@/components/trips/AvailabilityHeatmap";
+import { AvailabilityCalendar } from "@/components/trips/AvailabilityCalendar";
 
 interface Props {
   params: Promise<{ tripId: string }>;
@@ -56,21 +57,35 @@ export default async function SchedulePage({ params }: Props) {
       )}
 
       {poll && (
-        <>
-          <AvailabilityGrid
-            poll={poll}
-            slots={slots}
-            members={members}
-            currentUserId={currentUserId}
-          />
-          <AvailabilityHeatmap
+        // Whole-day polls (the common case) get the calendar, which folds the
+        // personal grid, group heat and best window into one surface. Granular
+        // block polls keep the per-block table + heatmap.
+        poll.enabledBlocks.length === 1 && poll.enabledBlocks[0] === "all_day" ? (
+          <AvailabilityCalendar
             poll={poll}
             slots={slots}
             members={members}
             bestWindow={bestWindow}
+            currentUserId={currentUserId}
             isOwner={isOwner}
           />
-        </>
+        ) : (
+          <>
+            <AvailabilityGrid
+              poll={poll}
+              slots={slots}
+              members={members}
+              currentUserId={currentUserId}
+            />
+            <AvailabilityHeatmap
+              poll={poll}
+              slots={slots}
+              members={members}
+              bestWindow={bestWindow}
+              isOwner={isOwner}
+            />
+          </>
+        )
       )}
     </div>
   );
