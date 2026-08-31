@@ -108,17 +108,19 @@ function parseFsq(r: FsqResult, preset: VibePreset, destination: string): VibePl
  */
 async function fetchFoursquare(
   preset: VibePreset,
-  lat: number,
-  lng: number,
+  near: string,
   destination: string
 ): Promise<VibePlace[]> {
   const key = process.env.FOURSQUARE_API_KEY;
   if (!key) throw new Error("FOURSQUARE_API_KEY not set");
 
+  // Resolve the locality by NAME (near=) instead of passing coordinates we'd
+  // have to obtain from Nominatim first. Nominatim blocks Vercel's shared IPs,
+  // which made Explore return nothing in production even with a valid key —
+  // Foursquare geocodes the destination itself and ranks results near it.
   const params = new URLSearchParams({
     query: preset.fsqQuery,
-    ll: `${lat},${lng}`,
-    radius: String(SEARCH_RADIUS_M),
+    near,
     limit: String(RAW_CAP),
     fields: "name,latitude,longitude,location,categories",
   });
@@ -148,15 +150,13 @@ async function fetchFoursquare(
  *  centre + vibe query). Errors propagate uncached so we can fall back / retry. */
 function fetchFoursquareCached(
   preset: VibePreset,
-  lat: number,
-  lng: number,
+  near: string,
   destination: string
 ): Promise<VibePlace[]> {
-  const rLat = roundCoord(lat);
-  const rLng = roundCoord(lng);
+  const nearKey = near.trim().toLowerCase();
   return unstable_cache(
-    () => fetchFoursquare(preset, rLat, rLng, destination),
-    ["explore-fsq", preset.fsqQuery, String(rLat), String(rLng), String(SEARCH_RADIUS_M)],
+    () => fetchFoursquare(preset, near, destination),
+    ["explore-fsq", preset.fsqQuery, nearKey],
     { revalidate: POI_TTL_SECONDS }
   )();
 }
@@ -255,6 +255,21 @@ function fetchOverpassCached(
 // Public API
 // ---------------------------------------------------------------------------
 
+/** Dedupe by name and cap, preserving the provider's own relevance order —
+ *  used for the Foursquare `near` path, which has no single centre to sort by. */
+function dedupeCap(places: VibePlace[], limit: number): VibePlace[] {
+  const seen = new Set<string>();
+  const out: VibePlace[] = [];
+  for (const p of places) {
+    const key = p.title.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /** Dedupe by name, sort closest-to-centre first, and cap. */
 function finalize(places: VibePlace[], center: { lat: number; lng: number }, limit: number): VibePlace[] {
   const seen = new Set<string>();
@@ -286,28 +301,29 @@ export async function searchPlacesByVibe(
 ): Promise<VibePlace[]> {
   const preset = resolveVibe(vibe);
 
-  // Anchor on the destination's coordinates. A compound destination
-  // ("Lisbon and Crete") won't geocode as one phrase, so try the full string
-  // first and fall back to each segment — otherwise Explore returns nothing
-  // for a multi-city trip even with a valid provider key.
+  // Primary: Foursquare resolves the destination by name (near=), so Explore no
+  // longer depends on a Nominatim geocode — that dependency was blocked on
+  // Vercel's shared IPs and made Explore return nothing in production.
+  if (process.env.FOURSQUARE_API_KEY) {
+    try {
+      const places = await fetchFoursquareCached(preset, destination, destination);
+      if (places.length > 0) return dedupeCap(places, limit);
+      // A valid but empty response falls through to the Overpass backstop.
+    } catch (err) {
+      // Logged so a misconfigured key or outage is visible in the server logs
+      // instead of silently degrading.
+      console.warn("[explore] Foursquare unavailable, using Overpass fallback:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  // Overpass fallback needs coordinates, so it still geocodes the destination
+  // (or a segment of a compound one). Best-effort — Nominatim may be blocked.
   let center: { lat: number; lng: number } | null = null;
   for (const candidate of geocodeCandidates(destination)) {
     center = await geocode(candidate, { userKey });
     if (center) break;
   }
   if (!center) return [];
-
-  if (process.env.FOURSQUARE_API_KEY) {
-    try {
-      const places = await fetchFoursquareCached(preset, center.lat, center.lng, destination);
-      return finalize(places, center, limit);
-    } catch (err) {
-      // Foursquare unavailable — fall through to the keyless Overpass path
-      // rather than failing the whole search. Logged so a misconfigured key or
-      // outage is visible in the server logs instead of silently degrading.
-      console.warn("[explore] Foursquare unavailable, using Overpass fallback:", err instanceof Error ? err.message : err);
-    }
-  }
 
   const places = await fetchOverpassCached(preset, center.lat, center.lng, destination);
   return finalize(places, center, limit);
