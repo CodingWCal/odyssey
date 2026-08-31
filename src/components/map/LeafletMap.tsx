@@ -37,6 +37,31 @@ function hasDest(ev: MapEvent): boolean {
   return ev.destLat != null && ev.destLng != null;
 }
 
+/**
+ * Stadia Maps is authenticated by DOMAIN, so it only works on localhost and on
+ * hosts allow-listed in the Stadia dashboard (the production domain, set via
+ * NEXT_PUBLIC_APP_URL). Preview deploys get random *.vercel.app subdomains that
+ * can't be allow-listed — and Stadia serves a *successful* "401 Error" tile
+ * there, so a tileerror-based fallback never fires. Decide up front instead:
+ * Stadia on an authorized host, keyless OpenStreetMap everywhere else.
+ */
+function stadiaAuthorized(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return true;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (appUrl) {
+    try {
+      return host === new URL(appUrl).hostname;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+const OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
 export function LeafletMap({
   events,
   places = [],
@@ -77,37 +102,41 @@ export function LeafletMap({
       if (claimed._leaflet_id) delete claimed._leaflet_id;
 
       const map = L.map(el, { zoomControl: false, attributionControl: false }).setView([35.6, 139.5], 5);
-      // Basemap: Stadia Maps "Alidade Smooth" — the clean editorial Positron
-      // look, with labels baked into ONE fast layer that stays crisp to z20 (no
-      // separate slow label tiles, no upscale blur on zoom-in). Authenticated by
-      // domain — Stadia's recommended method for browser maps, so no key is
-      // exposed in the bundle: localhost/127.0.0.1 work with no setup, and
-      // production domains are allow-listed in the Stadia dashboard. If tiles
-      // start erroring (an unlisted domain, or a provider gating its tiles the
-      // way CARTO did), we swap to OpenStreetMap so the map never renders blank.
-      const stadia = L.tileLayer(
-        "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
-        {
-          maxZoom: 20,
-          detectRetina: true,
-          attribution: "&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap contributors",
-        }
-      ).addTo(map);
 
-      let tileErrors = 0;
-      let swapped = false;
-      stadia.on("tileerror", () => {
-        // Only after several errors (not a transient blip), and only once.
-        // `.map-osm-fallback` desaturates OSM toward the editorial look.
-        if (swapped || (tileErrors += 1) < 5) return;
-        swapped = true;
-        map.removeLayer(stadia);
-        el.classList.add("map-osm-fallback");
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: "&copy; OpenStreetMap contributors",
-        }).addTo(map);
-      });
+      // Choose the basemap by host (see stadiaAuthorized): Stadia's editorial
+      // "Alidade Smooth" where it's authorized, keyless OpenStreetMap
+      // (desaturated toward the same calm look via `.map-osm-fallback`)
+      // everywhere else, so the map renders on every deploy.
+      const useStadia = stadiaAuthorized();
+      const base = useStadia
+        ? L.tileLayer("https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png", {
+            maxZoom: 20,
+            detectRetina: true,
+            attribution: "&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap contributors",
+          })
+        : L.tileLayer(OSM_TILES, {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors",
+          });
+      base.addTo(map);
+      if (!useStadia) el.classList.add("map-osm-fallback");
+
+      // Safety net: even on an authorized host, if real Stadia tiles start
+      // failing, swap to OSM after a few genuine errors so the map never blanks.
+      if (useStadia) {
+        let tileErrors = 0;
+        let swapped = false;
+        base.on("tileerror", () => {
+          if (swapped || (tileErrors += 1) < 5) return;
+          swapped = true;
+          map.removeLayer(base);
+          el.classList.add("map-osm-fallback");
+          L.tileLayer(OSM_TILES, {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors",
+          }).addTo(map);
+        });
+      }
 
       // Tile providers (Stadia/OpenMapTiles/OSM) require visible attribution.
       // Keep it — but tiny and muted via `.leaflet-control-attribution` in
