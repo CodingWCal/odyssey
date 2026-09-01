@@ -558,7 +558,8 @@ Filed from the ODY-108 audit (findings F04-F06) — three small, mechanical, sam
 >
 > **Completed (2026-08-11).** The remaining radius values are now named compact tokens (`--radius-focus/inline/control/field/icon/sheet`) and every literal `border-radius: <n>px` use was replaced without changing its numeric value. The 2px drop indicator now uses the existing pill token, which produces the same fully rounded shape. `eslint`, **191 tests**, and the production build all pass.
 
-### ODY-109 · Scheduling poll UX — the vote is ambiguous and easy to lose — M, sonnet — ✅ DONE (2026-08-30)
+### ODY-109 · Scheduling poll UX — the vote is ambiguous and easy to lose — M, sonnet — ✅ DONE (2026-08-30) · 🔁 redesigned 2026-09-01
+> **Update (2026-09-01):** the correctness slice below (busy≠unset, maybe surfaced, responded roster, failed-save toast) still stands. The bulk-marking that followed was reverted and the whole-day poll UI was **redesigned as a calendar** (`AvailabilityCalendar.tsx`) — drag-to-paint free/busy, best-window on top, per-day group heat. See "Status as of 2026-09-01" at the foot of this file. Granular-block polls keep the table + heatmap described below.
 > **In plain terms:** The Schedule tab lets people tap cells to say when they're free, but the result is genuinely ambiguous: "I'm busy" looks exactly the same as "I haven't answered yet," and "maybe" is collected but then never shown to anyone. You also can't tell who still hasn't voted, there's no way to mark a whole week at once, and if a save fails the app says nothing — you think you voted when you didn't. This makes the poll trustworthy to read and quicker to fill in.
 Concrete defects found in the 2026-08-08 audit of `AvailabilityGrid.tsx` / `AvailabilityHeatmap.tsx` / `schedule/actions.ts`:
 - **"Busy" and "unset" are visually identical.** `cellClass()` returns `is-unset` for both `"unavailable"` and `undefined`, and the legend collapses them into one swatch labelled "Busy / unset". The four-state tap cycle (unset → free → maybe → busy → unset) therefore has only three visual states, and an explicit "I can't make it" is indistinguishable from silence — the single most important distinction in a scheduling poll. Give `unavailable` its own treatment (`--coral`-family, per the palette's alert role) and leave unset visually empty.
@@ -1147,6 +1148,32 @@ features ODY-032/033/060/069/072/078/082/083/086/087/093/096/097; the **ODY-094*
 Splitwise Stage A+B per-expense split engine (C/D still future); the **map** basemap
 move to Stadia "Alidade Smooth"; and the **Explore** migration to **Foursquare
 Places** (ODY-049 — enrichment filed as ODY-119).
+
+**Status as of 2026-09-01 — session addendum (verify against git; all merged to
+`main` at `689743e`, reconciled with the parallel coworker thread).** This session
+shipped four things, none of which were new features — all robustness/UX repairs on
+existing surfaces:
+- **Explore multi-city fix** — a destination like "Lisbon and Crete" wouldn't geocode
+  as one phrase, so Explore returned nothing. `splitDestinations` (new
+  `src/lib/destinations.ts`, unit-tested) parses it and Explore shows a per-city filter
+  chip row.
+- **Explore `near` fix (the real "Explore returns nothing in prod" cause)** — Explore
+  anchored on a Nominatim geocode of the destination, and Vercel's shared IPs are
+  blocked from Nominatim → empty even with a valid `FOURSQUARE_API_KEY`. Foursquare now
+  resolves the locality by name (`near=`); Nominatim is off the happy path.
+- **Map basemap host-gating** — Stadia is domain-authenticated and serves 200-status
+  "401" error tiles on preview URLs, so the tileerror→OSM fallback never fired. The
+  basemap is now chosen by host: Stadia on localhost + the `NEXT_PUBLIC_APP_URL` host,
+  keyless OSM (desaturated) everywhere else. To keep the Stadia look on production, set
+  `NEXT_PUBLIC_APP_URL` and allow-list that domain in the Stadia dashboard.
+- **Scheduler — ODY-109 correction + calendar redesign.** The 2026-08-30 bulk-marking
+  (label-as-button "free" fills + Clear all) was **reverted** — a confusing, destructive
+  pattern that silently overwrote busy/maybe; the mobile sticky-day-column fix was kept.
+  Replaced by an owner-approved **calendar redesign** for whole-day polls
+  (`AvailabilityCalendar.tsx`): best-window on top, a month grid you drag to paint
+  free/busy, a per-day group-consensus bar + "waiting on" roster — folding the old grid
+  + heatmap into one surface. Granular-block polls keep the existing table. So the
+  ODY-109 line above (bulk fills) is **superseded** by this.
 
 **Obsolete — do NOT action (checked against current code 2026-08-30):**
 - Landing **F07** (six feature cards share one bare-circle icon): ✅ already done
