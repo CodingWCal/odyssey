@@ -21,6 +21,44 @@ Size: S (<1h) · M (1–3h) · L (3h+) · Model hint: `haiku` for S mechanical, 
 
 ---
 
+## 🚀 MVP release punch-list (2026-09-01 — owner mobile testing)
+Filed from live mobile testing of `odyssey-trips.vercel.app`. Owner flagged all as
+**essential for MVP release.** Priority order for the release: **ODY-121 → ODY-120 →
+ODY-124 → ODY-122 → ODY-123** (ODY-123 is research/decision, so it gates itself).
+
+### ODY-120 · New-trip wizard: "Add member" is easy to miss on mobile — S, sonnet (P1) — 🔴 MVP
+> **In plain terms:** On the create-a-trip form you type a collaborator's email, but on mobile it's not obvious you then have to tap a separate "Add" button — so people finish the wizard thinking they invited someone, then find the members list empty and have to re-add them.
+- **Repro (owner):** Added an email in the wizard's invite step, submitted the trip, but the invitee did not appear on the Members (invited) page — the email was never committed because the "Add" button next to the input wasn't tapped. Not a data bug: the pending-invite chip only appears after tapping Add.
+- **Fix (make it hard to miss / forgiving on mobile):** in `NewTripWizard.tsx` — (a) commit a typed-but-unadded email on blur and on wizard submit (so a forgotten Add still invites), OR (b) make the Add affordance unmissable on mobile (full-width or clearly-labelled button, Enter-to-add already works on desktop — ensure the mobile keyboard "return"/"done" also adds). Prefer (a)+(b) together: submit-time flush is the safety net, a clearer button is the fix.
+- **Acceptance:** on a phone, typing an email and hitting Continue/Create (without tapping Add) still invites that person; the Add control is obviously tappable.
+
+### ODY-121 · Date-picker inputs are smashed together on mobile — S, sonnet (P1) — 🔴 MVP
+> **In plain terms:** On phones, the two date boxes (start/end) sit edge-to-edge with no gap and get clipped, so they're cramped and hard to tap. This affects every start/end date pair in the app.
+- **Repro (owner, screenshots):** New-trip wizard "When are we going?" (Custom → Start/End) and the Add-event modal (Starts/Ends) — the two `type="date"` inputs touch with no spacing and overflow the container edge at 375px.
+- **Fix:** give the start/end date row a proper responsive layout — a 2-col grid with a gap that **stacks to 1 column** (or keeps a clear gap) on narrow screens. Apply the **same fix to every date-pair / modal date field on mobile**, at minimum: **`NewTripWizard.tsx`** (start/end), **`AddEventModal.tsx`** (starts/ends), **`PollSetupForm.tsx`** (Schedule range start/end), plus `TripEditModal.tsx` if it shares the pattern. Prefer a single shared `.date-row` class in `globals.css` so they can't drift.
+- **Acceptance:** at 375px every start/end date pair has clear spacing (or stacks), nothing clips the container edge, both inputs are comfortably tappable.
+
+### ODY-122 · Explore: surface BOTH "Add to itinerary" and "Save to collections" on mobile — S, sonnet (P2) — 🔴 MVP
+> **In plain terms:** On an Explore result you should clearly be able to send a place either to your day plan OR to your saved collection. Both actions exist but the owner didn't see both on mobile.
+- **Note:** `ExploreClient.tsx` already renders both buttons (`Add to itinerary` primary + `Save to collections` ghost, lines ~222–226) plus a day picker. So this is a **mobile layout/discoverability** issue, not a missing feature — verify the `.explore-card-actions` row doesn't wrap the ghost button off-screen or hide it behind the day `<select>` at 375px.
+- **Fix:** ensure both actions are visible and tappable on a phone (stack the actions column-wise on narrow screens; keep the day picker from crowding them out). No new server action needed.
+- **Acceptance:** on a phone, every Explore result card shows a clearly tappable "Add to itinerary" and "Save to collections."
+
+### ODY-123 · RESEARCH+DECISION: richer Explore preview (map / photos / reviews / "open in Google Maps") — L, sonnet (P3) — 🟡 MVP-nice, decide first
+> **In plain terms:** Before adding a place from Explore, a traveler usually wants to *see* it — a map pin, photos, reviews — the way you would on Google Maps. Today Explore is text-only (name + area + category) because it runs on the free, rate-limited provider.
+- **This is a research + decision ticket — do NOT implement before an owner decision.** Deliverable first: a short options memo, then a greenlit path.
+- **Owner's framing:** would love an in-app map preview of a result before adding, and/or an **"Open in Google Maps"** link (new tab) to see photos/reviews. Acknowledges this likely means **switching the Explore provider** away from the current free/rate-limited one (Foursquare free tier was chosen deliberately for cost). Wants it kept as contained as possible — same result card / a sub-panel — rather than a sprawling new surface.
+- **Research to produce:** (1) cheapest way to add a map thumbnail + "Open in Google/Apple Maps" deep-link with **zero provider switch** (we already have lat/lng — a static-map image and a `maps.google.com/?q=lat,lng` link need no new API for the link itself; a static map image does need a tiles/static-map key). (2) What a provider switch buys (Google Places / Mapbox / Foursquare paid) for photos+reviews, and the cost/rate-limit tradeoff. (3) Whether reviews/photos can be embedded ToS-compliantly or only linked out.
+- **Acceptance:** an options memo (`docs/`) with a recommendation + rough cost, then an owner decision recorded here before any build. The **zero-cost "Open in Google Maps" deep-link** is likely shippable immediately and independently — call that out as the quick win.
+
+### ODY-124 · Itinerary: show the day's LOCATION in each day header (multi-destination clarity) — M, sonnet (P2) — 🔴 MVP
+> **In plain terms:** On a multi-city trip you can't tell at a glance which city a given day is in. The big day heading currently just repeats the weekday ("Friday") which is already shown in the date line right beside it ("Friday, Oct 2") — redundant. Replace it with the day's place, e.g. **"DAY 01 · Lisbon"**, so multi-destination trips read clearly.
+- **Repro (owner, screenshot):** `DayBlock` header shows the serif weekday "Friday" directly under "DAY 01 · Friday, Oct 2" — the weekday appears twice and carries no new information.
+- **Fix:** replace the redundant weekday heading with the day's **location**. Deriving the location: the trip `destination` (single-city trips) or, for multi-city, infer per-day from that day's events' `location`/city (first event with a city), falling back to the trip destination. Keep the date line as-is. Consider a small `deriveDayLocation(day, trip)` helper (pure, unit-testable). Editorial styling unchanged (serif display heading, just different text).
+- **Acceptance:** each day header reads "DAY NN · <City>"; the weekday is no longer duplicated; a multi-destination trip shows different cities on different days; a single-destination trip shows the trip city.
+
+---
+
 ## P0 — Correctness & Security
 
 ### ODY-036 · Configure production Clerk instance with Google Cloud OAuth — M, sonnet
