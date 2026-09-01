@@ -125,6 +125,29 @@ export function AvailabilityCalendar({
     paintCell(dateKey);
   }
 
+  // Keyboard path: pointer events don't fire for keyboard, so Enter/Space
+  // cycles the focused day (unset → free → busy → unset) and saves that one
+  // cell. Keeps the calendar fully operable without a mouse.
+  function toggleCell(dateKey: string) {
+    const snap = statuses;
+    const state = nextState(statuses[dateKey]);
+    setStatuses((s) => {
+      const n = { ...s };
+      if (state === "unset") delete n[dateKey];
+      else n[dateKey] = state;
+      return n;
+    });
+    startTransition(async () => {
+      try {
+        if (state === "unset") await deleteMySlot({ tripId: poll.tripId, date: dateKey, block });
+        else await setMySlots({ tripId: poll.tripId, slots: [{ date: dateKey, block, status: state }] });
+      } catch {
+        toast("Couldn't save that — try again.");
+        setStatuses(snap);
+      }
+    });
+  }
+
   // Commit the whole drag in one save (fill) or one delete-per-cleared-cell.
   // Reads drag state from refs, so it stays stable across renders.
   const commit = useCallback(() => {
@@ -214,7 +237,7 @@ export function AvailabilityCalendar({
 
         <div className="av-cal-monthcap">{monthCaption(poll.rangeStart, poll.rangeEnd)}</div>
 
-        <div className="av-cal-grid" role="grid" aria-label="Availability calendar">
+        <div className="av-cal-grid" role="group" aria-label="Availability calendar">
           {DOW.map((d, i) => (
             <div key={`dow-${i}`} className="av-cal-dow" aria-hidden="true">{d}</div>
           ))}
@@ -234,10 +257,10 @@ export function AvailabilityCalendar({
               <button
                 key={dateKey}
                 type="button"
-                role="gridcell"
                 className={`av-cal-day pick${stateClass}`}
                 onPointerDown={(e) => { e.preventDefault(); onDown(dateKey); }}
                 onPointerEnter={() => onEnter(dateKey)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCell(dateKey); } }}
                 aria-label={`${label}: ${mine === "available" ? "free" : mine === "unavailable" ? "busy" : "not answered"}. ${free} of ${totalMembers} travelers free.`}
               >
                 <span className="av-cal-num">{dayNum}</span>
