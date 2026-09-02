@@ -24,7 +24,9 @@ Size: S (<1h) · M (1–3h) · L (3h+) · Model hint: `haiku` for S mechanical, 
 ## 🚀 MVP release punch-list (2026-09-01 — owner mobile testing)
 Filed from live mobile testing of `odyssey-trips.vercel.app`. Owner flagged all as
 **essential for MVP release.** Priority order for the release: **ODY-121 → ODY-120 →
-ODY-124 → ODY-122 → ODY-123** (ODY-123 is research/decision, so it gates itself).
+ODY-124 → ODY-122 → ODY-125 → ODY-126 → ODY-123** (ODY-123 is research/decision, so
+it gates itself; ODY-126 folds packing/event-linking scope into ODY-067 Stage B if
+that's picked up separately).
 
 ### ODY-120 · New-trip wizard: "Add member" is easy to miss on mobile — S, sonnet (P1) — 🔴 MVP
 > **In plain terms:** On the create-a-trip form you type a collaborator's email, but on mobile it's not obvious you then have to tap a separate "Add" button — so people finish the wizard thinking they invited someone, then find the members list empty and have to re-add them.
@@ -56,6 +58,22 @@ ODY-124 → ODY-122 → ODY-123** (ODY-123 is research/decision, so it gates its
 - **Repro (owner, screenshot):** `DayBlock` header shows the serif weekday "Friday" directly under "DAY 01 · Friday, Oct 2" — the weekday appears twice and carries no new information.
 - **Fix:** replace the redundant weekday heading with the day's **location**. Deriving the location: the trip `destination` (single-city trips) or, for multi-city, infer per-day from that day's events' `location`/city (first event with a city), falling back to the trip destination. Keep the date line as-is. Consider a small `deriveDayLocation(day, trip)` helper (pure, unit-testable). Editorial styling unchanged (serif display heading, just different text).
 - **Acceptance:** each day header reads "DAY NN · <City>"; the weekday is no longer duplicated; a multi-destination trip shows different cities on different days; a single-destination trip shows the trip city.
+
+### ODY-125 · Dashboard: "N travelers" stat double-counts repeat collaborators and wraps ugly — S, haiku (P2) — 🔴 MVP
+> **In plain terms:** The dashboard's "travelers" stat counts a member once per trip they're on, so a person who collaborates on 3 trips gets counted 3 times — the number doesn't mean anything real. It also line-wraps awkwardly next to "adventures" and "days planned" on mobile.
+- **Repro (owner, screenshot):** dashboard stats row shows "9 adventures · 41 days planned · 31 travelers" — 31 is a sum of per-trip member counts, not distinct people, and the third stat drops to its own line at 375px instead of staying inline or wrapping cleanly.
+- **Fix:** compute the travelers stat as the count of **distinct users** across all of the owner's trips (dedupe by user id, e.g. via `TripMember` grouped/distinct query in the dashboard's data-loading action), not a per-trip sum. Pair with a mobile layout fix for the stats row — either allow it to wrap as a proper multi-line flex/grid with consistent gaps, or keep it on one line with a smaller/responsive type size at narrow widths — whichever keeps the editorial stat row from breaking mid-number.
+- **Files:** dashboard data query (wherever the trips-overview stats are aggregated, e.g. `app/(dashboard)` or `app/page.tsx` server action / `lib/prisma`), stats row component + its CSS in `globals.css`.
+- **Acceptance:** a user who collaborates with the same 5 people across multiple trips sees "5 travelers," not an inflated per-trip sum; at 375px the stats row reads cleanly with no orphaned single stat on its own line.
+
+### ODY-126 · Trip notes sections: default-collapse noise, add-section toast, and move Packing List to its own mappable tab — M, sonnet (P2) — 🔴 MVP
+> **In plain terms:** The itinerary page currently opens with "Important Reminders," "Packing List," and "To Do" all expanded, pushing the actual day-by-day plan below the fold — travelers have to scroll past empty boilerplate to get to planning. This collapses that noise by default, tells people what else they can add there, and moves packing into its own tab where it can eventually link an item to a specific event (e.g. hiking boots → the hiking day).
+- **Repro (owner, screenshots):** itinerary page opens showing all three note sections (Reminders/Packing/To Do) expanded with "Add items…" placeholders before any itinerary content is visible.
+- **Fix, three parts:**
+  1. **Default-collapse:** in `TripNotes.tsx`/`NoteSection.tsx` (ODY-104/105), only **Important Reminders** defaults to open; **Packing List** and **To Do** (and any other non-default section) default to **collapsed** on first render. Respect the user's own toggle thereafter (don't fight an explicit expand).
+  2. **Discoverability toast:** when a trip's notes have no custom sections yet (or on first visit to the itinerary page), show a one-time toast (reuse `src/components/shared/Toast`, ODY-013 pattern) suggesting example sections a user can add via "Add section" (e.g. "Packing List," "To Do," "Emergency Contacts"). Don't nag — dismiss persists per-trip the same way ODY-085's welcome dismissal does (cookie/db flag, **not localStorage** per project rules).
+  3. **Move Packing List off the itinerary page:** remove the Packing List section from the itinerary's notes area entirely; its own tab (already liked by the owner) becomes the single home for packing. In that tab, extend the packing item model so an item can optionally be linked to one or more specific events/days (e.g. a join table or an `eventIds`/`dayId` field on the packing item) so "hiking boots" can be tied to the hiking-trail event or a specific day/time. Filed as the follow-up ODY-067 Stage B in this backlog already covers per-event packing — **this ticket's linking scope should fold into that Stage B work rather than duplicate it**; if ODY-067 Stage B is picked up separately, split part 3 out and only ship parts 1–2 here.
+- **Acceptance:** itinerary page loads with only Important Reminders expanded (Packing/To Do collapsed) and no Packing List section present at all; a first-time-per-trip toast names example sections; the Packing tab is the only place packing lives, with a path (even if Stage B ships later) to associate an item with a specific event/day.
 
 ---
 
