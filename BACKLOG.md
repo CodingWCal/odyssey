@@ -123,6 +123,51 @@ file's own design-review convention — everything else here is buildable direct
 
 ---
 
+## 💰 Launch costs & vendor decisions (2026-09-14 — owner request)
+Costs the owner is weighing for moving off "raw dawg" free-tier infra toward a
+real paid launch. Sequenced against triggers already in this backlog (the
+ODY-036 production-Clerk cutover, ODY-073's phase gate, and the open ODY-123
+research ticket) rather than arbitrary calendar dates — spending ahead of a
+trigger buys nothing, and spending after it blocks launch.
+
+**Timeline at a glance:**
+1. **Now, zero dependency:** ODY-132 — buy/reserve the domain, don't cut over DNS yet.
+2. **At the ODY-036 launch cutover (do these three together):** ODY-133 Supabase → Pro, domain DNS live, Stadia's domain-allowlist repointed to the new domain.
+3. **Decision gate, not yet scheduled:** ODY-135 Google Maps vs. keeping Stadia — resolve together with the already-open ODY-123, before spending anything.
+4. **Deferred, no ship date:** ODY-134 Apple Developer Program — only needed once ODY-073 reaches an actual App Store phase (Phase 2/3), not for Phase 1 PWA.
+
+### ODY-132 · Buy the production domain name — $ low (~$10-20/yr typical registrar cost), any time — 🟢 no dependency
+> **In plain terms:** The app currently lives at `odyssey-trips.vercel.app`. A real domain is cheap enough that the only risk in waiting is someone else grabbing the exact name you want — there's no reason tied to *this* to delay buying it.
+- **Current state (verified against this file):** no custom domain configured yet; `odyssey-trips.vercel.app` is referenced throughout the backlog as the live URL.
+- **Timeline:** buy/reserve now — cheap insurance, no dependency on anything else. **Don't point DNS at Vercel yet.** Do that in the same pass as ODY-133 (Supabase Pro) and the ODY-036 Clerk `pk_live` cutover — Stadia Maps' domain-allowlist and Clerk's redirect URLs both need reconfiguring for the new domain, and three moving pieces are easier to get right together than staggered across separate days.
+- **Acceptance:** domain purchased and held; DNS not pointed anywhere until the launch-cutover ticket says go.
+
+### ODY-133 · Supabase → Pro tier ($25/mo) — at the ODY-036 launch cutover
+> **In plain terms:** The database currently free-tier auto-pauses after inactivity — this backlog already has to "coordinate the Supabase unpause" as a workaround on every schema change. Tolerable for a dev-only app; not tolerable once real travelers depend on it.
+- **Current state (verified against this file):** ODY-082, ODY-093, ODY-045, and ODY-067 all explicitly call out "Supabase free-tier may be paused — coordinate the unpause" before running `prisma db push`. This is a live, already-felt cost of staying on free tier, not a hypothetical one.
+- **Timeline:** upgrade **at the same time as ODY-036** (production Clerk) — that's the point real users start relying on uptime, and a cold-started database on someone's first visit is a bad first impression. No reason to pay before then; no reason to wait past it.
+- **Acceptance:** Supabase project on a paid tier before the domain goes live to real users; future tickets no longer need an "unpause" caveat.
+
+### ODY-134 · Apple Developer Program ($100/yr) — hold, no current need
+> **In plain terms:** This only matters for two things, neither in motion: an App Store submission, or "Sign in with Apple." Paying the recurring $100/yr now buys nothing yet.
+- **Current state (verified against this file):** no Sign-in-with-Apple exists (ODY-036 covers Google OAuth only). The only feature that needs this is **ODY-073 "Native mobile apps"**, already phased as Phase 1 PWA (mostly shipped, no App Store involved) → Phase 2 Capacitor → Phase 3 Expo/React Native, explicitly **post-MVP**. An Apple Developer account is only required starting at **Phase 2** (first actual App Store submission) — not for Phase 1, and not the moment ODY-073 is merely picked up.
+- **Timeline:** defer until ODY-073 is greenlit **and** reaches Phase 2/3, or until Sign-in-with-Apple is specifically requested. Don't pre-pay a recurring fee for a phase with no ship date.
+- **Acceptance:** revisit this ticket the day ODY-073's Phase 2 (Capacitor/App Store) is actually scheduled — not before.
+
+### ODY-135 · Map/Places provider: Google Maps vs. keeping Stadia Maps — resolve alongside ODY-123
+> **In plain terms:** "Replace Stadia with Google?" and "should we pay for Google Maps?" are the same decision, not two separate expenses — merged into one ticket rather than filed as overlapping costs (same move as ODY-128 merging the two layover asks last round).
+- **Current state (verified in code):** the map runs on **Leaflet + Stadia Maps** "Alidade Smooth" tiles, domain-authenticated (free tier) with a keyless OSM fallback for non-allowlisted hosts. **Explore places search runs on Foursquare** (free tier) with Overpass/OSM fallback. There is no Google Maps integration anywhere in the codebase today — adopting it is a net-new provider, not a swap of existing keys.
+- **This is the same fork already opened by ODY-123** ("richer Explore preview… likely means switching the Explore provider… Google Places/Mapbox" — filed as research+decision, do **not** implement before an owner decision). Answer both at once: (1) does richer Explore (photos/reviews/ratings) justify a paid Google Places switch, and (2) separately, does the map *tile* layer need to leave Stadia too, or can it stay free? These don't have to be the same vendor — Google for one and Stadia for the other is a legitimate outcome.
+- **Cost framing before committing:** Google Maps Platform bills pay-as-you-go with a monthly usage credit that may cover pre-launch/low-traffic use at $0 — the flat $100/mo tier is a commitment, not a requirement. Get an actual usage estimate (expected map loads + Explore searches/month) before picking a tier, rather than defaulting to $100/mo.
+- **Timeline:** decision gate, not yet scheduled — no spend against this until ODY-123's options memo is written and the owner picks a direction. Keeping Stadia (free, already working since the basemap host-gating fix) is a legitimate "do nothing yet" outcome.
+- **Acceptance:** ODY-123's memo explicitly evaluates Google Maps with a real pay-as-you-go cost estimate (not just the flat-tier number); no spend committed until the owner picks a path.
+
+**Not on the owner's list, but triggered by the same launch cutover — worth a quick check alongside it:**
+- **Clerk's paid tier:** ODY-036 already requires moving off `pk_test_*` dev keys — confirm Clerk's current production pricing at the same time (their free tier has an MAU cap a real launch may exceed).
+- **Vercel's plan:** the Hobby (free) tier's terms restrict it to non-commercial use — worth confirming current Vercel pricing/ToS before a monetized public launch, in the same pass as the domain cutover.
+
+---
+
 ## P0 — Correctness & Security
 
 ### ODY-036 · Configure production Clerk instance with Google Cloud OAuth — M, sonnet
