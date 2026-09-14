@@ -77,6 +77,52 @@ that's picked up separately).
 
 ---
 
+## 🚀 MVP release punch-list (2026-09-14 — owner request, round 3)
+Filed from a written owner list of MVP items, not a live mobile-testing screenshot
+session like rounds 1–2 above. ODY-129 and ODY-131 involve a visual/spacing call
+the owner should confirm at 375px (screenshot) before build starts, per this
+file's own design-review convention — everything else here is buildable directly.
+
+### ODY-127 · Auto-categorize event type from the title as you type — M, sonnet (P2) — 🔴 MVP
+> **In plain terms:** Type "Delta flight to LAX" or "Uber to the airport" or "Dinner at Nobu" into an event's title and the Type pill should jump to Flight / Transport / Restaurant on its own, instead of always defaulting to Activity and making you remember to change it.
+- **Current state (verified in code):** `AddEventModal.tsx:29` hardcodes `type: existing?.type ?? "activity"` on open and never reacts to title text afterward — there is no keyword-based type inference anywhere in the codebase.
+- **Fix:** add a small pure classifier, e.g. `src/lib/categorizeEvent.ts` (unit-tested, no dependencies) that maps case-insensitive keywords in the title to a type: "flight"/"airlines"/"airways" → `flight`; "uber"/"lyft"/"taxi"/"train"/"subway"/"transit"/"ferry"/"rental car" → `transport`; "restaurant"/"dinner"/"lunch"/"brunch"/"breakfast"/"cafe"/"café"/"bistro" → `restaurant`; "hotel"/"airbnb"/"hostel"/"check-in" → `hotel`. Wire it into `AddEventModal.tsx` on title change, but **only for a brand-new event and only until the user has manually touched a type chip this session** (track a `typeTouched` boolean) — never fight or silently override a type the user (or an existing saved event) already set, matching the "respect an explicit user choice" precedent from ODY-104/126.
+- **Acceptance:** on a new event, typing "Delta flight to LAX" auto-selects the Flight chip before Type is touched; manually picking a different chip afterward sticks even if the title keeps changing; opening an existing event for edit never auto-changes its saved type.
+- **Files:** new `src/lib/categorizeEvent.ts` + test, `src/components/itinerary/AddEventModal.tsx`.
+
+### ODY-128 · Flights: layover / multi-leg support — M/L, sonnet (P2) — 🔴 MVP
+> **In plain terms:** Logging a flight with a layover today means either stuffing both legs into one title or creating two disconnected events. This gives flights a real way to say "connects through Denver." (Consolidates two overlapping owner asks — "easier submission for flights with layovers" and "add layover option to flights" — same feature.)
+- **Current state (verified in code):** `Event` has only single `location`/`destLocation` (origin/destination) plus ODY-086's booking fields (confirmation/link/check-in) — no layover concept anywhere in `schema.prisma`, `types/index.ts`, or the `hasRoute` flight/transport logic in `AddEventModal.tsx:70`.
+- **Scope decision before build (owner call, like ODY-123's pattern):**
+  - **(a) Minimal, ship first:** one optional free-text `layover` field on `Event` (e.g. "1h 20m in Denver (DEN)"), shown only when `type === "flight"`. Small schema change, zero migration risk to existing rows (nullable).
+  - **(b) Full multi-leg:** model each leg as its own linked segment (multiple times/airports, a "connects to" relation) — genuinely easier submission for complex itineraries, but an L-size schema/UI change.
+  - **Recommendation:** ship (a) now; only invest in (b) if free-text proves insufficient once the owner uses it for a real multi-leg trip.
+- **Acceptance (path a):** flight-type events show an optional "Layover" text field; saves/edits/clears like any other optional field; hidden for non-flight types; displayed on the event card when present.
+- **Files:** `prisma/schema.prisma` (add `Event.layover String?`), `src/lib/validations/index.ts`, `src/app/trips/[tripId]/itinerary/actions.ts`, `src/components/itinerary/AddEventModal.tsx`, `src/components/itinerary/EventBlock.tsx`, `src/types/index.ts`.
+- **⚠️ Needs `prisma db push`** after the schema change (same pattern as ODY-024/082/086/093).
+
+### ODY-129 · Condense long addresses on mobile itinerary cards — S, sonnet (P2) — 🟡 MVP, confirm format first
+> **In plain terms:** A full geocoded address ("123 Main St, Cambridge, MA 02139, United States") wraps across 2–3 lines on a phone, making every event card tall and busy. Show a shorter form on mobile, with the full address still reachable.
+- **Current state (verified in code):** `EventBlock.tsx:149-166` renders `event.location` as one unbroken string; the only mobile handling for it (`globals.css` `@media (max-width: 768px)` around line 1489-1490) stacks the row and lets the full text wrap — it doesn't shorten anything.
+- **Fix — needs an owner-confirmed target format before building** (mock up 1-2 options per this file's design-review convention): most likely truncate to the first comma-segment (venue/street name) with the full address available on tap, or a single-line ellipsis truncation. Whichever is picked, the full address must stay reachable (tap-to-expand, or already visible on the Map tab).
+- **Acceptance:** at 375px, an event card with a long geocoded address renders on ≤2 lines without dominating the card; the full address is still reachable somewhere in the UI.
+- **Files:** `src/components/itinerary/EventBlock.tsx`, `src/app/globals.css` (`.event-sub .meta`).
+
+### ODY-130 · Rename "Hotel" label to "Lodging" (covers Airbnb, hostels, etc.) — S, haiku (P2) — 🔴 MVP
+> **In plain terms:** The event type called "Hotel" also covers Airbnbs, hostels, and other short-term stays, so the word on screen reads wrong for most of what people actually book. Change what's *shown* to "Lodging" — the budget side of the app already calls it that.
+- **Current state (verified in code):** keep the internal type key as `"hotel"` — renaming the stored enum/column value would require a data migration touching every existing event for a cosmetic change, unnecessary risk. Today there's no label-mapping layer at all: `TypeBadge.tsx:9` prints the raw `{type}` key as text, `AddEventModal.tsx:157`'s type-chip button does the same, and `mapTypes.ts:59` has an explicit `hotel: "Hotel"` in its own label map (used for map popups/legend). The budget layer already treats this as `"lodging"` (`src/lib/expenses.ts:12`, `EVENT_TYPE_TO_CATEGORY.hotel = "lodging"`) — this ticket just brings the itinerary-facing UI in line with what budget already calls it.
+- **Fix:** add a small `TYPE_LABEL: Record<EventTypeKey, string>` (next to `EVENT_TYPES` in `Icons.tsx`) with `hotel: "Lodging"` and every other type mapped to its capitalized self; use it in `TypeBadge.tsx` and the type-chip labels in `AddEventModal.tsx` / `CollectionsClient.tsx` instead of the raw key; update the existing label in `mapTypes.ts`.
+- **Acceptance:** every place the type name renders as text (badges, type picker, map legend/popup) reads "Lodging" for hotel-type events; the stored `type` value, CSS class (`.t-hotel`), icon, and color token are unchanged; no other type's label changes.
+- **Files:** `src/components/shared/Icons.tsx`, `src/components/shared/TypeBadge.tsx`, `src/components/itinerary/AddEventModal.tsx`, `src/components/collections/CollectionsClient.tsx`, `src/components/map/mapTypes.ts`.
+
+### ODY-131 · Trip overview: reduce mobile spacing — S, haiku (P2) — 🟡 MVP, confirm target first
+> **In plain terms:** On a phone, the trip's overview area feels crowded with too much space before anything useful — tighten it up.
+- **Note — needs an owner screenshot to scope, unlike most spacing tickets in this file (compare ODY-092/096/100):** "trip overview" isn't one named component in the codebase. Leading candidate is the itinerary page's `ItineraryHero.tsx` header (weather/length/location row) — but ODY-100 already shipped a mobile fix there, so this may be a *different* crowded area (e.g. dashboard trip cards) or a regression/gap in that same fix. **Do not start build until confirmed against a 375px screenshot.**
+- **Acceptance (once scoped):** the identified overview area's vertical spacing is visibly tightened at 375px with nothing clipped or overlapping — polish only, no redesign, per the standing hyper-polish directive.
+- **Files:** likely `src/components/itinerary/ItineraryHero.tsx` and/or dashboard trip-card components — confirm against screenshot first.
+
+---
+
 ## P0 — Correctness & Security
 
 ### ODY-036 · Configure production Clerk instance with Google Cloud OAuth — M, sonnet
