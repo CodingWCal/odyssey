@@ -123,48 +123,162 @@ file's own design-review convention — everything else here is buildable direct
 
 ---
 
-## 💰 Launch costs & vendor decisions (2026-09-14 — owner request)
+## 💰 Launch costs & vendor decisions (filed 2026-09-14, prices fact-checked 2026-09-14)
 Costs the owner is weighing for moving off "raw dawg" free-tier infra toward a
-real paid launch. Sequenced against triggers already in this backlog (the
-ODY-036 production-Clerk cutover, ODY-073's phase gate, and the open ODY-123
-research ticket) rather than arbitrary calendar dates — spending ahead of a
-trigger buys nothing, and spending after it blocks launch.
+real paid launch, **plus every other paid-or-payable service found by auditing
+the actual codebase** (not just the owner's original list) and **every price
+below re-verified against current vendor pricing pages this session** — none of
+this is from training-data memory, which drifts (e.g. Google Maps' old "$200/mo
+credit" was retired in March 2025; see ODY-135). Sequenced against triggers
+already in this backlog (the ODY-036 production-Clerk cutover, ODY-073's phase
+gate, and the open ODY-123 research ticket) rather than arbitrary calendar
+dates — spending ahead of a trigger buys nothing, spending after it blocks
+launch. A running cost-vs-revenue model is at the bottom of this section.
 
 **Timeline at a glance:**
 1. **Now, zero dependency:** ODY-132 — buy/reserve the domain, don't cut over DNS yet.
-2. **At the ODY-036 launch cutover (do these three together):** ODY-133 Supabase → Pro, domain DNS live, Stadia's domain-allowlist repointed to the new domain.
-3. **Decision gate, not yet scheduled:** ODY-135 Google Maps vs. keeping Stadia — resolve together with the already-open ODY-123, before spending anything.
-4. **Deferred, no ship date:** ODY-134 Apple Developer Program — only needed once ODY-073 reaches an actual App Store phase (Phase 2/3), not for Phase 1 PWA.
+2. **At the ODY-036 launch cutover (do these together):** ODY-133 Supabase → Pro, ODY-137 Vercel → Pro (Hobby's ToS forbids commercial use outright — this isn't usage-triggered, it's a rules violation the day the app stops being a personal project), domain DNS live, ODY-136 Clerk → Pro **only if** past 50K MRU by then (check first, likely not yet).
+3. **Also at that cutover, not a "wait and see":** ODY-135's Stadia half — Stadia's *free tier itself is non-commercial-only* (not just usage-capped), so it must resolve to either Stadia's cheap $20/mo Starter tier or a Google Maps switch by launch, not "whenever traffic grows." The Google-Maps-for-Explore half of ODY-135 can still wait for ODY-123's decision.
+4. **Deferred, no ship date:** ODY-134 Apple Developer Program (only once ODY-073 hits an App Store phase); ODY-138 error monitoring (nice-to-have, not blocking); ODY-139 AI itinerary chat (new feature, needs an explicit greenlight against the standing "no new features" directive, same as ODY-073/119).
 
-### ODY-132 · Buy the production domain name — $ low (~$10-20/yr typical registrar cost), any time — 🟢 no dependency
+### ODY-132 · Buy the production domain name — ~$10-16/yr (.com), any time — 🟢 no dependency
 > **In plain terms:** The app currently lives at `odyssey-trips.vercel.app`. A real domain is cheap enough that the only risk in waiting is someone else grabbing the exact name you want — there's no reason tied to *this* to delay buying it.
 - **Current state (verified against this file):** no custom domain configured yet; `odyssey-trips.vercel.app` is referenced throughout the backlog as the live URL.
-- **Timeline:** buy/reserve now — cheap insurance, no dependency on anything else. **Don't point DNS at Vercel yet.** Do that in the same pass as ODY-133 (Supabase Pro) and the ODY-036 Clerk `pk_live` cutover — Stadia Maps' domain-allowlist and Clerk's redirect URLs both need reconfiguring for the new domain, and three moving pieces are easier to get right together than staggered across separate days.
+- **Price (fact-checked 2026-09-14):** a `.com` runs **~$10-16/yr** depending on registrar — Cloudflare Registrar sells at-cost (~$10.44/yr today, rising to ~$11.15/yr on Nov 1, 2026 per a Verisign wholesale-fee increase); Namecheap discounts year one (~$7) and renews around ~$16/yr. Cloudflare's at-cost, no-markup pricing is the simpler long-term default (no renewal-price surprise).
+- **Timeline:** buy/reserve now — cheap insurance, no dependency on anything else. **Don't point DNS at Vercel yet.** Do that in the same pass as ODY-133 (Supabase Pro), ODY-137 (Vercel Pro), and the ODY-036 Clerk `pk_live` cutover — Stadia Maps' domain-allowlist and Clerk's redirect URLs both need reconfiguring for the new domain, and several moving pieces are easier to get right together than staggered across separate days.
 - **Acceptance:** domain purchased and held; DNS not pointed anywhere until the launch-cutover ticket says go.
 
 ### ODY-133 · Supabase → Pro tier ($25/mo) — at the ODY-036 launch cutover
 > **In plain terms:** The database currently free-tier auto-pauses after inactivity — this backlog already has to "coordinate the Supabase unpause" as a workaround on every schema change. Tolerable for a dev-only app; not tolerable once real travelers depend on it.
 - **Current state (verified against this file):** ODY-082, ODY-093, ODY-045, and ODY-067 all explicitly call out "Supabase free-tier may be paused — coordinate the unpause" before running `prisma db push`. This is a live, already-felt cost of staying on free tier, not a hypothetical one.
+- **Price (fact-checked 2026-09-14, matches the owner's own number):** Pro is **$25/mo per project**, includes a $10/mo compute credit (covers one micro instance) and raises the ceiling to 100K MAU / more storage than Free's 500MB. Free also caps at 2 active projects and pauses after a week idle — Pro removes the pause entirely.
 - **Timeline:** upgrade **at the same time as ODY-036** (production Clerk) — that's the point real users start relying on uptime, and a cold-started database on someone's first visit is a bad first impression. No reason to pay before then; no reason to wait past it.
 - **Acceptance:** Supabase project on a paid tier before the domain goes live to real users; future tickets no longer need an "unpause" caveat.
 
-### ODY-134 · Apple Developer Program ($100/yr) — hold, no current need
-> **In plain terms:** This only matters for two things, neither in motion: an App Store submission, or "Sign in with Apple." Paying the recurring $100/yr now buys nothing yet.
+### ODY-134 · Apple Developer Program — $99/yr (owner listed $100, actual price is $99), hold until App Store phase
+> **In plain terms:** This only matters for two things, neither in motion: an App Store submission, or "Sign in with Apple." Paying the recurring fee now buys nothing yet.
+- **Price correction (fact-checked 2026-09-14):** the program is **$99/yr**, not $100 — a small correction but worth having the exact number for a budget.
 - **Current state (verified against this file):** no Sign-in-with-Apple exists (ODY-036 covers Google OAuth only). The only feature that needs this is **ODY-073 "Native mobile apps"**, already phased as Phase 1 PWA (mostly shipped, no App Store involved) → Phase 2 Capacitor → Phase 3 Expo/React Native, explicitly **post-MVP**. An Apple Developer account is only required starting at **Phase 2** (first actual App Store submission) — not for Phase 1, and not the moment ODY-073 is merely picked up.
 - **Timeline:** defer until ODY-073 is greenlit **and** reaches Phase 2/3, or until Sign-in-with-Apple is specifically requested. Don't pre-pay a recurring fee for a phase with no ship date.
 - **Acceptance:** revisit this ticket the day ODY-073's Phase 2 (Capacitor/App Store) is actually scheduled — not before.
 
-### ODY-135 · Map/Places provider: Google Maps vs. keeping Stadia Maps — resolve alongside ODY-123
-> **In plain terms:** "Replace Stadia with Google?" and "should we pay for Google Maps?" are the same decision, not two separate expenses — merged into one ticket rather than filed as overlapping costs (same move as ODY-128 merging the two layover asks last round).
-- **Current state (verified in code):** the map runs on **Leaflet + Stadia Maps** "Alidade Smooth" tiles, domain-authenticated (free tier) with a keyless OSM fallback for non-allowlisted hosts. **Explore places search runs on Foursquare** (free tier) with Overpass/OSM fallback. There is no Google Maps integration anywhere in the codebase today — adopting it is a net-new provider, not a swap of existing keys.
-- **This is the same fork already opened by ODY-123** ("richer Explore preview… likely means switching the Explore provider… Google Places/Mapbox" — filed as research+decision, do **not** implement before an owner decision). Answer both at once: (1) does richer Explore (photos/reviews/ratings) justify a paid Google Places switch, and (2) separately, does the map *tile* layer need to leave Stadia too, or can it stay free? These don't have to be the same vendor — Google for one and Stadia for the other is a legitimate outcome.
-- **Cost framing before committing:** Google Maps Platform bills pay-as-you-go with a monthly usage credit that may cover pre-launch/low-traffic use at $0 — the flat $100/mo tier is a commitment, not a requirement. Get an actual usage estimate (expected map loads + Explore searches/month) before picking a tier, rather than defaulting to $100/mo.
-- **Timeline:** decision gate, not yet scheduled — no spend against this until ODY-123's options memo is written and the owner picks a direction. Keeping Stadia (free, already working since the basemap host-gating fix) is a legitimate "do nothing yet" outcome.
-- **Acceptance:** ODY-123's memo explicitly evaluates Google Maps with a real pay-as-you-go cost estimate (not just the flat-tier number); no spend committed until the owner picks a path.
+### ODY-135 · Map/Places provider: Google Maps vs. keeping Stadia Maps — resolve alongside ODY-123, but Stadia's licensing half can't wait
+> **In plain terms:** "Replace Stadia with Google?" and "should we pay for Google Maps?" are the same decision, not two separate expenses — merged into one ticket rather than filed as overlapping costs (same move as ODY-128 merging the two layover asks last round). New information this round changes the urgency: **Stadia's free tier is licensed for non-commercial use only** — that's a rules trigger at launch, not a traffic-based "revisit later."
+- **Current state (verified in code):** the map runs on **Leaflet + Stadia Maps** "Alidade Smooth" tiles, domain-authenticated, with a keyless OSM fallback for non-allowlisted hosts. **Explore places search runs on Foursquare** with Overpass/OSM fallback. No Google Maps integration exists anywhere in the codebase today — adopting it is a net-new provider, not a swap of existing keys.
+- **Prices (fact-checked 2026-09-14 — both corrected/updated from last round):**
+  - **Stadia Maps:** free tier = 200,000 credits/mo (a vector tile = 1 credit, ~10-20K map views/mo) — **but the free tier's own terms restrict it to non-commercial use**, independent of whether traffic ever approaches that cap. Commercial use starts at the **Starter plan, $20/mo for 1M credits** (overage $0.03/1,000 credits) — cheap, and the path of least change if the map tile layer doesn't need to move.
+  - **Google Maps Platform:** ⚠️ **the widely-known "$200/mo free credit" was retired in March 2025** — don't budget against it, that's stale info. What exists now: a small per-SKU free tier (Maps JavaScript gets ~10,000 free loads/mo), pay-as-you-go at $2-$40 per 1,000 requests depending on SKU/tier, **or** new flat subscription tiers introduced late 2025 — **Starter ~$100/mo** (matches the owner's number, but as a real named tier, not an estimate), Essentials ~$275/mo, Pro ~$1,200/mo.
+- **This is the same fork already opened by ODY-123** ("richer Explore preview… likely means switching the Explore provider… Google Places/Mapbox" — filed as research+decision, do **not** implement before an owner decision). Two sub-decisions, don't have to share a vendor:
+  1. **Map tiles (has a deadline — the launch cutover):** stay on Stadia and upgrade to its $20/mo Starter (cheapest fix, zero code change), or switch tiles to Google Maps (~$100/mo Starter or metered).
+  2. **Explore/places search (no deadline — gated on ODY-123's memo):** stay on Foursquare free tier, pay for Foursquare Premium fields (already priced in ODY-119, ~$0.011-0.019/call), or switch to Google Places.
+- **Timeline:** sub-decision 1 (map tiles) needs an answer **by the ODY-036 launch cutover** — Stadia's ToS doesn't allow "wait and see." Sub-decision 2 (Explore provider) stays a genuine decision gate with no deadline, resolved via ODY-123.
+- **Acceptance:** by launch, the map tile layer is on a commercially-licensed plan (Stadia Starter or Google); ODY-123's memo evaluates Google Places with the corrected pricing above (no more "$200 credit" framing) before any Explore-provider spend.
 
-**Not on the owner's list, but triggered by the same launch cutover — worth a quick check alongside it:**
-- **Clerk's paid tier:** ODY-036 already requires moving off `pk_test_*` dev keys — confirm Clerk's current production pricing at the same time (their free tier has an MAU cap a real launch may exceed).
-- **Vercel's plan:** the Hobby (free) tier's terms restrict it to non-commercial use — worth confirming current Vercel pricing/ToS before a monetized public launch, in the same pass as the domain cutover.
+### ODY-136 · Clerk → Pro tier ($25/mo, $20/mo billed annually) — only once past the free tier's user cap
+> **In plain terms:** Not on the owner's original list, but the same ODY-036 cutover already forces Clerk off dev keys — worth knowing what production actually costs once real usage shows up.
+- **Price (fact-checked 2026-09-14):** Clerk's free tier now covers **50,000 MRU/mo** (Monthly *Retained* Users — narrower than MAU: only users who return on a later day count, so a launch-week spike of signups that don't come back doesn't burn the quota). Past that, **Pro is $25/mo ($20/mo billed annually)**; Business is $300/mo; Enterprise is custom.
+- **Timeline:** most likely **stays free at MVP scale** — 50K MRU is a high bar for an early travel-planning app. No action needed at the ODY-036 cutover beyond swapping to `pk_live` keys (that step is required regardless of tier and is already ODY-036's job); just check current MRU against the 50K line before assuming $0.
+- **Acceptance:** confirmed which tier applies at actual launch traffic; budgeted for $25/mo only if/when MRU crosses 50K.
+
+### ODY-137 · Vercel → Pro tier ($20/seat/mo) — at the ODY-036 launch cutover, required regardless of traffic
+> **In plain terms:** Not on the owner's original list, but this is a hard rule, not a nice-to-have: Vercel's free Hobby tier's terms explicitly forbid commercial use — any deployment for anyone's financial gain, paid contractor work included, not just "the app charges users." Odyssey being built as a real product (not a personal hobby project) likely already puts it in that bucket.
+- **Price (fact-checked 2026-09-14):** Hobby is free but non-commercial-use only; **Pro is $20 per developer seat per month** and is what unlocks commercial rights (plus team collaboration and password protection).
+- **Timeline:** same moment as the domain/Clerk/Supabase cutover — this isn't usage-gated like Supabase's pause problem, it's a ToS line that's crossed the moment the app is a commercial venture, independent of whether it has one user or ten thousand. Worth the owner's own read of Vercel's current commercial-use definition against how Odyssey is actually organized (side project vs. registered business) before assuming day one requires it — but budget for it at launch either way.
+- **Acceptance:** on a Pro seat (or a confirmed determination that current usage still qualifies as non-commercial) before the domain goes live publicly.
+
+---
+
+## 🔍 Codebase expense audit — everything else checked
+Beyond the owner's original list, a full pass over `package.json`, every
+`process.env.*` reference, and every outbound `fetch()` call in `src/` for
+anything that is, or could become, a paid dependency.
+
+**Confirmed free, no action needed:**
+- **Weather (`src/lib/weather.ts`):** runs on **Open-Meteo** (`api.open-meteo.com` / `geocoding-api.open-meteo.com`) — no API key, no auth, genuinely free (non-commercial-friendly open service). Nothing to budget here.
+- **Invite emails:** no separate email-service SDK exists in `package.json` (no Resend/SendGrid/Postmark) — trip invitations ride on Clerk's own built-in invitation email sending, so there's no standalone email cost; it's already inside whatever Clerk tier ODY-136 lands on.
+
+**Free today, but worth watching (not a committed cost, no action needed yet):**
+- **Geocoding / location autocomplete (`src/lib/geocode.ts`):** runs on **Nominatim** (OpenStreetMap's free community server), already proxied and cached per ODY-010 specifically because Nominatim's usage policy is fragile (1 req/sec, best-effort uptime, no SLA) — the same class of risk that forced the Explore feature off Nominatim/Overpass onto Foursquare (see the 2026-08-30 handoff notes). If location-search volume grows enough to strain it, the fix is a paid geocoder (Google Geocoding, Mapbox, LocationIQ) — no price researched here since there's no current trigger to act on; revisit only if Nominatim starts erroring under real load.
+
+### ODY-138 · Error monitoring (e.g. Sentry) — not currently implemented, $0-26/mo when adopted
+> **In plain terms:** Right now, if the production app throws an error, nobody finds out unless a user reports it. This isn't on the owner's list, but it's a standard pre-launch gap worth naming before real travelers hit it.
+- **Current state (verified in `package.json`):** no error-monitoring or analytics SDK exists at all (no Sentry, PostHog, LogRocket, Vercel Analytics). ODY-013 added toast-based user-facing error feedback, but there's no server-side visibility into what's actually failing in production.
+- **Price (fact-checked 2026-09-14, using Sentry as the reference vendor):** a **free Developer tier** (5K errors/mo, 1 user) covers a solo owner fine; a **Team plan at $26/mo** (50K errors, unlimited users, Slack/GitHub integration) is the realistic tier once more than one person needs visibility. Session-replay add-ons are extra and skippable at this stage.
+- **Timeline:** not blocking — this is a "before you're debugging production blind" recommendation, not a launch gate. Reasonable to add any time around the ODY-036 cutover, free tier first.
+- **Acceptance:** if adopted, production errors are visible without waiting on a user bug report; cost stays $0 on the free tier unless/until team size or error volume requires Team.
+
+---
+
+## 🤖 New feature: itinerary-planning chat agent (Claude API) — needs explicit greenlight
+### ODY-139 · In-trip AI chat: ask questions about your own itinerary — M/L, sonnet (P3, new feature) — 🟡 NOT hyper-polish, needs owner greenlight
+> **In plain terms:** A chat panel on the trip page where a traveler can ask "what should we do on Day 3?" or "find a vegetarian place near the hotel" and get an answer that actually knows their real itinerary, budget, and dates — not a generic chatbot bolted on the side.
+- **Why this needs a greenlight, not just a build:** the 2026-08-30 handoff recorded a standing owner directive — "no more brand-new features for now… just hyper-polishing of existing things." This is unambiguously a new feature (like ODY-073 and ODY-119), not polish, so it's filed here for prioritization, not started.
+- **What it needs technically:** a new `ANTHROPIC_API_KEY` (Claude API, separate from anything already in this stack — no Anthropic integration exists in the codebase today), a new server route/action that sends the trip's context (day-by-day events, dates, destination, budget) as prompt context, and a new chat UI component (doesn't exist yet — closest precedent is the existing itinerary/notes UI, not reusable as-is).
+- **Scope decision (like ODY-123/128's pattern):** ship **read-only advice first** (Claude suggests, the traveler adds it themselves via the existing "Add event" flow) rather than letting the model directly mutate the itinerary — smaller blast radius, no new permission/authorization surface to get right on day one. Direct-mutation ("Claude adds it for you") is a defensible Phase 2, not required for a useful v1.
+- **Model choice + pricing (fact-checked 2026-09-14 against Anthropic's current published rates):**
+
+  | Model | Input $/MTok | Output $/MTok |
+  |---|---|---|
+  | Claude Haiku 4.5 | $1.00 | $5.00 |
+  | Claude Sonnet 5 | $2.00 | $10.00 |
+  | Claude Opus 5 | $5.00 | $25.00 |
+
+  Recommend **Haiku 4.5 as the default** for this use case (conversational Q&A grounded in a fixed itinerary is well within its capability, and it's the cheapest tier) — Opus-tier is unnecessary overkill for "what's for dinner near the hotel." **Prompt caching** matters here: the trip's itinerary/budget context is large-ish (~1.5-3K tokens) but stable across a whole chat session, so cache it — cached reads run at roughly 1/10th the normal input price, meaning only the first message in a session pays full context cost.
+- **Illustrative cost estimate (assumption-driven — real usage will differ):** assuming ~2,000 input tokens + ~500 output tokens per chat turn, and the itinerary context mostly cache-hit after turn one:
+  - **Haiku 4.5:** ≈ $0.002-0.005 per message (well under a cent).
+  - **Sonnet 5:** ≈ $0.005-0.01 per message, for trips where a smarter model earns its cost (e.g. "replan my whole day 3 around this closure").
+  - At an illustrative 15-20 messages per trip that actually uses the feature: **≈ $0.05-0.10/trip on Haiku, ≈ $0.10-0.20/trip on Sonnet.** Scaling that: 500 trips/mo using it ≈ $25-100/mo; 5,000 trips/mo ≈ $250-1,000/mo. These are illustrative unit-cost drivers, not a forecast — actual cost depends entirely on adoption rate and messages-per-trip, both unknown pre-launch.
+- **Cost-control guardrail (don't skip):** add a per-trip or per-user message-rate cap before shipping, the same pattern ODY-055 already uses to rate-limit geocode/Explore — an unbounded chat feature is the one line item in this whole cost audit that a single abusive session could blow past every other budget line combined.
+- **Acceptance (once greenlit):** a trip page chat panel answers itinerary-grounded questions using the trip's real data; Haiku 4.5 by default with prompt caching enabled; a message-rate limit exists before public rollout; no direct itinerary mutation in v1.
+- **Files (new):** `src/lib/claude.ts` (or `src/lib/ai/`), a new server action under the trip's itinerary route, `src/components/itinerary/ItineraryChat.tsx` (new), `ANTHROPIC_API_KEY` env var.
+
+---
+
+## 📊 Profit margin tracking (internal — for the owner/developers, not shown to users)
+A running view of infra cost vs. revenue, so "are we profitable" has a real
+number behind it instead of a gut feeling. **The cost side below is real,
+fact-checked, and computed from this backlog's own tickets. The revenue side
+is currently undefined** — there is no monetization model anywhere in this
+codebase (no Stripe/billing integration, no pricing tiers, no paid-plan gate)
+— so the scenarios below are illustrative placeholders to make the shape of
+the model concrete, **not a recommendation**. This needs an actual owner
+decision on how (or whether) Odyssey charges anyone before it becomes a real
+forecast rather than a template.
+
+**Fixed monthly cost, two scenarios (excludes anything usage-metered):**
+
+| Line item | Lean scenario | Fuller-stack scenario |
+|---|---|---|
+| Supabase Pro (ODY-133) | $25 | $25 |
+| Vercel Pro, 1 seat (ODY-137) | $20 | $20 |
+| Domain, amortized (ODY-132, ~$13/yr) | ~$1 | ~$1 |
+| Map tiles (ODY-135) | Stadia Starter $20 | Google Maps Starter ~$100 |
+| Clerk (ODY-136) | $0 (under 50K MRU) | $25 (Pro, past 50K MRU) |
+| Error monitoring (ODY-138) | $0 (Developer free) | $26 (Team) |
+| Apple Developer (ODY-134) | $0 (not yet triggered) | $0 (not yet triggered) |
+| **Total fixed/mo** | **≈ $66** | **≈ $197** |
+
+**Variable, usage-metered costs (not in the table above — scale with adoption, not time):**
+- **AI chat feature (ODY-139), if greenlit:** ≈ $0.05-0.20 per trip that uses it (see ODY-139's own estimate) — this is a per-trip cost, not a flat monthly line, and only exists at all if that feature ships.
+- **Foursquare Premium fields (ODY-119), if greenlit:** ~$0.011-0.019 per enriched place lookup (already priced in ODY-119) — currently $0, Explore runs on free-tier fields today.
+
+**Illustrative break-even (placeholder revenue assumptions — replace with a real pricing decision):**
+"Paying users needed to cover fixed costs" at a few illustrative price points, against both cost scenarios above:
+
+| Illustrative price / paying user / mo | Lean ($66/mo) | Fuller stack ($197/mo) |
+|---|---|---|
+| $3 | 22 users | 66 users |
+| $5 | 14 users | 40 users |
+| $10 | 7 users | 20 users |
+
+This says nothing about whether $3/$5/$10 is the right price, or whether
+Odyssey should charge per user, per trip, per household, or not at all — that's
+a monetization decision only the owner can make. Once it's made, replace this
+table with the real price and the actual variable-cost-per-user (including
+ODY-139's AI cost if that feature ships) to get a real margin, not an
+illustration.
+
+- **Acceptance:** this section is updated (a) every time a new paid/potential-cost item is filed anywhere in this backlog going forward, so the fixed-cost table stays current, and (b) with a real revenue line the moment the owner decides on a monetization model — at that point this stops being a template and starts being an actual profit-margin forecast.
 
 ---
 
