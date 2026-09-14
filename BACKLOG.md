@@ -77,6 +77,211 @@ that's picked up separately).
 
 ---
 
+## 🚀 MVP release punch-list (2026-09-14 — owner request, round 3)
+Filed from a written owner list of MVP items, not a live mobile-testing screenshot
+session like rounds 1–2 above. ODY-129 and ODY-131 involve a visual/spacing call
+the owner should confirm at 375px (screenshot) before build starts, per this
+file's own design-review convention — everything else here is buildable directly.
+
+### ODY-127 · Auto-categorize event type from the title as you type — M, sonnet (P2) — 🔴 MVP
+> **In plain terms:** Type "Delta flight to LAX" or "Uber to the airport" or "Dinner at Nobu" into an event's title and the Type pill should jump to Flight / Transport / Restaurant on its own, instead of always defaulting to Activity and making you remember to change it.
+- **Current state (verified in code):** `AddEventModal.tsx:29` hardcodes `type: existing?.type ?? "activity"` on open and never reacts to title text afterward — there is no keyword-based type inference anywhere in the codebase.
+- **Fix:** add a small pure classifier, e.g. `src/lib/categorizeEvent.ts` (unit-tested, no dependencies) that maps case-insensitive keywords in the title to a type: "flight"/"airlines"/"airways" → `flight`; "uber"/"lyft"/"taxi"/"train"/"subway"/"transit"/"ferry"/"rental car" → `transport`; "restaurant"/"dinner"/"lunch"/"brunch"/"breakfast"/"cafe"/"café"/"bistro" → `restaurant`; "hotel"/"airbnb"/"hostel"/"check-in" → `hotel`. Wire it into `AddEventModal.tsx` on title change, but **only for a brand-new event and only until the user has manually touched a type chip this session** (track a `typeTouched` boolean) — never fight or silently override a type the user (or an existing saved event) already set, matching the "respect an explicit user choice" precedent from ODY-104/126.
+- **Acceptance:** on a new event, typing "Delta flight to LAX" auto-selects the Flight chip before Type is touched; manually picking a different chip afterward sticks even if the title keeps changing; opening an existing event for edit never auto-changes its saved type.
+- **Files:** new `src/lib/categorizeEvent.ts` + test, `src/components/itinerary/AddEventModal.tsx`.
+
+### ODY-128 · Flights: layover / multi-leg support — M/L, sonnet (P2) — 🔴 MVP
+> **In plain terms:** Logging a flight with a layover today means either stuffing both legs into one title or creating two disconnected events. This gives flights a real way to say "connects through Denver." (Consolidates two overlapping owner asks — "easier submission for flights with layovers" and "add layover option to flights" — same feature.)
+- **Current state (verified in code):** `Event` has only single `location`/`destLocation` (origin/destination) plus ODY-086's booking fields (confirmation/link/check-in) — no layover concept anywhere in `schema.prisma`, `types/index.ts`, or the `hasRoute` flight/transport logic in `AddEventModal.tsx:70`.
+- **Scope decision before build (owner call, like ODY-123's pattern):**
+  - **(a) Minimal, ship first:** one optional free-text `layover` field on `Event` (e.g. "1h 20m in Denver (DEN)"), shown only when `type === "flight"`. Small schema change, zero migration risk to existing rows (nullable).
+  - **(b) Full multi-leg:** model each leg as its own linked segment (multiple times/airports, a "connects to" relation) — genuinely easier submission for complex itineraries, but an L-size schema/UI change.
+  - **Recommendation:** ship (a) now; only invest in (b) if free-text proves insufficient once the owner uses it for a real multi-leg trip.
+- **Acceptance (path a):** flight-type events show an optional "Layover" text field; saves/edits/clears like any other optional field; hidden for non-flight types; displayed on the event card when present.
+- **Files:** `prisma/schema.prisma` (add `Event.layover String?`), `src/lib/validations/index.ts`, `src/app/trips/[tripId]/itinerary/actions.ts`, `src/components/itinerary/AddEventModal.tsx`, `src/components/itinerary/EventBlock.tsx`, `src/types/index.ts`.
+- **⚠️ Needs `prisma db push`** after the schema change (same pattern as ODY-024/082/086/093).
+
+### ODY-129 · Condense long addresses on mobile itinerary cards — S, sonnet (P2) — 🟡 MVP, confirm format first
+> **In plain terms:** A full geocoded address ("123 Main St, Cambridge, MA 02139, United States") wraps across 2–3 lines on a phone, making every event card tall and busy. Show a shorter form on mobile, with the full address still reachable.
+- **Current state (verified in code):** `EventBlock.tsx:149-166` renders `event.location` as one unbroken string; the only mobile handling for it (`globals.css` `@media (max-width: 768px)` around line 1489-1490) stacks the row and lets the full text wrap — it doesn't shorten anything.
+- **Fix — needs an owner-confirmed target format before building** (mock up 1-2 options per this file's design-review convention): most likely truncate to the first comma-segment (venue/street name) with the full address available on tap, or a single-line ellipsis truncation. Whichever is picked, the full address must stay reachable (tap-to-expand, or already visible on the Map tab).
+- **Acceptance:** at 375px, an event card with a long geocoded address renders on ≤2 lines without dominating the card; the full address is still reachable somewhere in the UI.
+- **Files:** `src/components/itinerary/EventBlock.tsx`, `src/app/globals.css` (`.event-sub .meta`).
+
+### ODY-130 · Rename "Hotel" label to "Lodging" (covers Airbnb, hostels, etc.) — S, haiku (P2) — 🔴 MVP
+> **In plain terms:** The event type called "Hotel" also covers Airbnbs, hostels, and other short-term stays, so the word on screen reads wrong for most of what people actually book. Change what's *shown* to "Lodging" — the budget side of the app already calls it that.
+- **Current state (verified in code):** keep the internal type key as `"hotel"` — renaming the stored enum/column value would require a data migration touching every existing event for a cosmetic change, unnecessary risk. Today there's no label-mapping layer at all: `TypeBadge.tsx:9` prints the raw `{type}` key as text, `AddEventModal.tsx:157`'s type-chip button does the same, and `mapTypes.ts:59` has an explicit `hotel: "Hotel"` in its own label map (used for map popups/legend). The budget layer already treats this as `"lodging"` (`src/lib/expenses.ts:12`, `EVENT_TYPE_TO_CATEGORY.hotel = "lodging"`) — this ticket just brings the itinerary-facing UI in line with what budget already calls it.
+- **Fix:** add a small `TYPE_LABEL: Record<EventTypeKey, string>` (next to `EVENT_TYPES` in `Icons.tsx`) with `hotel: "Lodging"` and every other type mapped to its capitalized self; use it in `TypeBadge.tsx` and the type-chip labels in `AddEventModal.tsx` / `CollectionsClient.tsx` instead of the raw key; update the existing label in `mapTypes.ts`.
+- **Acceptance:** every place the type name renders as text (badges, type picker, map legend/popup) reads "Lodging" for hotel-type events; the stored `type` value, CSS class (`.t-hotel`), icon, and color token are unchanged; no other type's label changes.
+- **Files:** `src/components/shared/Icons.tsx`, `src/components/shared/TypeBadge.tsx`, `src/components/itinerary/AddEventModal.tsx`, `src/components/collections/CollectionsClient.tsx`, `src/components/map/mapTypes.ts`.
+
+### ODY-131 · Trip overview: reduce mobile spacing — S, haiku (P2) — 🟡 MVP, confirm target first
+> **In plain terms:** On a phone, the trip's overview area feels crowded with too much space before anything useful — tighten it up.
+- **Note — needs an owner screenshot to scope, unlike most spacing tickets in this file (compare ODY-092/096/100):** "trip overview" isn't one named component in the codebase. Leading candidate is the itinerary page's `ItineraryHero.tsx` header (weather/length/location row) — but ODY-100 already shipped a mobile fix there, so this may be a *different* crowded area (e.g. dashboard trip cards) or a regression/gap in that same fix. **Do not start build until confirmed against a 375px screenshot.**
+- **Acceptance (once scoped):** the identified overview area's vertical spacing is visibly tightened at 375px with nothing clipped or overlapping — polish only, no redesign, per the standing hyper-polish directive.
+- **Files:** likely `src/components/itinerary/ItineraryHero.tsx` and/or dashboard trip-card components — confirm against screenshot first.
+
+---
+
+## 💰 Launch costs & vendor decisions (filed 2026-09-14, prices fact-checked 2026-09-14)
+Costs the owner is weighing for moving off "raw dawg" free-tier infra toward a
+real paid launch, **plus every other paid-or-payable service found by auditing
+the actual codebase** (not just the owner's original list) and **every price
+below re-verified against current vendor pricing pages this session** — none of
+this is from training-data memory, which drifts (e.g. Google Maps' old "$200/mo
+credit" was retired in March 2025; see ODY-135). Sequenced against triggers
+already in this backlog (the ODY-036 production-Clerk cutover, ODY-073's phase
+gate, and the open ODY-123 research ticket) rather than arbitrary calendar
+dates — spending ahead of a trigger buys nothing, spending after it blocks
+launch. A running cost-vs-revenue model is at the bottom of this section.
+
+**Timeline at a glance:**
+1. **Now, zero dependency:** ODY-132 — buy/reserve the domain, don't cut over DNS yet.
+2. **At the ODY-036 launch cutover (do these together):** ODY-133 Supabase → Pro, ODY-137 Vercel → Pro (Hobby's ToS forbids commercial use outright — this isn't usage-triggered, it's a rules violation the day the app stops being a personal project), domain DNS live, ODY-136 Clerk → Pro **only if** past 50K MRU by then (check first, likely not yet).
+3. **Also at that cutover, not a "wait and see":** ODY-135's Stadia half — Stadia's *free tier itself is non-commercial-only* (not just usage-capped), so it must resolve to either Stadia's cheap $20/mo Starter tier or a Google Maps switch by launch, not "whenever traffic grows." The Google-Maps-for-Explore half of ODY-135 can still wait for ODY-123's decision.
+4. **Deferred, no ship date:** ODY-134 Apple Developer Program (only once ODY-073 hits an App Store phase); ODY-138 error monitoring (nice-to-have, not blocking); ODY-139 AI itinerary chat (new feature, needs an explicit greenlight against the standing "no new features" directive, same as ODY-073/119).
+
+### ODY-132 · Buy the production domain name — ~$10-16/yr (.com), any time — 🟢 no dependency
+> **In plain terms:** The app currently lives at `odyssey-trips.vercel.app`. A real domain is cheap enough that the only risk in waiting is someone else grabbing the exact name you want — there's no reason tied to *this* to delay buying it.
+- **Current state (verified against this file):** no custom domain configured yet; `odyssey-trips.vercel.app` is referenced throughout the backlog as the live URL.
+- **Price (fact-checked 2026-09-14):** a `.com` runs **~$10-16/yr** depending on registrar — Cloudflare Registrar sells at-cost (~$10.44/yr today, rising to ~$11.15/yr on Nov 1, 2026 per a Verisign wholesale-fee increase); Namecheap discounts year one (~$7) and renews around ~$16/yr. Cloudflare's at-cost, no-markup pricing is the simpler long-term default (no renewal-price surprise).
+- **Timeline:** buy/reserve now — cheap insurance, no dependency on anything else. **Don't point DNS at Vercel yet.** Do that in the same pass as ODY-133 (Supabase Pro), ODY-137 (Vercel Pro), and the ODY-036 Clerk `pk_live` cutover — Stadia Maps' domain-allowlist and Clerk's redirect URLs both need reconfiguring for the new domain, and several moving pieces are easier to get right together than staggered across separate days.
+- **Acceptance:** domain purchased and held; DNS not pointed anywhere until the launch-cutover ticket says go.
+
+### ODY-133 · Supabase → Pro tier ($25/mo) — at the ODY-036 launch cutover
+> **In plain terms:** The database currently free-tier auto-pauses after inactivity — this backlog already has to "coordinate the Supabase unpause" as a workaround on every schema change. Tolerable for a dev-only app; not tolerable once real travelers depend on it.
+- **Current state (verified against this file):** ODY-082, ODY-093, ODY-045, and ODY-067 all explicitly call out "Supabase free-tier may be paused — coordinate the unpause" before running `prisma db push`. This is a live, already-felt cost of staying on free tier, not a hypothetical one.
+- **Price (fact-checked 2026-09-14, matches the owner's own number):** Pro is **$25/mo per project**, includes a $10/mo compute credit (covers one micro instance) and raises the ceiling to 100K MAU / more storage than Free's 500MB. Free also caps at 2 active projects and pauses after a week idle — Pro removes the pause entirely.
+- **Timeline:** upgrade **at the same time as ODY-036** (production Clerk) — that's the point real users start relying on uptime, and a cold-started database on someone's first visit is a bad first impression. No reason to pay before then; no reason to wait past it.
+- **Acceptance:** Supabase project on a paid tier before the domain goes live to real users; future tickets no longer need an "unpause" caveat.
+
+### ODY-134 · Apple Developer Program — $99/yr (owner listed $100, actual price is $99), hold until App Store phase
+> **In plain terms:** This only matters for two things, neither in motion: an App Store submission, or "Sign in with Apple." Paying the recurring fee now buys nothing yet.
+- **Price correction (fact-checked 2026-09-14):** the program is **$99/yr**, not $100 — a small correction but worth having the exact number for a budget.
+- **Current state (verified against this file):** no Sign-in-with-Apple exists (ODY-036 covers Google OAuth only). The only feature that needs this is **ODY-073 "Native mobile apps"**, already phased as Phase 1 PWA (mostly shipped, no App Store involved) → Phase 2 Capacitor → Phase 3 Expo/React Native, explicitly **post-MVP**. An Apple Developer account is only required starting at **Phase 2** (first actual App Store submission) — not for Phase 1, and not the moment ODY-073 is merely picked up.
+- **Timeline:** defer until ODY-073 is greenlit **and** reaches Phase 2/3, or until Sign-in-with-Apple is specifically requested. Don't pre-pay a recurring fee for a phase with no ship date.
+- **Acceptance:** revisit this ticket the day ODY-073's Phase 2 (Capacitor/App Store) is actually scheduled — not before.
+
+### ODY-135 · Map/Places provider: Google Maps vs. keeping Stadia Maps — resolve alongside ODY-123, but Stadia's licensing half can't wait
+> **In plain terms:** "Replace Stadia with Google?" and "should we pay for Google Maps?" are the same decision, not two separate expenses — merged into one ticket rather than filed as overlapping costs (same move as ODY-128 merging the two layover asks last round). New information this round changes the urgency: **Stadia's free tier is licensed for non-commercial use only** — that's a rules trigger at launch, not a traffic-based "revisit later."
+- **Current state (verified in code):** the map runs on **Leaflet + Stadia Maps** "Alidade Smooth" tiles, domain-authenticated, with a keyless OSM fallback for non-allowlisted hosts. **Explore places search runs on Foursquare** with Overpass/OSM fallback. No Google Maps integration exists anywhere in the codebase today — adopting it is a net-new provider, not a swap of existing keys.
+- **Prices (fact-checked 2026-09-14 — both corrected/updated from last round):**
+  - **Stadia Maps:** free tier = 200,000 credits/mo (a vector tile = 1 credit, ~10-20K map views/mo) — **but the free tier's own terms restrict it to non-commercial use**, independent of whether traffic ever approaches that cap. Commercial use starts at the **Starter plan, $20/mo for 1M credits** (overage $0.03/1,000 credits) — cheap, and the path of least change if the map tile layer doesn't need to move.
+  - **Google Maps Platform:** ⚠️ **the widely-known "$200/mo free credit" was retired in March 2025** — don't budget against it, that's stale info. What exists now: a small per-SKU free tier (Maps JavaScript gets ~10,000 free loads/mo), pay-as-you-go at $2-$40 per 1,000 requests depending on SKU/tier, **or** new flat subscription tiers introduced late 2025 — **Starter ~$100/mo** (matches the owner's number, but as a real named tier, not an estimate), Essentials ~$275/mo, Pro ~$1,200/mo.
+- **This is the same fork already opened by ODY-123** ("richer Explore preview… likely means switching the Explore provider… Google Places/Mapbox" — filed as research+decision, do **not** implement before an owner decision). Two sub-decisions, don't have to share a vendor:
+  1. **Map tiles (has a deadline — the launch cutover):** stay on Stadia and upgrade to its $20/mo Starter (cheapest fix, zero code change), or switch tiles to Google Maps (~$100/mo Starter or metered).
+  2. **Explore/places search (no deadline — gated on ODY-123's memo):** stay on Foursquare free tier, pay for Foursquare Premium fields (already priced in ODY-119, ~$0.011-0.019/call), or switch to Google Places.
+- **Timeline:** sub-decision 1 (map tiles) needs an answer **by the ODY-036 launch cutover** — Stadia's ToS doesn't allow "wait and see." Sub-decision 2 (Explore provider) stays a genuine decision gate with no deadline, resolved via ODY-123.
+- **Acceptance:** by launch, the map tile layer is on a commercially-licensed plan (Stadia Starter or Google); ODY-123's memo evaluates Google Places with the corrected pricing above (no more "$200 credit" framing) before any Explore-provider spend.
+
+### ODY-136 · Clerk → Pro tier ($25/mo, $20/mo billed annually) — only once past the free tier's user cap
+> **In plain terms:** Not on the owner's original list, but the same ODY-036 cutover already forces Clerk off dev keys — worth knowing what production actually costs once real usage shows up.
+- **Price (fact-checked 2026-09-14):** Clerk's free tier now covers **50,000 MRU/mo** (Monthly *Retained* Users — narrower than MAU: only users who return on a later day count, so a launch-week spike of signups that don't come back doesn't burn the quota). Past that, **Pro is $25/mo ($20/mo billed annually)**; Business is $300/mo; Enterprise is custom.
+- **Timeline:** most likely **stays free at MVP scale** — 50K MRU is a high bar for an early travel-planning app. No action needed at the ODY-036 cutover beyond swapping to `pk_live` keys (that step is required regardless of tier and is already ODY-036's job); just check current MRU against the 50K line before assuming $0.
+- **Acceptance:** confirmed which tier applies at actual launch traffic; budgeted for $25/mo only if/when MRU crosses 50K.
+
+### ODY-137 · Vercel → Pro tier ($20/seat/mo) — at the ODY-036 launch cutover, required regardless of traffic
+> **In plain terms:** Not on the owner's original list, but this is a hard rule, not a nice-to-have: Vercel's free Hobby tier's terms explicitly forbid commercial use — any deployment for anyone's financial gain, paid contractor work included, not just "the app charges users." Odyssey being built as a real product (not a personal hobby project) likely already puts it in that bucket.
+- **Price (fact-checked 2026-09-14):** Hobby is free but non-commercial-use only; **Pro is $20 per developer seat per month** and is what unlocks commercial rights (plus team collaboration and password protection).
+- **Timeline:** same moment as the domain/Clerk/Supabase cutover — this isn't usage-gated like Supabase's pause problem, it's a ToS line that's crossed the moment the app is a commercial venture, independent of whether it has one user or ten thousand. Worth the owner's own read of Vercel's current commercial-use definition against how Odyssey is actually organized (side project vs. registered business) before assuming day one requires it — but budget for it at launch either way.
+- **Acceptance:** on a Pro seat (or a confirmed determination that current usage still qualifies as non-commercial) before the domain goes live publicly.
+
+---
+
+## 🔍 Codebase expense audit — everything else checked
+Beyond the owner's original list, a full pass over `package.json`, every
+`process.env.*` reference, and every outbound `fetch()` call in `src/` for
+anything that is, or could become, a paid dependency.
+
+**Confirmed free, no action needed:**
+- **Weather (`src/lib/weather.ts`):** runs on **Open-Meteo** (`api.open-meteo.com` / `geocoding-api.open-meteo.com`) — no API key, no auth, genuinely free (non-commercial-friendly open service). Nothing to budget here.
+- **Invite emails:** no separate email-service SDK exists in `package.json` (no Resend/SendGrid/Postmark) — trip invitations ride on Clerk's own built-in invitation email sending, so there's no standalone email cost; it's already inside whatever Clerk tier ODY-136 lands on.
+
+**Free today, but worth watching (not a committed cost, no action needed yet):**
+- **Geocoding / location autocomplete (`src/lib/geocode.ts`):** runs on **Nominatim** (OpenStreetMap's free community server), already proxied and cached per ODY-010 specifically because Nominatim's usage policy is fragile (1 req/sec, best-effort uptime, no SLA) — the same class of risk that forced the Explore feature off Nominatim/Overpass onto Foursquare (see the 2026-08-30 handoff notes). If location-search volume grows enough to strain it, the fix is a paid geocoder (Google Geocoding, Mapbox, LocationIQ) — no price researched here since there's no current trigger to act on; revisit only if Nominatim starts erroring under real load.
+
+### ODY-138 · Error monitoring (e.g. Sentry) — not currently implemented, $0-26/mo when adopted
+> **In plain terms:** Right now, if the production app throws an error, nobody finds out unless a user reports it. This isn't on the owner's list, but it's a standard pre-launch gap worth naming before real travelers hit it.
+- **Current state (verified in `package.json`):** no error-monitoring or analytics SDK exists at all (no Sentry, PostHog, LogRocket, Vercel Analytics). ODY-013 added toast-based user-facing error feedback, but there's no server-side visibility into what's actually failing in production.
+- **Price (fact-checked 2026-09-14, using Sentry as the reference vendor):** a **free Developer tier** (5K errors/mo, 1 user) covers a solo owner fine; a **Team plan at $26/mo** (50K errors, unlimited users, Slack/GitHub integration) is the realistic tier once more than one person needs visibility. Session-replay add-ons are extra and skippable at this stage.
+- **Timeline:** not blocking — this is a "before you're debugging production blind" recommendation, not a launch gate. Reasonable to add any time around the ODY-036 cutover, free tier first.
+- **Acceptance:** if adopted, production errors are visible without waiting on a user bug report; cost stays $0 on the free tier unless/until team size or error volume requires Team.
+
+---
+
+## 🤖 New feature: itinerary-planning chat agent (Claude API) — needs explicit greenlight
+### ODY-139 · In-trip AI chat: ask questions about your own itinerary — M/L, sonnet (P3, new feature) — 🟡 NOT hyper-polish, needs owner greenlight
+> **In plain terms:** A chat panel on the trip page where a traveler can ask "what should we do on Day 3?" or "find a vegetarian place near the hotel" and get an answer that actually knows their real itinerary, budget, and dates — not a generic chatbot bolted on the side.
+- **Why this needs a greenlight, not just a build:** the 2026-08-30 handoff recorded a standing owner directive — "no more brand-new features for now… just hyper-polishing of existing things." This is unambiguously a new feature (like ODY-073 and ODY-119), not polish, so it's filed here for prioritization, not started.
+- **What it needs technically:** a new `ANTHROPIC_API_KEY` (Claude API, separate from anything already in this stack — no Anthropic integration exists in the codebase today), a new server route/action that sends the trip's context (day-by-day events, dates, destination, budget) as prompt context, and a new chat UI component (doesn't exist yet — closest precedent is the existing itinerary/notes UI, not reusable as-is).
+- **Scope decision (like ODY-123/128's pattern):** ship **read-only advice first** (Claude suggests, the traveler adds it themselves via the existing "Add event" flow) rather than letting the model directly mutate the itinerary — smaller blast radius, no new permission/authorization surface to get right on day one. Direct-mutation ("Claude adds it for you") is a defensible Phase 2, not required for a useful v1.
+- **Model choice + pricing (fact-checked 2026-09-14 against Anthropic's current published rates):**
+
+  | Model | Input $/MTok | Output $/MTok |
+  |---|---|---|
+  | Claude Haiku 4.5 | $1.00 | $5.00 |
+  | Claude Sonnet 5 | $2.00 | $10.00 |
+  | Claude Opus 5 | $5.00 | $25.00 |
+
+  Recommend **Haiku 4.5 as the default** for this use case (conversational Q&A grounded in a fixed itinerary is well within its capability, and it's the cheapest tier) — Opus-tier is unnecessary overkill for "what's for dinner near the hotel." **Prompt caching** matters here: the trip's itinerary/budget context is large-ish (~1.5-3K tokens) but stable across a whole chat session, so cache it — cached reads run at roughly 1/10th the normal input price, meaning only the first message in a session pays full context cost.
+- **Illustrative cost estimate (assumption-driven — real usage will differ):** assuming ~2,000 input tokens + ~500 output tokens per chat turn, and the itinerary context mostly cache-hit after turn one:
+  - **Haiku 4.5:** ≈ $0.002-0.005 per message (well under a cent).
+  - **Sonnet 5:** ≈ $0.005-0.01 per message, for trips where a smarter model earns its cost (e.g. "replan my whole day 3 around this closure").
+  - At an illustrative 15-20 messages per trip that actually uses the feature: **≈ $0.05-0.10/trip on Haiku, ≈ $0.10-0.20/trip on Sonnet.** Scaling that: 500 trips/mo using it ≈ $25-100/mo; 5,000 trips/mo ≈ $250-1,000/mo. These are illustrative unit-cost drivers, not a forecast — actual cost depends entirely on adoption rate and messages-per-trip, both unknown pre-launch.
+- **Cost-control guardrail (don't skip):** add a per-trip or per-user message-rate cap before shipping, the same pattern ODY-055 already uses to rate-limit geocode/Explore — an unbounded chat feature is the one line item in this whole cost audit that a single abusive session could blow past every other budget line combined.
+- **Acceptance (once greenlit):** a trip page chat panel answers itinerary-grounded questions using the trip's real data; Haiku 4.5 by default with prompt caching enabled; a message-rate limit exists before public rollout; no direct itinerary mutation in v1.
+- **Files (new):** `src/lib/claude.ts` (or `src/lib/ai/`), a new server action under the trip's itinerary route, `src/components/itinerary/ItineraryChat.tsx` (new), `ANTHROPIC_API_KEY` env var.
+
+---
+
+## 📊 Profit margin tracking (internal — for the owner/developers, not shown to users)
+A running view of infra cost vs. revenue, so "are we profitable" has a real
+number behind it instead of a gut feeling. **The cost side below is real,
+fact-checked, and computed from this backlog's own tickets. The revenue side
+is currently undefined** — there is no monetization model anywhere in this
+codebase (no Stripe/billing integration, no pricing tiers, no paid-plan gate)
+— so the scenarios below are illustrative placeholders to make the shape of
+the model concrete, **not a recommendation**. This needs an actual owner
+decision on how (or whether) Odyssey charges anyone before it becomes a real
+forecast rather than a template.
+
+**Fixed monthly cost, two scenarios (excludes anything usage-metered):**
+
+| Line item | Lean scenario | Fuller-stack scenario |
+|---|---|---|
+| Supabase Pro (ODY-133) | $25 | $25 |
+| Vercel Pro, 1 seat (ODY-137) | $20 | $20 |
+| Domain, amortized (ODY-132, ~$13/yr) | ~$1 | ~$1 |
+| Map tiles (ODY-135) | Stadia Starter $20 | Google Maps Starter ~$100 |
+| Clerk (ODY-136) | $0 (under 50K MRU) | $25 (Pro, past 50K MRU) |
+| Error monitoring (ODY-138) | $0 (Developer free) | $26 (Team) |
+| Apple Developer (ODY-134) | $0 (not yet triggered) | $0 (not yet triggered) |
+| **Total fixed/mo** | **≈ $66** | **≈ $197** |
+
+**Variable, usage-metered costs (not in the table above — scale with adoption, not time):**
+- **AI chat feature (ODY-139), if greenlit:** ≈ $0.05-0.20 per trip that uses it (see ODY-139's own estimate) — this is a per-trip cost, not a flat monthly line, and only exists at all if that feature ships.
+- **Foursquare Premium fields (ODY-119), if greenlit:** ~$0.011-0.019 per enriched place lookup (already priced in ODY-119) — currently $0, Explore runs on free-tier fields today.
+
+**Illustrative break-even (placeholder revenue assumptions — replace with a real pricing decision):**
+"Paying users needed to cover fixed costs" at a few illustrative price points, against both cost scenarios above:
+
+| Illustrative price / paying user / mo | Lean ($66/mo) | Fuller stack ($197/mo) |
+|---|---|---|
+| $3 | 22 users | 66 users |
+| $5 | 14 users | 40 users |
+| $10 | 7 users | 20 users |
+
+This says nothing about whether $3/$5/$10 is the right price, or whether
+Odyssey should charge per user, per trip, per household, or not at all — that's
+a monetization decision only the owner can make. Once it's made, replace this
+table with the real price and the actual variable-cost-per-user (including
+ODY-139's AI cost if that feature ships) to get a real margin, not an
+illustration.
+
+- **Acceptance:** this section is updated (a) every time a new paid/potential-cost item is filed anywhere in this backlog going forward, so the fixed-cost table stays current, and (b) with a real revenue line the moment the owner decides on a monetization model — at that point this stops being a template and starts being an actual profit-margin forecast.
+
+---
+
 ## P0 — Correctness & Security
 
 ### ODY-036 · Configure production Clerk instance with Google Cloud OAuth — M, sonnet
