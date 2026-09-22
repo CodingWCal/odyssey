@@ -13,7 +13,7 @@ import { formatWeekday } from "@/lib/dates";
 import { normalizeTripNoteContent } from "@/lib/tripNotes";
 import { getOrCreateDbUser } from "@/lib/auth";
 import { db } from "@/lib/prisma/db";
-import { visiblePackingWhere, groupPackingItemsByEvent } from "@/lib/packing";
+import { visiblePackingWhere, groupPackingItemsByEvent, type EventPackingItem } from "@/lib/packing";
 
 interface Props {
   params: Promise<{ tripId: string }>;
@@ -38,11 +38,20 @@ export default async function ItineraryPage({ params }: Props) {
     fetchWeather(trip.destination, trip.startDate, trip.endDate),
     getOrCreateDbUser(),
   ]);
-  const eventChecklistItems = await db.checklistItem.findMany({
-    where: { ...visiblePackingWhere(tripId, dbUser.id), eventId: { not: null } },
-    orderBy: { orderIndex: "asc" },
-  });
-  const packingByEvent = groupPackingItemsByEvent(eventChecklistItems);
+  // Defensive: ChecklistItem.eventId only exists once `prisma db push` has
+  // run against this database (see BACKLOG.md's required-deploy-step
+  // warning). Degrade to "no per-event packing shown" instead of taking
+  // down the whole itinerary page if that migration hasn't landed yet here.
+  let packingByEvent = new Map<string, EventPackingItem[]>();
+  try {
+    const eventChecklistItems = await db.checklistItem.findMany({
+      where: { ...visiblePackingWhere(tripId, dbUser.id), eventId: { not: null } },
+      orderBy: { orderIndex: "asc" },
+    });
+    packingByEvent = groupPackingItemsByEvent(eventChecklistItems);
+  } catch (err) {
+    console.error("[itinerary] event-scoped packing items unavailable (has `prisma db push` run?):", err);
+  }
   const daysWithPacking = trip.days.map((d: (typeof trip.days)[number]) => ({
     ...d,
     events: d.events.map((e: (typeof d.events)[number]) => ({
