@@ -1064,6 +1064,12 @@
   display: inline-flex; align-items: center; gap: 5px;
 }
 .event-sub .meta .icon { color: var(--ink-3); }
+/* Condensed mobile address (ODY-129) — reads as plain text with a subtle
+ * tap affordance (dotted underline), not a heavy button. */
+.event-location-toggle {
+  border: 0; background: none; padding: 0; font: inherit; color: inherit;
+  text-align: left; text-decoration: underline dotted; text-underline-offset: 2px;
+}
 .event-sub .cost {
   font-family: var(--font-mono);
   color: var(--teal);
