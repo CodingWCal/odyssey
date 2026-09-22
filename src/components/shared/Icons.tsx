@@ -196,3 +196,16 @@ export const Icons = {
 
 export type EventTypeKey = "flight" | "hotel" | "restaurant" | "activity" | "transport" | "misc";
 export const EVENT_TYPES: EventTypeKey[] = ["flight", "hotel", "restaurant", "activity", "transport", "misc"];
+
+// Display label per type (ODY-130): "hotel" reads as "Lodging" since the
+// type also covers Airbnbs/hostels — the budget layer already calls it
+// that (lib/expenses.ts). The stored type key, CSS class, icon, and color
+// token all stay "hotel"; this only changes the text shown to users.
+export const TYPE_LABEL: Record<EventTypeKey, string> = {
+  flight: "Flight",
+  hotel: "Lodging",
+  restaurant: "Restaurant",
+  activity: "Activity",
+  transport: "Transport",
+  misc: "Misc",
+};

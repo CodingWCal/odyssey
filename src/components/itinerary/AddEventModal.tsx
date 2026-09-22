@@ -4,8 +4,9 @@ import { useState, useTransition } from "react";
 import { createEvent, updateEvent, deleteEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import { Modal } from "@/components/shared/Modal";
 import { toast } from "@/components/shared/Toast";
-import { Icons, EVENT_TYPES } from "@/components/shared/Icons";
+import { Icons, EVENT_TYPES, TYPE_LABEL } from "@/components/shared/Icons";
 import { LocationAutocomplete } from "./LocationAutocomplete";
+import { categorizeEvent } from "@/lib/categorizeEvent";
 import type { TripEvent, EventType } from "@/types";
 
 interface AddEventModalProps {
@@ -47,6 +48,10 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
   // already has any (ODY-086).
   const hasBooking = Boolean(existing?.confirmationCode || existing?.bookingUrl || existing?.checkIn);
   const [bookingOpen, setBookingOpen] = useState(hasBooking);
+  // ODY-127: auto-categorize from the title, but only for a brand-new event
+  // and only until the user manually picks a type chip this session — never
+  // fight an explicit choice or silently recategorize an existing event.
+  const [typeTouched, setTypeTouched] = useState(isEdit);
 
   // Re-seed the form each time the modal opens ("adjust state during render"
   // — the React-sanctioned replacement for a reset-on-open effect).
@@ -57,6 +62,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
       setForm(initialForm());
       setTitleError(false);
       setBookingOpen(hasBooking);
+      setTypeTouched(isEdit);
     }
   }
 
@@ -151,10 +157,10 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
                   key={tp}
                   type="button"
                   className={`type-chip t-${tp} ${form.type === tp ? "selected" : ""}`}
-                  onClick={() => set("type", tp)}
+                  onClick={() => { set("type", tp); setTypeTouched(true); }}
                 >
                   <Icon size={18} />
-                  {tp}
+                  {TYPE_LABEL[tp]}
                 </button>
               );
             })}
@@ -168,7 +174,16 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
             className={`input${titleError ? " invalid" : ""}`}
             value={form.title}
             onChange={(e) => {
-              set("title", e.target.value);
+              const value = e.target.value;
+              if (!isEdit && !typeTouched) {
+                const guess = categorizeEvent(value);
+                if (guess) {
+                  setForm((s) => ({ ...s, title: value, type: guess }));
+                  if (titleError) setTitleError(false);
+                  return;
+                }
+              }
+              set("title", value);
               if (titleError) setTitleError(false);
             }}
             placeholder="Flight to Tokyo"

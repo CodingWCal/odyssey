@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { addPlaceToItinerary, createPlace, deletePlace } from "@/app/trips/[tripId]/collections/actions";
 import { LocationAutocomplete } from "@/components/itinerary/LocationAutocomplete";
-import { Icons, EVENT_TYPES } from "@/components/shared/Icons";
+import { Icons, EVENT_TYPES, TYPE_LABEL } from "@/components/shared/Icons";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { toast } from "@/components/shared/Toast";
 import { formatShortDate } from "@/lib/utils";
@@ -240,7 +240,7 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
                     onClick={() => setForm((s) => ({ ...s, category: tp }))}
                   >
                     <Icon size={16} />
-                    {tp}
+                    {TYPE_LABEL[tp]}
                   </button>
                 );
               })}
