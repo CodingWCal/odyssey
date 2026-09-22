@@ -1208,7 +1208,10 @@
 .sheet-panel .type-chip { padding: 14px 8px; }
 .sheet-panel .field { gap: 10px; }
 
-.field { display: flex; flex-direction: column; gap: 8px; }
+/* min-width: 0 lets a .field shrink inside a grid/flex row (e.g. .field-row,
+ * .wz-dates) instead of a native date/time input's intrinsic width pushing
+ * the row past its container at narrow widths (ODY-121). */
+.field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .field > label {
   font-size: 11.5px;
   font-weight: 500;
@@ -1220,6 +1223,16 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+/* ODY-121: a start/end date-or-time pair stacks to one column once a phone
+ * is too narrow for two native inputs side by side — applies everywhere the
+ * pattern shows up (Add Event, New Trip wizard, Schedule poll setup). */
+@media (max-width: 400px) {
+  .field-row,
+  .wz-dates,
+  .poll-form .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 .input {
   width: 100%;
@@ -3191,6 +3204,15 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
 }
 .wz-add:hover { border-color: var(--peri); color: var(--peri); }
+/* ODY-120: the ghost "Add" button reads as decorative next to a full-width
+ * email input on phones — give it equal visual weight so it isn't missed. */
+@media (max-width: 480px) {
+  .wz-invite-row { flex-direction: column; }
+  .wz-add {
+    width: 100%; height: 44px; justify-content: center;
+    background: var(--peri-soft); border-color: var(--peri); color: var(--peri);
+  }
+}
 .wz-invite-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .wz-tag {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px;
@@ -3950,6 +3972,14 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .explore-card-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .explore-day-pick { flex: 1; min-width: 160px; }
 .explore-day-pick .input { height: 40px; }
+/* ODY-122: stack to full-width controls on a phone so "Add to itinerary"
+ * and "Save to collections" are always clearly separate, tappable targets
+ * instead of competing for space with the day picker on one wrapped line. */
+@media (max-width: 420px) {
+  .explore-card-actions { flex-direction: column; align-items: stretch; }
+  .explore-card-actions .btn { width: 100%; }
+  .explore-day-pick { min-width: 0; width: 100%; }
+}
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;

@@ -92,9 +92,14 @@ function WizardBody({ onClose }: { onClose: () => void }) {
     }
   }
 
+  function normalizedEmail(raw: string) {
+    const e = raw.trim().toLowerCase();
+    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? e : null;
+  }
+
   function addInvite() {
-    const e = inviteInput.trim().toLowerCase();
-    if (e && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && !invites.includes(e)) {
+    const e = normalizedEmail(inviteInput);
+    if (e && !invites.includes(e)) {
       setInvites((s) => [...s, e]);
       setInviteInput("");
     }
@@ -112,6 +117,10 @@ function WizardBody({ onClose }: { onClose: () => void }) {
   async function create() {
     if (!title.trim() || busy) return;
     setBusy(true);
+    // Safety net (ODY-120): a typed-but-never-"Add"ed email still gets
+    // invited on submit, so a missed tap doesn't silently drop the invite.
+    const pending = normalizedEmail(inviteInput);
+    const finalInvites = pending && !invites.includes(pending) ? [...invites, pending] : invites;
     try {
       const { tripId } = await createTripWizard({
         title: title.trim(),
@@ -121,7 +130,7 @@ function WizardBody({ onClose }: { onClose: () => void }) {
         totalBudget: budget ? parseFloat(budget) : undefined,
         coverIndex,
       });
-      for (const email of invites) {
+      for (const email of finalInvites) {
         try {
           await inviteCollaborator({ email, tripId, role: "editor" });
         } catch {
@@ -249,6 +258,7 @@ function WizardBody({ onClose }: { onClose: () => void }) {
                 autoCapitalize="none" spellCheck={false} className="input" value={inviteInput}
                 onChange={(e) => setInviteInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addInvite(); } }}
+                onBlur={addInvite}
                 placeholder="friend@email.com" />
               <button type="button" className="wz-add" onClick={addInvite}><Icons.plus size={12} /> Add</button>
             </div>
