@@ -74,7 +74,10 @@ export default async function DashboardPage() {
       status,
       countdown,
       cover: resolveCover(t.coverImageUrl, t.id),
-      members: t.members.map((m: (typeof t.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" })),
+      // id is the *user's* id (not the TripMember row id) so the dashboard's
+      // distinct-travelers count (ODY-125) can dedupe repeat collaborators
+      // across trips instead of counting one row per membership.
+      members: t.members.map((m: (typeof t.members)[number]) => ({ id: m.userId, name: m.user?.name ?? "Traveler" })),
       // Per-member archive (ODY-082): read *this* member's own archivedAt, so
       // hiding a trip only affects the current user's dashboard.
       archived: t.members.find((m: (typeof t.members)[number]) => m.userId === dbUser.id)?.archivedAt != null,
