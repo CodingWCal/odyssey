@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { assertTripRole, getOrCreateDbUser } from "@/lib/auth";
 import { db } from "@/lib/prisma/db";
-import { assignChecklistItemSchema, checklistItemIdSchema, createChecklistItemSchema } from "@/lib/validations";
+import {
+  addEventChecklistItemSchema,
+  assignChecklistItemSchema,
+  checklistItemIdSchema,
+  createChecklistItemSchema,
+} from "@/lib/validations";
 import { visiblePackingWhere } from "@/lib/packing";
 import { parseChecklistLines } from "@/lib/checklist";
 import { applySectionsPatch, normalizeTripNoteContent } from "@/lib/tripNotes";
@@ -23,6 +28,29 @@ export async function addChecklistItem(input: { tripId: string; label: string; s
   revalidatePath(pathFor(data.tripId));
 }
 
+/**
+ * Add a packing item scoped to one event (ODY-067 Stage B) — "hiking boots
+ * for the Cadillac Mountain hike." Always personal (ownerId: the caller):
+ * there's no group/shared option here, since two people on the same event
+ * each need their own boots, not a shared checkbox (see ChecklistItem's
+ * schema comment). Reuses toggleChecklistItem/removeChecklistItem as-is —
+ * both already look items up via visiblePackingWhere, with no eventId
+ * special-casing needed.
+ */
+export async function addEventChecklistItem(input: { tripId: string; eventId: string; label: string }) {
+  const user = await getOrCreateDbUser();
+  await assertTripRole(input.tripId, user.id, "editor");
+  const data = addEventChecklistItemSchema.parse(input);
+  const event = await db.event.findFirst({ where: { id: data.eventId, tripId: data.tripId } });
+  if (!event) throw new Error("Not found");
+  const last = await db.checklistItem.aggregate({ where: { tripId: data.tripId, ownerId: user.id }, _max: { orderIndex: true } });
+  await db.checklistItem.create({
+    data: { tripId: data.tripId, eventId: data.eventId, label: data.label, ownerId: user.id, orderIndex: (last._max.orderIndex ?? -1) + 1 },
+  });
+  revalidatePath(pathFor(data.tripId));
+  revalidatePath(`/trips/${data.tripId}/itinerary`);
+}
+
 export async function toggleChecklistItem(input: { tripId: string; itemId: string }) {
   const user = await getOrCreateDbUser();
   await assertTripRole(input.tripId, user.id, "editor");
@@ -31,6 +59,8 @@ export async function toggleChecklistItem(input: { tripId: string; itemId: strin
   if (!item) throw new Error("Not found");
   await db.checklistItem.update({ where: { id: item.id }, data: { done: !item.done } });
   revalidatePath(pathFor(data.tripId));
+  // Event-scoped items also render on the itinerary page (ODY-067 Stage B).
+  if (item.eventId) revalidatePath(`/trips/${data.tripId}/itinerary`);
 }
 
 export async function removeChecklistItem(input: { tripId: string; itemId: string }) {
@@ -41,6 +71,7 @@ export async function removeChecklistItem(input: { tripId: string; itemId: strin
   if (!item) throw new Error("Not found");
   await db.checklistItem.delete({ where: { id: item.id } });
   revalidatePath(pathFor(data.tripId));
+  if (item.eventId) revalidatePath(`/trips/${data.tripId}/itinerary`);
 }
 
 export async function assignChecklistItem(input: { tripId: string; itemId: string; assigneeId: string | null }) {

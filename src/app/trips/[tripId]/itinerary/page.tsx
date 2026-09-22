@@ -11,6 +11,9 @@ import type { TripDay } from "@/types";
 import { formatShortDate } from "@/lib/utils";
 import { formatWeekday } from "@/lib/dates";
 import { normalizeTripNoteContent } from "@/lib/tripNotes";
+import { getOrCreateDbUser } from "@/lib/auth";
+import { db } from "@/lib/prisma/db";
+import { visiblePackingWhere, groupPackingItemsByEvent } from "@/lib/packing";
 
 interface Props {
   params: Promise<{ tripId: string }>;
@@ -28,7 +31,26 @@ export default async function ItineraryPage({ params }: Props) {
   const trip = await getTripById(tripId);
   if (!trip) notFound();
 
-  const weather = await fetchWeather(trip.destination, trip.startDate, trip.endDate);
+  // ODY-067 Stage B: this viewer's own packing items scoped to an event
+  // (always personal — see ChecklistItem's schema comment), grouped by
+  // event so EventBlock can show a compact list without a per-event query.
+  const [weather, dbUser] = await Promise.all([
+    fetchWeather(trip.destination, trip.startDate, trip.endDate),
+    getOrCreateDbUser(),
+  ]);
+  const eventChecklistItems = await db.checklistItem.findMany({
+    where: { ...visiblePackingWhere(tripId, dbUser.id), eventId: { not: null } },
+    orderBy: { orderIndex: "asc" },
+  });
+  const packingByEvent = groupPackingItemsByEvent(eventChecklistItems);
+  const daysWithPacking = trip.days.map((d: (typeof trip.days)[number]) => ({
+    ...d,
+    events: d.events.map((e: (typeof d.events)[number]) => ({
+      ...e,
+      packingItems: packingByEvent.get(e.id) ?? [],
+    })),
+  }));
+
   const totalEvents = trip.days.reduce((n: number, d: (typeof trip.days)[number]) => n + d.events.length, 0);
   const dateRange = `${formatShortDate(trip.startDate)} – ${formatShortDate(trip.endDate)}`;
   const members = trip.members.map((m: (typeof trip.members)[number]) => ({ id: m.id, name: m.user?.name ?? "Traveler" }));
@@ -109,7 +131,7 @@ export default async function ItineraryPage({ params }: Props) {
             dayNumber: i + 1,
             label: `${formatWeekday(d.date)} · ${formatShortDate(d.date)}`,
           }));
-          return trip.days.map((day: (typeof trip.days)[number], index: number) => (
+          return daysWithPacking.map((day, index: number) => (
             <DayBlock
               key={day.id}
               day={day as TripDay}

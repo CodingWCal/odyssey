@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { AddEventModal } from "./AddEventModal";
+import { EventChecklist } from "./EventChecklist";
 import { deleteEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
@@ -185,6 +186,12 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
               {event.notes && (
                 <EventNotes text={event.notes} />
               )}
+              <EventChecklist
+                tripId={tripId}
+                eventId={event.id}
+                items={event.packingItems ?? []}
+                readOnly={readOnly}
+              />
               {overlapWith && overlapWith.length > 0 && (
                 <p className="event-overlap">
                   Overlaps {overlapWith.join(", ")}

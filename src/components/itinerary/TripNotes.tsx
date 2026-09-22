@@ -61,7 +61,7 @@ export function TripNotes({ tripId, initialText, initialSections, readOnly = fal
   // custom section saved — dismiss persists immediately so it won't repeat.
   useEffect(() => {
     if (!showSectionsHint) return;
-    toast("Add a section — Packing List, Emergency Contacts, whatever this trip needs.", "success");
+    toast("Add a section — Emergency Contacts, Restaurant Reservations, whatever this trip needs.", "success");
     dismissNotesHint(tripId).catch(() => {});
   }, [showSectionsHint, tripId]);
 
@@ -181,6 +181,13 @@ export function TripNotes({ tripId, initialText, initialSections, readOnly = fal
 
   const anyPending = isPending || sectionsPending;
 
+  // ODY-126 part 3: Packing List moved to its own tab (ODY-067) — stop
+  // rendering it here. Presentational only: an existing trip's persisted
+  // section (possibly holding real content) is never dropped from
+  // `sections`/storage, so packing/actions.ts's one-time
+  // importLegacyPackingList migration keeps working off the real data.
+  const visibleSections = sections.filter((s) => s.id !== "default-packing");
+
   return (
     <div className={`notes-card ${focused ? "focused" : ""}`}>
       <button
@@ -233,9 +240,9 @@ export function TripNotes({ tripId, initialText, initialSections, readOnly = fal
             </button>
           )}
 
-          {sections.length > 0 && (
+          {visibleSections.length > 0 && (
             <div className="note-sections">
-              {sections.map((section) => (
+              {visibleSections.map((section) => (
                 <NoteSection
                   key={section.id}
                   section={section}

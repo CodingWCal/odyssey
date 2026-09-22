@@ -40,11 +40,17 @@ export function emptyTripNote(): TripNoteContentV1 {
   return { v: 1, text: "", doc: EMPTY_DOC, sections: [] };
 }
 
-/** The starting sections a trip's shared notes seed with (ODY-104). */
+/**
+ * The starting sections a trip's shared notes seed with (ODY-104). Packing
+ * List was dropped (ODY-126 part 3): the real Packing tab (ODY-067) is now
+ * the single home for packing, so a new trip no longer seeds a free-text
+ * stand-in for it. An existing trip's already-persisted "Packing List"
+ * section is left alone (not deleted) — see TripNotes.tsx, which just stops
+ * rendering it — so importLegacyPackingList's one-time migration still works.
+ */
 export function defaultNoteSections(): TripNoteSection[] {
   return [
     { id: "default-reminders", title: "Important Reminders", text: "" },
-    { id: "default-packing", title: "Packing List", text: "" },
     { id: "default-todo", title: "To Do", text: "" },
   ];
 }

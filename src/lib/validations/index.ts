@@ -229,6 +229,13 @@ export const assignChecklistItemSchema = checklistItemIdSchema.extend({
   assigneeId: z.string().min(1).nullable(),
 });
 
+/** ODY-067 Stage B — always personal (no `scope`, unlike createChecklistItemSchema). */
+export const addEventChecklistItemSchema = z.object({
+  tripId: z.string().min(1),
+  eventId: z.string().min(1),
+  label: z.string().trim().min(1, "Add an item first").max(160),
+});
+
 /** Trip notes upsert patch (ODY-051) — plain OR TipTap doc, not both required. */
 const NOTE_TEXT_MAX = 20_000;
 /** Shared notes sections (ODY-104). */

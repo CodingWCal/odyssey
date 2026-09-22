@@ -10,8 +10,18 @@ import {
 } from "@/app/trips/[tripId]/packing/actions";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
+import { formatShortDate } from "@/lib/utils";
 
-type Item = { id: string; label: string; done: boolean; ownerId: string | null; assigneeId: string | null };
+type EventRef = { id: string; title: string; orderIndex: number; day: { date: string | Date } };
+type Item = {
+  id: string;
+  label: string;
+  done: boolean;
+  ownerId: string | null;
+  assigneeId: string | null;
+  eventId: string | null;
+  event: EventRef | null;
+};
 type Member = { id: string; name: string };
 
 interface PackingClientProps {
@@ -110,7 +120,26 @@ export function PackingClient({ tripId, items, members, hasLegacyPacking, readOn
   const [pending, startTransition] = useTransition();
 
   const group = items.filter((item) => item.ownerId === null);
-  const personal = items.filter((item) => item.ownerId !== null);
+  const personal = items.filter((item) => item.ownerId !== null && item.eventId === null);
+
+  // ODY-067 Stage B: event-scoped personal items roll up here instead of
+  // cluttering the flat "For me" list — grouped by event, ordered by the
+  // event's own day/position rather than item creation order.
+  const eventGroups = Array.from(
+    items
+      .filter((item) => item.eventId !== null && item.event)
+      .reduce((map, item) => {
+        const event = item.event as EventRef;
+        const entry = map.get(event.id) ?? { event, rows: [] as Item[] };
+        entry.rows.push(item);
+        map.set(event.id, entry);
+        return map;
+      }, new Map<string, { event: EventRef; rows: Item[] }>())
+      .values()
+  ).sort((a, b) => {
+    const byDay = new Date(a.event.day.date).getTime() - new Date(b.event.day.date).getTime();
+    return byDay !== 0 ? byDay : a.event.orderIndex - b.event.orderIndex;
+  });
 
   // Every mutation shares the same optimistic-transition + toast-on-failure
   // wrapper, so a failed add/toggle/assign/remove always surfaces.
@@ -176,6 +205,25 @@ export function PackingClient({ tripId, items, members, hasLegacyPacking, readOn
         readOnly={readOnly}
         mutate={mutate}
       />
+
+      {eventGroups.length > 0 && (
+        <section className="packing-by-activity">
+          <h2 className="packing-by-activity-title">By activity</h2>
+          {eventGroups.map(({ event, rows }) => (
+            <PackingList
+              key={event.id}
+              title={event.title}
+              subtitle={formatShortDate(event.day.date)}
+              rows={rows}
+              shared={false}
+              tripId={tripId}
+              members={members}
+              readOnly={readOnly}
+              mutate={mutate}
+            />
+          ))}
+        </section>
+      )}
 
       {!readOnly && (
         <form
