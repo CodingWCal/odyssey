@@ -22,6 +22,8 @@ function revalidateTrip(tripId: string) {
   revalidatePath(`/trips/${tripId}/itinerary`);
   revalidatePath(`/trips/${tripId}/map`);
   revalidatePath(`/trips/${tripId}/budget`);
+  // Deleting an event cascades to its packing items (ODY-067 Stage B).
+  revalidatePath(`/trips/${tripId}/packing`);
   revalidatePath(`/trips/${tripId}`);
 }
 

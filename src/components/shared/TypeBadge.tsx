@@ -1,4 +1,4 @@
-import { Icons, type EventTypeKey } from "./Icons";
+import { Icons, TYPE_LABEL, type EventTypeKey } from "./Icons";
 
 // Event type pill — `.badge.t-{type}` per the design's badge styles.
 export function TypeBadge({ type }: { type: EventTypeKey }) {
@@ -6,7 +6,7 @@ export function TypeBadge({ type }: { type: EventTypeKey }) {
   return (
     <span className={`badge t-${type}`}>
       <Icon size={11} />
-      {type}
+      {TYPE_LABEL[type] ?? type}
     </span>
   );
 }

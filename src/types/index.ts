@@ -16,6 +16,13 @@ export type ExpenseCategory =
 
 export type MemberRole = "owner" | "editor";
 
+/** One of the viewer's own packing items scoped to this event (ODY-067 Stage B). */
+export interface PackingItem {
+  id: string;
+  label: string;
+  done: boolean;
+}
+
 export interface TripEvent {
   id: string;
   dayId: string;
@@ -38,6 +45,8 @@ export interface TripEvent {
   checkIn: string | null;
   createdBy: string;
   createdAt: Date;
+  /** Populated only by the itinerary page fetch; absent elsewhere. */
+  packingItems?: PackingItem[];
 }
 
 export interface TripDay {

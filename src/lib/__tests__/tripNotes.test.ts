@@ -93,11 +93,10 @@ describe("note size guards (ODY-051)", () => {
 });
 
 describe("shared notes sections (ODY-104)", () => {
-  it("defaultNoteSections seeds three named, empty sections", () => {
+  it("defaultNoteSections seeds two named, empty sections (Packing List moved to its own tab, ODY-126)", () => {
     const sections = defaultNoteSections();
     expect(sections.map((s) => s.title)).toEqual([
       "Important Reminders",
-      "Packing List",
       "To Do",
     ]);
     expect(sections.every((s) => s.text === "")).toBe(true);

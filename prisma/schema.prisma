@@ -123,9 +123,10 @@ model Event {
   createdBy    String
   createdAt    DateTime @default(now())
 
-  day      Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  creator  User      @relation(fields: [createdBy], references: [id])
-  expenses Expense[]
+  day            Day             @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  creator        User            @relation(fields: [createdBy], references: [id])
+  expenses       Expense[]
+  checklistItems ChecklistItem[]
 }
 
 model Expense {
@@ -235,9 +236,15 @@ model Place {
 /// Shared (ownerId null) or private (ownerId set) packing items (ODY-067).
 /// User ids stay scalar deliberately: privacy is enforced in the server query,
 /// while trip membership remains the authorization boundary.
+/// eventId (ODY-067 Stage B) scopes an item to one event — "hiking boots for
+/// the Cadillac Mountain hike" — and is always personal (ownerId set), never
+/// a shared/group item: two hikers each need their own boots, not one shared
+/// checkbox. onDelete: Cascade (not SetNull, unlike Expense.eventId) because
+/// a packing reminder tied to a deleted event has no reason to persist.
 model ChecklistItem {
   id         String   @id @default(uuid())
   tripId     String
+  eventId    String?
   ownerId    String?
   assigneeId String?
   label      String
@@ -245,7 +252,9 @@ model ChecklistItem {
   orderIndex Int      @default(0)
   createdAt  DateTime @default(now())
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip  Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([tripId, ownerId, orderIndex])
+  @@index([tripId, eventId])
 }

@@ -153,7 +153,7 @@ export function MapClient({
                       style={{ "--swatch": TYPE_HEX[cat] } as React.CSSProperties}
                       aria-hidden="true"
                     />
-                    {cat}
+                    {TYPE_LABEL[cat]}
                   </button>
                 );
               })}

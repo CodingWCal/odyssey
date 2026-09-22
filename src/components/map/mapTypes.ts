@@ -56,7 +56,7 @@ export const TYPE_HEX: Record<EventType, string> = {
 // reads for color-blind users via the map list and tooltips, not hue alone.
 export const TYPE_LABEL: Record<EventType, string> = {
   flight: "Flight",
-  hotel: "Hotel",
+  hotel: "Lodging", // ODY-130: covers Airbnbs/hostels too, not just hotels
   restaurant: "Restaurant",
   activity: "Activity",
   transport: "Transport",

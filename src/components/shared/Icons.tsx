@@ -185,6 +185,13 @@ export const Icons = {
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </Base>
   ),
+  suitcase: ({ size = 13 }: IconProps) => (
+    <Base size={size}>
+      <rect x="3" y="8" width="18" height="12" rx="2" />
+      <path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+      <path d="M3 13h18" />
+    </Base>
+  ),
   more: ({ size = 18 }: IconProps) => (
     <Base size={size}>
       <circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none" />
@@ -196,3 +203,16 @@ export const Icons = {
 
 export type EventTypeKey = "flight" | "hotel" | "restaurant" | "activity" | "transport" | "misc";
 export const EVENT_TYPES: EventTypeKey[] = ["flight", "hotel", "restaurant", "activity", "transport", "misc"];
+
+// Display label per type (ODY-130): "hotel" reads as "Lodging" since the
+// type also covers Airbnbs/hostels — the budget layer already calls it
+// that (lib/expenses.ts). The stored type key, CSS class, icon, and color
+// token all stay "hotel"; this only changes the text shown to users.
+export const TYPE_LABEL: Record<EventTypeKey, string> = {
+  flight: "Flight",
+  hotel: "Lodging",
+  restaurant: "Restaurant",
+  activity: "Activity",
+  transport: "Transport",
+  misc: "Misc",
+};

@@ -8,7 +8,20 @@ import { normalizeTripNoteContent } from "@/lib/tripNotes";
 export default async function PackingPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
   const user = await getOrCreateDbUser();
-  const trip = await db.trip.findFirst({ where: { id: tripId, members: { some: { userId: user.id } } }, include: { members: { include: { user: { select: { id: true, name: true } } } }, note: true, checklistItems: { where: visiblePackingWhere(tripId, user.id), orderBy: [{ ownerId: "asc" }, { orderIndex: "asc" }] } } });
+  const trip = await db.trip.findFirst({
+    where: { id: tripId, members: { some: { userId: user.id } } },
+    include: {
+      members: { include: { user: { select: { id: true, name: true } } } },
+      note: true,
+      checklistItems: {
+        where: visiblePackingWhere(tripId, user.id),
+        orderBy: [{ ownerId: "asc" }, { orderIndex: "asc" }],
+        // ODY-067 Stage B: event + its day, so event-scoped items can roll
+        // up under "By activity" instead of cluttering the flat personal list.
+        include: { event: { select: { id: true, title: true, orderIndex: true, day: { select: { date: true } } } } },
+      },
+    },
+  });
   if (!trip) notFound();
   const hasLegacyPacking = normalizeTripNoteContent(trip.note?.content).sections.some((s) => s.title === "Packing List" && s.text.trim());
   return <div className="canvas"><PackingClient tripId={tripId} items={trip.checklistItems} members={trip.members.map((m) => ({ id: m.user.id, name: m.user.name }))} hasLegacyPacking={hasLegacyPacking} readOnly={trip.members.find((m) => m.userId === user.id)?.role === "viewer"} /></div>;

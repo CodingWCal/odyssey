@@ -819,6 +819,50 @@
   min-height: 20px;
 }
 
+/* Per-event packing list (ODY-067 Stage B) — a scaled-down version of the
+ * Packing tab's checkbox row, always the viewer's own items for this event. */
+.event-checklist {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-2);
+  font-size: 12.5px;
+}
+.event-checklist-head {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--ink-2);
+}
+.event-checklist-head svg { color: var(--peri); flex-shrink: 0; }
+.event-checklist-head .count {
+  margin-left: auto; font-family: var(--font-mono); color: var(--ink-3); font-size: 11.5px;
+}
+.event-checklist ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.event-checklist li { display: flex; align-items: center; gap: 6px; min-height: 30px; }
+.event-checklist li > button:first-child {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  border: 0; background: none; text-align: left; color: var(--ink); padding: 3px 0;
+}
+.event-checklist li > button:first-child span {
+  width: 14px; height: 14px; border: 1px solid var(--rule-2); border-radius: var(--radius-focus);
+  display: grid; place-items: center; color: var(--paper); background: var(--paper-2);
+  font-size: 10px; flex-shrink: 0;
+}
+.event-checklist li > button.done { color: var(--ink-3); text-decoration: line-through; }
+.event-checklist li > button.done span { background: var(--teal); border-color: var(--teal); }
+.event-checklist li > button:last-child { border: 0; background: none; color: var(--ink-3); flex-shrink: 0; }
+.event-checklist-add-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 8px; border: 0; background: none; color: var(--peri); font-size: 12px; font-weight: 500;
+}
+.event-checklist-add { display: flex; gap: 6px; margin-top: 8px; }
+.event-checklist-add input {
+  flex: 1; min-width: 0; height: 30px; padding: 0 8px;
+  border: 1px solid var(--rule-2); border-radius: var(--radius-field); background: var(--paper-2); font-size: 12.5px;
+}
+.event-checklist-add button {
+  border: 1px solid var(--rule); border-radius: var(--radius-field); background: var(--paper-2);
+  color: var(--ink-2); padding: 0 10px; font-size: 12px; font-weight: 500;
+}
+
 /* ─── Day block ──────────────────────────────────────────────────── */
 
 .day-block { margin-bottom: var(--day-gap); }
@@ -1208,7 +1252,10 @@
 .sheet-panel .type-chip { padding: 14px 8px; }
 .sheet-panel .field { gap: 10px; }
 
-.field { display: flex; flex-direction: column; gap: 8px; }
+/* min-width: 0 lets a .field shrink inside a grid/flex row (e.g. .field-row,
+ * .wz-dates) instead of a native date/time input's intrinsic width pushing
+ * the row past its container at narrow widths (ODY-121). */
+.field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .field > label {
   font-size: 11.5px;
   font-weight: 500;
@@ -1220,6 +1267,16 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+/* ODY-121: a start/end date-or-time pair stacks to one column once a phone
+ * is too narrow for two native inputs side by side — applies everywhere the
+ * pattern shows up (Add Event, New Trip wizard, Schedule poll setup). */
+@media (max-width: 400px) {
+  .field-row,
+  .wz-dates,
+  .poll-form .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 .input {
   width: 100%;
@@ -3191,6 +3248,15 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
 }
 .wz-add:hover { border-color: var(--peri); color: var(--peri); }
+/* ODY-120: the ghost "Add" button reads as decorative next to a full-width
+ * email input on phones — give it equal visual weight so it isn't missed. */
+@media (max-width: 480px) {
+  .wz-invite-row { flex-direction: column; }
+  .wz-add {
+    width: 100%; height: 44px; justify-content: center;
+    background: var(--peri-soft); border-color: var(--peri); color: var(--peri);
+  }
+}
 .wz-invite-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .wz-tag {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px;
@@ -3460,6 +3526,14 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .packing-section { border-top:1px solid var(--rule); padding:18px 0; }.packing-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }.packing-head h2 { font-size:23px; }.packing-head > span { font:12px var(--font-mono); color:var(--ink-3); }
 .packing-section ul { list-style:none; padding:0; margin:14px 0 0; }.packing-section li { display:flex; gap:8px; align-items:center; min-height:40px; }.packing-section li > button:first-child { flex:1; display:flex; align-items:center; gap:10px; border:0; background:none; text-align:left; color:var(--ink); padding:6px 0; }.packing-section li > button:first-child span { width:18px; height:18px; border:1px solid var(--rule-2); border-radius:var(--radius-focus); display:grid; place-items:center; color:var(--paper); background:var(--paper-2); }.packing-section li > button.done { color:var(--ink-3); text-decoration:line-through; }.packing-section li > button.done span { background:var(--teal); border-color:var(--teal); }.packing-section li > button:last-child { border:0; background:none; color:var(--ink-3); }.packing-empty { color:var(--ink-3); font-style:italic; }
 .packing-scope { display:flex; gap:8px; margin:10px 0; }.packing-scope button { border:1px solid var(--rule); background:var(--paper-2); color:var(--ink-2); border-radius:var(--radius-pill); padding:7px 11px; }.packing-scope button.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }.packing-add { display:flex; gap:8px; }.packing-add input { flex:1; min-width:0; height:42px; padding:0 12px; border:1px solid var(--rule-2); border-radius:var(--radius-field); background:var(--paper-2); }
+/* By-activity rollup (ODY-067 Stage B) — a labeled group of per-event
+ * PackingLists, visually set apart from the group/personal sections above. */
+.packing-by-activity { margin-top: 8px; }
+.packing-card .packing-by-activity-title {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-3); font-family: var(--font-mono);
+  margin: 24px 0 -4px;
+}
 .ld-card p { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin: 0; }
 
 .ld-foot-cta {
@@ -3950,6 +4024,14 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
 .explore-card-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .explore-day-pick { flex: 1; min-width: 160px; }
 .explore-day-pick .input { height: 40px; }
+/* ODY-122: stack to full-width controls on a phone so "Add to itinerary"
+ * and "Save to collections" are always clearly separate, tappable targets
+ * instead of competing for space with the day picker on one wrapped line. */
+@media (max-width: 420px) {
+  .explore-card-actions { flex-direction: column; align-items: stretch; }
+  .explore-card-actions .btn { width: 100%; }
+  .explore-day-pick { min-width: 0; width: 100%; }
+}
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
