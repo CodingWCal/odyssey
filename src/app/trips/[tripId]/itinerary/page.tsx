@@ -1,4 +1,5 @@
 import { getTripById } from "@/app/trips/actions";
+import { getNotesHintDismissed } from "@/app/trips/[tripId]/notes/actions";
 import { DayBlock } from "@/components/itinerary/DayBlock";
 import { TripNotes } from "@/components/itinerary/TripNotes";
 import { FirstSteps } from "@/components/itinerary/FirstSteps";
@@ -35,6 +36,13 @@ export default async function ItineraryPage({ params }: Props) {
   const note = normalizeTripNoteContent(trip.note?.content);
   const readOnly = trip.myRole === "viewer"; // ODY-001
 
+  // ODY-126: nudge a first-time visitor toward "Add section" once, before
+  // this trip has ever had a custom section saved (sections stay [] server-
+  // side until the first section write — the 3 starter sections are only a
+  // client-render fallback). Viewers can't add sections, so skip for them.
+  const notesHintDismissed = await getNotesHintDismissed(tripId);
+  const showSectionsHint = !readOnly && !notesHintDismissed && note.sections.length === 0;
+
   // First-visit welcome for a freshly-joined member (ODY-085); eligibility
   // (non-owner, joined within a week) is computed in getTripById.
   const ownerName =
@@ -70,7 +78,13 @@ export default async function ItineraryPage({ params }: Props) {
         canEdit={!readOnly}
       />
 
-      <TripNotes tripId={tripId} initialText={note.text} initialSections={note.sections} readOnly={readOnly} />
+      <TripNotes
+        tripId={tripId}
+        initialText={note.text}
+        initialSections={note.sections}
+        readOnly={readOnly}
+        showSectionsHint={showSectionsHint}
+      />
 
       {totalEvents === 0 && trip.days.length > 0 && (
         <FirstSteps

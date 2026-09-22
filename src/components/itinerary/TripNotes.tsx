@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useTransition } from "react";
-import { upsertNote } from "@/app/trips/[tripId]/notes/actions";
+import { useState, useRef, useLayoutEffect, useEffect, useTransition } from "react";
+import { upsertNote, dismissNotesHint } from "@/app/trips/[tripId]/notes/actions";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
 import { ChecklistText } from "@/components/shared/ChecklistText";
@@ -9,12 +9,18 @@ import { NoteSection } from "./NoteSection";
 import { defaultNoteSections, type TripNoteSection } from "@/lib/tripNotes";
 import { appendChecklistItem, lineEndOffset } from "@/lib/checklist";
 
+/** The only starter section that defaults open (ODY-126) — Packing List, To
+ *  Do, and any custom section default collapsed until the user opens them. */
+const DEFAULT_OPEN_SECTION_ID = "default-reminders";
+
 interface TripNotesProps {
   tripId: string;
   initialText: string;
   initialSections: TripNoteSection[];
   /** Viewers can read but not edit trip notes (ODY-001). */
   readOnly?: boolean;
+  /** One-time "you can add sections" nudge for a trip with none saved yet (ODY-126). */
+  showSectionsHint?: boolean;
 }
 
 function makeSectionId(): string {
@@ -27,7 +33,7 @@ function makeSectionId(): string {
  * plain patch (ODY-051) plus shared notes sections (ODY-104), e.g.
  * "Important Reminders" / "Packing List" / "To Do".
  */
-export function TripNotes({ tripId, initialText, initialSections, readOnly = false }: TripNotesProps) {
+export function TripNotes({ tripId, initialText, initialSections, readOnly = false, showSectionsHint = false }: TripNotesProps) {
   const [value, setValue] = useState(initialText);
   const [focused, setFocused] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -41,9 +47,23 @@ export function TripNotes({ tripId, initialText, initialSections, readOnly = fal
   const [sections, setSections] = useState<TripNoteSection[]>(() =>
     initialSections.length > 0 ? initialSections : defaultNoteSections()
   );
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  // ODY-126: only "Important Reminders" opens by default — Packing List, To
+  // Do, and custom sections start collapsed so the day-by-day plan isn't
+  // pushed below a wall of empty boilerplate. This is just the initial
+  // render's default; a user's own toggle afterward is never overridden.
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    () => new Set(sections.filter((s) => s.id !== DEFAULT_OPEN_SECTION_ID).map((s) => s.id))
+  );
   const lastSavedSections = useRef(sections);
   const [sectionsPending, startSectionsTransition] = useTransition();
+
+  // One-time discoverability nudge (ODY-126) for a trip that's never had a
+  // custom section saved — dismiss persists immediately so it won't repeat.
+  useEffect(() => {
+    if (!showSectionsHint) return;
+    toast("Add a section — Packing List, Emergency Contacts, whatever this trip needs.", "success");
+    dismissNotesHint(tripId).catch(() => {});
+  }, [showSectionsHint, tripId]);
 
   // Auto-grow to fit the note — no internal scrollbar on mobile (ODY-102).
   useLayoutEffect(() => {

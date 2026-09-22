@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { db } from "@/lib/prisma/db";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 import { upsertNotePatchSchema } from "@/lib/validations";
@@ -15,6 +16,41 @@ import {
 } from "@/lib/tripNotes";
 
 const getDbUser = getOrCreateDbUser;
+
+// Per-trip cookie recording dismissal of the ODY-126 "what else can I add
+// here" notes-sections hint — same one-time, per-trip pattern as the ODY-085
+// join-welcome cookie in app/trips/actions.ts. Not exported: a "use server"
+// file can only export async functions, so reads go through the async
+// getNotesHintDismissed below instead of exposing the cookie name directly.
+const notesHintCookie = (tripId: string) => `ody-notes-hint-${tripId}`;
+
+export async function getNotesHintDismissed(tripId: string): Promise<boolean> {
+  return (await cookies()).has(notesHintCookie(tripId));
+}
+
+/**
+ * Persist that a member has seen the ODY-126 notes-sections hint so it
+ * doesn't nag on a later visit. Gated on membership like dismissJoinWelcome;
+ * best-effort — failure just means the hint may show once more.
+ */
+export async function dismissNotesHint(tripId: string) {
+  let dbUser;
+  try {
+    dbUser = await getDbUser();
+  } catch {
+    return;
+  }
+  const member = await db.tripMember.findFirst({ where: { tripId, userId: dbUser.id } });
+  if (!member) return;
+
+  (await cookies()).set(notesHintCookie(tripId), "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
 
 /**
  * Upsert trip-level notes (ODY-051 / ODY-056 / ODY-104).
