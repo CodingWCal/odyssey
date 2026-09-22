@@ -10,8 +10,9 @@ import { RouteLine } from "@/components/shared/RouteLine";
 import { toast } from "@/components/shared/Toast";
 import type { TripEvent } from "@/types";
 import { parseNoteChunks } from "@/lib/notes";
-import { formatTime, type TimeFormat } from "@/lib/utils";
+import { formatTime, firstAddressSegment, type TimeFormat } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
 const TYPE_VAR: Record<string, string> = {
   flight: "coral",
@@ -77,6 +78,39 @@ function EventNotes({ text }: { text: string }) {
         )}
       </span>
     </div>
+  );
+}
+
+/**
+ * A single-point location, condensed on mobile (ODY-129): a full geocoded
+ * address wraps 2-3 lines on a phone and dominates the card. Mobile shows
+ * just the venue/street segment (text before the first comma) with a tap
+ * to reveal the rest inline; desktop is unchanged, and a short address (no
+ * comma — nothing to shorten) never gets a toggle at all. Flight/transport
+ * routes go through RouteLine instead, which already handles this (ODY-096).
+ */
+function EventLocation({ location }: { location: string }) {
+  const isMobile = useIsMobile();
+  const [expanded, setExpanded] = useState(false);
+  const short = firstAddressSegment(location);
+  const canShorten = isMobile && short !== location;
+
+  if (!canShorten) {
+    return <span className="meta"><Icons.pin size={12} /> {location}</span>;
+  }
+
+  return (
+    <span className="meta event-location-condensed">
+      <Icons.pin size={12} />
+      <button
+        type="button"
+        className="event-location-toggle"
+        onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+      >
+        {expanded ? location : short}
+      </button>
+    </span>
   );
 }
 
@@ -156,9 +190,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
                         <RouteLine from={event.location} to={event.destLocation} />
                       </span>
                     ) : (
-                      <span className="meta">
-                        <Icons.pin size={12} /> {event.location}
-                      </span>
+                      <EventLocation location={event.location} />
                     )
                   )}
                   {event.cost != null && (

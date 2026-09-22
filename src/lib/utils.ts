@@ -26,6 +26,17 @@ export function formatShortDate(date: Date | string): string {
   });
 }
 
+/**
+ * The venue/street segment of a geocoded address (ODY-129) — the text
+ * before the first comma, e.g. "123 Main St" out of "123 Main St,
+ * Cambridge, MA 02139, United States". A location with no comma (already
+ * short, or a plain place name) is returned unchanged — nothing to shorten.
+ */
+export function firstAddressSegment(location: string): string {
+  const idx = location.indexOf(",");
+  return idx === -1 ? location : location.slice(0, idx).trim();
+}
+
 export type TimeFormat = "12h" | "24h";
 
 /**
