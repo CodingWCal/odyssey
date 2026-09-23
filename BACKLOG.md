@@ -644,9 +644,10 @@ input `role="combobox"`, color-only category coding in the budget bar.
 - Convert clickable non-buttons to `<button>` with `aria-expanded`; complete combobox ARIA in `LocationAutocomplete`; add text/pattern reinforcement where color is the only signal; run an axe pass on main routes.
 - Acceptance: keyboard-only operation of itinerary collapse, budget categories, autocomplete; no serious axe violations on the 5 main routes.
 
-### ODY-118 · Accessibility audit → remediation — M, sonnet — 🟡 IN PROGRESS (8 of 11 done)
+### ODY-118 · Accessibility audit → remediation — M, sonnet — 🟡 IN PROGRESS (9 of 11 done)
 > **Fixed (2026-08-19), aesthetic untouched — F1, F3, F4, F6, F7, F8, F9, F11.** F1: shared `Modal` now traps/returns focus (covers every dialog). F3: trip-card menu is keyboard-operable (focus-in, Escape returns focus, honest button semantics). F4: reduced-motion stills the badge pulse + `Globe3D` idle spin. F6: packing add-input `aria-label`. F7: error toasts announce assertively (split live regions). F8: decorative globe `aria-hidden`. F9: skip-to-content link + `<main>` landmarks on trip + dashboard. F11 (color-blindness): map type reads as **icon + label** in the list and in pin tooltips, `TYPE_HEX`/numbered pins unchanged. All behavior/opt-in — no visual change for normal users.
-> **Remaining (both need a rendered browser — bundled for one session):** F2 focus-visible rings on the *seamless inline note editors* (a visual-taste judgment, not guessed blind) and F10 the automated **axe** sweep + contrast measurement on the 5 main routes. tsc / eslint / 244 tests / build clean.
+> **Fixed (2026-09-23) — F2.** `NoteSection.tsx`'s section title input and its raw-edit textarea (`.note-section-title`, `.note-section-editor` in `globals.css`) unconditionally set `outline: none`, silently suppressing the app's global `:focus-visible` ring (`--peri`, defined once at the top of `globals.css`) for both — the one genuinely untreated "seamless inline editor" pair found (the trip-pinned notes editor already gets a ring via `.notes-card.focused`; day notes already gets a border-color change via `.day-notes:focus-within`). Fix: dropped the two `outline: none` overrides so the existing global rule applies natively — same zero-new-CSS pattern already used by `.day-title-edit` (ODY-141). Purely subtractive, additive in effect: no new selectors, no color/spacing/token changes.
+> **Remaining (needs a rendered browser):** F10, the automated **axe** sweep + contrast measurement on the 5 main routes. tsc / eslint / 291 tests / build clean.
 > **Full static a11y sweep done (2026-08-19); fixes are the open work.** A code-level pass over all 88 components/routes + `globals.css` is written up in **`docs/ody-118-accessibility-audit.md`** with 10 ranked findings (P0–P3), each with file + fix. Baseline is already solid (`lang`, `<nav aria-label>`+`aria-current` on both navs, combobox ARIA, keyboard disclosures, toast live region, error `role="alert"`, no unlabelled images). The gaps, in fix order:
 > - **P0 F1** — the shared desktop `Modal` has no focus management (no focus-in, no Tab trap, no focus-return). One change fixes *every* dialog (Add/Edit event, Trip edit, Duplicate, Copy day, Expense, Apply-window).
 > - **P1 F2** — several focusable controls set `outline: none` with only a background change on focus; add `:focus-visible` rings.
@@ -1478,8 +1479,6 @@ existing surfaces:
 
 **Genuinely open + polish-appropriate (fits the "no new features, hyper-polish only"
 directive — verify each against git first):**
-- **ODY-118 F2** — `:focus-visible` rings on the seamless inline note editors.
-  Shippable here, no browser needed. Smallest next step.
 - **ODY-118 F10 + ODY-022** — axe/contrast sweep across the 5 main routes. Needs a
   rendered browser (owner or a browser-capable session).
 - **ODY-097 residual** — budget per-event / restaurant split-view IA + mobile

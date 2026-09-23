@@ -733,7 +733,7 @@
 .note-section-chevron-btn { flex: none; }
 .note-section-title {
   flex: 1; min-width: 0;
-  border: 0; background: none; outline: none;
+  border: 0; background: none;
   font-size: 13px; font-weight: 600; color: var(--ink);
   padding: 4px 2px;
   border-radius: var(--radius-inline);
@@ -745,7 +745,7 @@
   width: 100%; border: 0; background: transparent; resize: none;
   overflow-y: hidden;
   font: 14px/1.5 var(--font-body); color: var(--ink);
-  padding: 6px 2px 0; margin-top: 2px; outline: none;
+  padding: 6px 2px 0; margin-top: 2px;
   min-height: 36px;
 }
 .note-section-editor::placeholder { color: var(--ink-3); font-style: italic; }
