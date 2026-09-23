@@ -31,6 +31,7 @@ import { formatDate, type TimeFormat } from "@/lib/utils";
 import { formatWeekday, localDateKey, toDateInputValue } from "@/lib/dates";
 import { sortEventsByTime } from "@/lib/sortEvents";
 import { deriveDayLocation } from "@/lib/deriveDayLocation";
+import { DayLocationLabel } from "./DayLocationLabel";
 import { findOverlaps } from "@/lib/eventOverlap";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
@@ -206,7 +207,9 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
 
   // ODY-124: the day heading shows the day's location, not the weekday —
   // the date line right beside it already spells out "Friday, Oct 2".
-  const dayLocation = deriveDayLocation(day, destination);
+  // ODY-141: a manual override (Day.label) wins when set — deriveDayLocation
+  // can't always guess right on a multi-city trip before events exist.
+  const dayLocation = day.label || deriveDayLocation(day, destination);
 
   // Other days this day's events can be copied onto (ODY-033).
   const copyTargets = days.filter((d) => d.id !== day.id);
@@ -251,7 +254,13 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
             Day {String(dayNumber).padStart(2, "0")}
             {isToday && <span className="day-today-badge">Today</span>}
           </div>
-          <h2 className="day-title">{dayLocation || formatWeekday(day.date)}</h2>
+          <DayLocationLabel
+            dayId={day.id}
+            tripId={tripId}
+            displayText={dayLocation || formatWeekday(day.date)}
+            initialLabel={day.label}
+            readOnly={readOnly}
+          />
         </div>
         <span className="day-date">{formatDate(day.date)}</span>
         <span className="day-count">
