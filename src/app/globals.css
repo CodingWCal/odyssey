@@ -1337,14 +1337,23 @@ button.lodging-banner:hover { border-color: var(--gold); }
  * can't shrink below, so two side by side still overflowed the container on
  * ordinary phones above 400px (e.g. Pro Max-class devices at 428-430px) —
  * widened to the app's standard 768px mobile breakpoint (matches
- * useIsMobile()) so it reliably covers every phone, not just the narrowest
- * ones. Desktop, where there's room and no native-control-overflow risk,
- * keeps the two-column layout. */
+ * useIsMobile()). Round 2: switching to a single *grid* column (`grid-
+ * template-columns: 1fr`) still overflowed on real iOS Safari — a bare
+ * `1fr` track's minimum size is `auto`, which Safari resolves from the
+ * native time/date control's own intrinsic content width rather than the
+ * container, even with `min-width: 0` on the grid item (a Safari-specific
+ * grid-sizing quirk not reproducible in Chromium). Switched the stacked
+ * case to `flex-direction: column` instead of a 1-column grid — a flex
+ * child's width comes from the container box, not an intrinsic-content
+ * track calculation, so it can't blow out regardless of the native
+ * control's own rendering. Desktop (≥768px, ample room, no native-control
+ * risk) keeps the two-column grid. */
 @media (max-width: 768px) {
   .field-row,
   .wz-dates,
   .poll-form .field-row {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
   }
 }
 .input {
