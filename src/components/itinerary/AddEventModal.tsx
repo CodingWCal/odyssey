@@ -42,6 +42,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
     confirmationCode: existing?.confirmationCode ?? "",
     bookingUrl: existing?.bookingUrl ?? "",
     checkIn: existing?.checkIn ?? "",
+    layover: existing?.layover ?? "",
   });
   const [form, setForm] = useState(initialForm);
   // Booking details are collapsed by default, but opened when the event
@@ -106,6 +107,9 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
         confirmationCode: form.confirmationCode,
         bookingUrl: normalizedUrl,
         checkIn: form.checkIn,
+        // Layover (ODY-128) is flight-only. Send "" otherwise so switching
+        // away from flight clears any stale layover text.
+        layover: isFlight ? form.layover : "",
       };
       try {
         if (isEdit && existing) {
@@ -222,6 +226,20 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
               near={destination}
               onChange={(text) => setForm((s) => ({ ...s, destLocation: text }))}
               onPick={(s) => setForm((f) => ({ ...f, destLocation: s.display, destLat: s.lat, destLng: s.lng }))}
+            />
+          </div>
+        )}
+
+        {isFlight && (
+          <div className="field">
+            <label htmlFor="ev-layover">Layover (optional)</label>
+            <input
+              id="ev-layover"
+              className="input"
+              value={form.layover}
+              onChange={(e) => set("layover", e.target.value)}
+              placeholder="1h 20m in Denver (DEN)"
+              maxLength={160}
             />
           </div>
         )}
