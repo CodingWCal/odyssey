@@ -787,12 +787,21 @@
   background: var(--paper-2);
 }
 .day-notes .icon { color: var(--peri); flex-shrink: 0; margin-top: 2px; }
+/* Wraps the textarea + its "More details"/"Show less" toggle (ODY-142) so
+ * the button sits on its own line below the note, not squeezed inline. */
+.day-notes-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .day-notes textarea {
-  flex: 1; border: 0; background: transparent; resize: none;
+  border: 0; background: transparent; resize: none; overflow-y: hidden;
   font: inherit; color: var(--ink); outline: none; padding: 0;
-  min-height: 22px;
 }
 .day-notes textarea::placeholder { color: var(--ink-3); font-style: italic; }
+.day-notes-more {
+  align-self: flex-start;
+  border: 0; background: none; padding: 0;
+  font-size: 12px; font-weight: 600; color: var(--peri);
+  cursor: pointer;
+}
+.day-notes-more:hover { text-decoration: underline; }
 
 /* Event-level notes (inline, expandable) */
 .event-notes {
@@ -4375,6 +4384,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
   flex-wrap: wrap; min-width: 0;
 }
 .route-pt { overflow-wrap: anywhere; min-width: 0; }
+/* Condensed mobile route endpoint (ODY-129/143) — same subtle tap
+ * affordance as .event-location-toggle, not a heavy button. */
+.route-pt-toggle {
+  border: 0; background: none; padding: 0; font: inherit; color: inherit;
+  text-align: left; text-decoration: underline dotted; text-underline-offset: 2px;
+}
 .route-sep { color: var(--ink-3); flex-shrink: 0; }
 /* Long single addresses also wrap rather than overflow the card. */
 .event-sub .meta, .map-card .card-meta .row { min-width: 0; overflow-wrap: anywhere; }

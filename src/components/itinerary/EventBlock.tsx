@@ -87,7 +87,9 @@ function EventNotes({ text }: { text: string }) {
  * just the venue/street segment (text before the first comma) with a tap
  * to reveal the rest inline; desktop is unchanged, and a short address (no
  * comma — nothing to shorten) never gets a toggle at all. Flight/transport
- * routes go through RouteLine instead, which already handles this (ODY-096).
+ * routes go through RouteLine instead, which has its own matching
+ * per-endpoint condense (ODY-143) — ODY-096 only fixed wrap/overflow, not
+ * length, so routes were still fully spelled out until that follow-up.
  */
 function EventLocation({ location }: { location: string }) {
   const isMobile = useIsMobile();
