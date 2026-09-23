@@ -338,3 +338,25 @@ export async function updateDayNotes(dayId: string, tripId: string, notes: strin
 
   revalidatePath(`/trips/${tripId}/itinerary`);
 }
+
+/**
+ * Manual override for a day's header location (ODY-141), e.g. "Oahu" vs
+ * "Maui" on a multi-island Hawaii trip where events don't exist yet to
+ * auto-derive it from. Reuses the existing (previously unused) Day.label
+ * column — no schema change. Empty clears the override and falls back to
+ * deriveDayLocation's automatic guess.
+ */
+export async function updateDayLabel(dayId: string, tripId: string, label: string) {
+  const dbUser = await getDbUser();
+  await assertTripAccess(tripId, dbUser.id);
+
+  if (label.length > 80) throw new Error("Keep it under 80 characters");
+
+  // Scope to this trip so a day id from another trip can't be edited.
+  await db.day.updateMany({
+    where: { id: dayId, tripId },
+    data: { label: label.trim() || null },
+  });
+
+  revalidatePath(`/trips/${tripId}/itinerary`);
+}

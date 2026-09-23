@@ -923,6 +923,31 @@
   color: var(--ink);
   margin: 0;
 }
+/* Manual day-location override (ODY-141) — the edit icon rides beside the
+ * title, inside the day-head's own collapse-toggle region; the icon and
+ * the edit input each stop click/keydown propagation so they never also
+ * toggle the day collapsed/expanded. */
+.day-title-editable { display: inline-flex; align-items: center; gap: 8px; }
+.day-title-edit-btn {
+  border: 0; background: none; padding: 4px; border-radius: var(--radius-focus);
+  color: var(--ink-3); flex-shrink: 0; opacity: .55; transition: opacity .15s ease;
+}
+.day-title-edit-btn:hover,
+.day-title-edit-btn:focus-visible { opacity: 1; color: var(--peri); }
+.day-title-edit {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--peri);
+  border-radius: var(--radius-md);
+  padding: 0 6px;
+  margin: 0;
+  width: 100%;
+  max-width: 280px;
+}
 .day-date {
   font-size: 12.5px;
   color: var(--ink-3);
