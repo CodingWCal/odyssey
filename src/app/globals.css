@@ -1330,10 +1330,17 @@ button.lodging-banner:hover { border-color: var(--gold); }
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
-/* ODY-121: a start/end date-or-time pair stacks to one column once a phone
- * is too narrow for two native inputs side by side — applies everywhere the
- * pattern shows up (Add Event, New Trip wizard, Schedule poll setup). */
-@media (max-width: 400px) {
+/* ODY-121/131: a start/end date-or-time pair stacks to one column on any
+ * mobile-width screen — applies everywhere the pattern shows up (Add Event,
+ * New Trip wizard, Schedule poll setup). Originally gated at 400px, but a
+ * native iOS date/time input has its own OS-rendered minimum width that CSS
+ * can't shrink below, so two side by side still overflowed the container on
+ * ordinary phones above 400px (e.g. Pro Max-class devices at 428-430px) —
+ * widened to the app's standard 768px mobile breakpoint (matches
+ * useIsMobile()) so it reliably covers every phone, not just the narrowest
+ * ones. Desktop, where there's room and no native-control-overflow risk,
+ * keeps the two-column layout. */
+@media (max-width: 768px) {
   .field-row,
   .wz-dates,
   .poll-form .field-row {
