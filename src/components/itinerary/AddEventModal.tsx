@@ -7,6 +7,7 @@ import { toast } from "@/components/shared/Toast";
 import { Icons, EVENT_TYPES, TYPE_LABEL } from "@/components/shared/Icons";
 import { LocationAutocomplete } from "./LocationAutocomplete";
 import { categorizeEvent } from "@/lib/categorizeEvent";
+import { toDateInputValue } from "@/lib/dates";
 import type { TripEvent, EventType } from "@/types";
 
 interface AddEventModalProps {
@@ -14,6 +15,9 @@ interface AddEventModalProps {
   tripId: string;
   dayId: string;
   dayLabel: string;
+  /** The day this event belongs to (its check-in day for lodging) — sets
+   * the minimum selectable checkout date for multi-night lodging. */
+  dayDate: Date | string;
   existing?: TripEvent;
   onClose: () => void;
   onSuccess?: () => void;
@@ -21,7 +25,7 @@ interface AddEventModalProps {
   destination?: string;
 }
 
-export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose, onSuccess, destination }: AddEventModalProps) {
+export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing, onClose, onSuccess, destination }: AddEventModalProps) {
   const isEdit = !!existing;
   const [isPending, startTransition] = useTransition();
   const [titleError, setTitleError] = useState(false);
@@ -43,6 +47,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
     bookingUrl: existing?.bookingUrl ?? "",
     checkIn: existing?.checkIn ?? "",
     layover: existing?.layover ?? "",
+    checkOutDate: existing?.checkOutDate ? toDateInputValue(existing.checkOutDate) : "",
   });
   const [form, setForm] = useState(initialForm);
   // Booking details are collapsed by default, but opened when the event
@@ -72,6 +77,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
   }
 
   const isFlight = form.type === "flight";
+  const isHotel = form.type === "hotel";
   // Flights and transport (Uber/Lyft, trains…) are point-to-point and get a
   // second "To" endpoint; everything else has a single location.
   const hasRoute = form.type === "flight" || form.type === "transport";
@@ -110,6 +116,9 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
         // Layover (ODY-128) is flight-only. Send "" otherwise so switching
         // away from flight clears any stale layover text.
         layover: isFlight ? form.layover : "",
+        // Multi-night lodging checkout date is hotel-only. Send "" otherwise
+        // so switching away from hotel clears any stale checkout date.
+        checkOutDate: isHotel ? form.checkOutDate : "",
       };
       try {
         if (isEdit && existing) {
@@ -244,13 +253,30 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
           </div>
         )}
 
+        {isHotel && (
+          <div className="field">
+            <label htmlFor="ev-checkout-date">Check-out date (optional)</label>
+            <input
+              id="ev-checkout-date"
+              type="date"
+              className="input mono"
+              value={form.checkOutDate}
+              min={toDateInputValue(dayDate)}
+              onChange={(e) => set("checkOutDate", e.target.value)}
+            />
+            <p className="field-hint">
+              Leave blank for a same-day stay. Set a later date and this shows as an all-day stay across those nights.
+            </p>
+          </div>
+        )}
+
         <div className="field-row">
           <div className="field">
-            <label htmlFor="ev-start">Starts</label>
+            <label htmlFor="ev-start">{isHotel ? "Check-in time" : "Starts"}</label>
             <input id="ev-start" type="time" className="input mono" value={form.startTime} onChange={(e) => set("startTime", e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="ev-end">Ends</label>
+            <label htmlFor="ev-end">{isHotel ? "Check-out time" : "Ends"}</label>
             <input id="ev-end" type="time" className="input mono" value={form.endTime} onChange={(e) => set("endTime", e.target.value)} />
           </div>
         </div>
@@ -318,8 +344,11 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, existing, onClose
                 />
               </div>
               <div className="field">
+                {/* "Check-in" (hotel) would collide with the primary Check-in
+                    time field above (ODY-lodging) — this one's a policy note
+                    ("After 3:00 PM"), not a time, so it gets its own label. */}
                 <label htmlFor="ev-checkin">
-                  {form.type === "hotel" ? "Check-in" : "Check-in / boarding"}
+                  {form.type === "hotel" ? "Check-in note" : "Check-in / boarding"}
                 </label>
                 <input
                   id="ev-checkin"

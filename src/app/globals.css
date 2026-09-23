@@ -970,6 +970,37 @@
   opacity: 0;
 }
 
+/* All-day lodging banner — a multi-night stay, at the top of every day it
+ * spans, like a calendar's all-day event (not in the timed list below). */
+.day-all-day { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.lodging-banner {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  background: var(--gold-soft);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  text-align: left;
+  font-size: 13px;
+}
+button.lodging-banner { cursor: pointer; }
+button.lodging-banner:hover { border-color: var(--gold); }
+.lodging-banner svg { color: var(--gold); flex-shrink: 0; }
+.lodging-banner .lb-phase {
+  flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-2);
+}
+.lodging-banner .lb-title { font-weight: 500; }
+.lodging-banner .lb-loc {
+  margin-left: auto; color: var(--ink-3); font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+@media (max-width: 480px) {
+  .lodging-banner { flex-wrap: wrap; }
+  .lodging-banner .lb-loc { margin-left: 24px; width: 100%; }
+}
+
 /* ─── Timeline / event list ──────────────────────────────────────── */
 
 .timeline {

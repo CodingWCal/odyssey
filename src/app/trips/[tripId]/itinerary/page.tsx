@@ -7,13 +7,14 @@ import { ItineraryHero } from "@/components/itinerary/ItineraryHero";
 import { JoinWelcome } from "@/components/trips/JoinWelcome";
 import { fetchWeather } from "@/components/shared/WeatherBanner";
 import { notFound } from "next/navigation";
-import type { TripDay } from "@/types";
+import type { TripDay, TripEvent } from "@/types";
 import { formatShortDate } from "@/lib/utils";
 import { formatWeekday } from "@/lib/dates";
 import { normalizeTripNoteContent } from "@/lib/tripNotes";
 import { getOrCreateDbUser } from "@/lib/auth";
 import { db } from "@/lib/prisma/db";
 import { visiblePackingWhere, groupPackingItemsByEvent, type EventPackingItem } from "@/lib/packing";
+import { isMultiNightLodging, lodgingPhaseForDay } from "@/lib/lodging";
 
 interface Props {
   params: Promise<{ tripId: string }>;
@@ -52,12 +53,36 @@ export default async function ItineraryPage({ params }: Props) {
   } catch (err) {
     console.error("[itinerary] event-scoped packing items unavailable (has `prisma db push` run?):", err);
   }
-  const daysWithPacking = trip.days.map((d: (typeof trip.days)[number]) => ({
+  const enrichedDays = trip.days.map((d: (typeof trip.days)[number]) => ({
     ...d,
     events: d.events.map((e: (typeof d.events)[number]) => ({
       ...e,
       packingItems: packingByEvent.get(e.id) ?? [],
+      // Own check-in day's date — lets AddEventModal bound a lodging
+      // checkout date picker regardless of which day's banner opened it.
+      dayDate: d.date,
     })),
+  }));
+
+  // Multi-night lodging (hotel type, checkOutDate after its own day): pulled
+  // out of the normal per-day list and shown as an all-day banner on every
+  // day it spans instead — see lib/lodging.ts.
+  const multiNightLodging = enrichedDays.flatMap((d) =>
+    d.events.filter((e) => isMultiNightLodging(e.type, d.date, e.checkOutDate))
+  );
+  const allDayByDay = new Map<string, (typeof multiNightLodging[number] & { lodgingPhase: NonNullable<ReturnType<typeof lodgingPhaseForDay>> })[]>();
+  for (const day of enrichedDays) {
+    const spanning = multiNightLodging
+      .map((e) => ({ event: e, phase: lodgingPhaseForDay(e.dayDate, e.checkOutDate!, day.date) }))
+      .filter((x): x is { event: (typeof multiNightLodging)[number]; phase: NonNullable<ReturnType<typeof lodgingPhaseForDay>> } => x.phase !== null)
+      .map(({ event, phase }) => ({ ...event, lodgingPhase: phase }));
+    if (spanning.length > 0) allDayByDay.set(day.id, spanning);
+  }
+
+  const daysWithPacking = enrichedDays.map((d) => ({
+    ...d,
+    // Multi-night lodging lives in the all-day banner now, not the timed list.
+    events: d.events.filter((e) => !isMultiNightLodging(e.type, d.date, e.checkOutDate)),
   }));
 
   const totalEvents = trip.days.reduce((n: number, d: (typeof trip.days)[number]) => n + d.events.length, 0);
@@ -151,6 +176,7 @@ export default async function ItineraryPage({ params }: Props) {
               currency={trip.currency ?? "USD"}
               destination={trip.destination}
               days={dayRoster}
+              allDayEvents={(allDayByDay.get(day.id) ?? []) as TripEvent[]}
             />
           ));
         })()

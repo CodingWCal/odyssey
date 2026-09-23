@@ -21,12 +21,13 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { EventBlock } from "./EventBlock";
 import { AddEventModal } from "./AddEventModal";
+import { LodgingBanner } from "./LodgingBanner";
 import { DayNotes } from "./DayNotes";
 import { Modal } from "@/components/shared/Modal";
 import { reorderEvents, copyDayEvents } from "@/app/trips/[tripId]/itinerary/actions";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
-import type { TripDay } from "@/types";
+import type { TripDay, TripEvent } from "@/types";
 import { formatDate, type TimeFormat } from "@/lib/utils";
 import { formatWeekday, localDateKey, toDateInputValue } from "@/lib/dates";
 import { sortEventsByTime } from "@/lib/sortEvents";
@@ -99,9 +100,13 @@ interface DayBlockProps {
   /** Roster of the trip's days, so this day can copy its events onto another
    * (ODY-033). Includes this day; the picker filters it out. */
   days?: { id: string; dayNumber: number; label: string }[];
+  /** Multi-night lodging stays spanning this day (ODY-lodging), each tagged
+   * with its check-in/staying/check-out phase — rendered as an all-day
+   * banner above the normal timed list, never inside it. */
+  allDayEvents?: TripEvent[];
 }
 
-export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", currency = "USD", destination, days = [] }: DayBlockProps) {
+export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat = "12h", currency = "USD", destination, days = [], allDayEvents = [] }: DayBlockProps) {
   const router = useRouter();
   const [copyOpen, setCopyOpen] = useState(false);
   const [copying, startCopy] = useTransition();
@@ -269,6 +274,14 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
       </header>
 
       <div className="day-body" ref={bodyRef}>
+        {allDayEvents.length > 0 && (
+          <div className="day-all-day">
+            {allDayEvents.map((event) => (
+              <LodgingBanner key={event.id} event={event} tripId={tripId} readOnly={readOnly} destination={destination} />
+            ))}
+          </div>
+        )}
+
         <DayNotes dayId={day.id} tripId={tripId} initialNotes={day.notes} readOnly={readOnly} />
 
         <DndContext id={`dnd-day-${day.id}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -339,6 +352,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
         dayId={day.id}
         tripId={tripId}
         dayLabel={`Day ${dayNumber} · ${formatDate(day.date)}`}
+        dayDate={day.date}
         destination={destination}
         onClose={() => setAddOpen(false)}
         onSuccess={() => setAddOpen(false)}
