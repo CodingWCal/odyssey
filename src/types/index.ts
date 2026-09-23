@@ -43,6 +43,8 @@ export interface TripEvent {
   confirmationCode: string | null;
   bookingUrl: string | null;
   checkIn: string | null;
+  /** Free-text layover, flight-type only (ODY-128 minimal path), e.g. "1h 20m in Denver (DEN)". */
+  layover: string | null;
   createdBy: string;
   createdAt: Date;
   /** Populated only by the itinerary page fetch; absent elsewhere. */

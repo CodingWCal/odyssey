@@ -63,6 +63,8 @@ export const createEventSchema = z.object({
   confirmationCode: z.string().max(100).optional().or(z.literal("")),
   bookingUrl: z.string().url("Enter a valid URL").max(2000).optional().or(z.literal("")),
   checkIn: z.string().max(100).optional().or(z.literal("")),
+  // Layover (ODY-128 minimal path) — free text, flight-type only in the UI.
+  layover: z.string().max(160).optional().or(z.literal("")),
 });
 
 export const updateEventSchema = createEventSchema.partial().omit({ dayId: true, tripId: true });

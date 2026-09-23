@@ -45,6 +45,7 @@ export async function createEvent(data: {
   confirmationCode?: string;
   bookingUrl?: string;
   checkIn?: string;
+  layover?: string;
 }) {
   const dbUser = await getDbUser();
   await assertTripAccess(data.tripId, dbUser.id);
@@ -109,6 +110,7 @@ export async function createEvent(data: {
         confirmationCode: validated.confirmationCode || null,
         bookingUrl: validated.bookingUrl || null,
         checkIn: validated.checkIn || null,
+        layover: validated.layover || null,
         orderIndex: (lastEvent?.orderIndex ?? -1) + 1,
         createdBy: dbUser.id,
       },
@@ -137,6 +139,7 @@ export async function updateEvent(eventId: string, data: Partial<{
   confirmationCode: string;
   bookingUrl: string;
   checkIn: string;
+  layover: string;
 }>) {
   const dbUser = await getDbUser();
 
@@ -202,6 +205,7 @@ export async function updateEvent(eventId: string, data: Partial<{
         ...("confirmationCode" in validated ? { confirmationCode: validated.confirmationCode || null } : {}),
         ...("bookingUrl" in validated ? { bookingUrl: validated.bookingUrl || null } : {}),
         ...("checkIn" in validated ? { checkIn: validated.checkIn || null } : {}),
+        ...("layover" in validated ? { layover: validated.layover || null } : {}),
       },
     });
     await syncLinkedExpense(next, tx);

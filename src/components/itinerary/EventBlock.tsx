@@ -199,8 +199,13 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
                 </div>
               )}
 
-              {(event.confirmationCode || event.bookingUrl || event.checkIn) && (
+              {(event.confirmationCode || event.bookingUrl || event.checkIn || event.layover) && (
                 <div className="event-booking">
+                  {event.layover && (
+                    <span className="eb-item" title="Layover">
+                      <Icons.transport size={12} /> {event.layover}
+                    </span>
+                  )}
                   {event.checkIn && (
                     <span className="eb-item"><Icons.clock size={12} /> {event.checkIn}</span>
                   )}

@@ -114,6 +114,10 @@ model Event {
   confirmationCode String? // reservation / confirmation number
   bookingUrl       String? // link to the reservation
   checkIn          String? // free-text check-in detail, e.g. "After 3:00 PM"
+  // ODY-128 minimal path: free-text layover, flight-type only in the UI, e.g.
+  // "1h 20m in Denver (DEN)". Null means none. Full multi-leg segment
+  // modeling was scoped out — only invest there if this proves insufficient.
+  layover          String?
   orderIndex   Int      @default(0)
   lat          Float?
   lng          Float?
