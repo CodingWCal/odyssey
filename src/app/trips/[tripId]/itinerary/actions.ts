@@ -10,6 +10,7 @@ import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 import { geocode } from "@/lib/geocode";
 // Event↔expense linkage lives in lib so it's unit-testable (ODY-016).
 import { syncLinkedExpense } from "@/lib/expenses";
+import { parseDateString, daysBetweenUTC } from "@/lib/dates";
 
 const getDbUser = getOrCreateDbUser;
 
@@ -46,6 +47,7 @@ export async function createEvent(data: {
   bookingUrl?: string;
   checkIn?: string;
   layover?: string;
+  checkOutDate?: string;
 }) {
   const dbUser = await getDbUser();
   await assertTripAccess(data.tripId, dbUser.id);
@@ -56,9 +58,17 @@ export async function createEvent(data: {
   // Explore → itinerary save goes through this same path.
   const day = await db.day.findFirst({
     where: { id: validated.dayId, tripId: validated.tripId },
-    select: { id: true },
+    select: { id: true, date: true },
   });
   if (!day) throw new Error("Not found");
+
+  // Multi-night lodging (ODY-lodging): checkout can't be before the event's
+  // own (check-in) day. The client's date-input min= enforces this too;
+  // this is the authoritative check.
+  const checkOutDate = validated.checkOutDate ? parseDateString(validated.checkOutDate) : null;
+  if (checkOutDate && daysBetweenUTC(day.date, checkOutDate) < 0) {
+    throw new Error("Check-out date can't be before check-in");
+  }
 
   const lastEvent = await db.event.findFirst({
     where: { dayId: validated.dayId },
@@ -111,6 +121,7 @@ export async function createEvent(data: {
         bookingUrl: validated.bookingUrl || null,
         checkIn: validated.checkIn || null,
         layover: validated.layover || null,
+        checkOutDate,
         orderIndex: (lastEvent?.orderIndex ?? -1) + 1,
         createdBy: dbUser.id,
       },
@@ -140,14 +151,23 @@ export async function updateEvent(eventId: string, data: Partial<{
   bookingUrl: string;
   checkIn: string;
   layover: string;
+  checkOutDate: string;
 }>) {
   const dbUser = await getDbUser();
 
-  const event = await db.event.findUnique({ where: { id: eventId } });
+  const event = await db.event.findUnique({ where: { id: eventId }, include: { day: { select: { date: true } } } });
   if (!event) throw new Error("Event not found");
   await assertTripAccess(event.tripId, dbUser.id);
 
   const validated = updateEventSchema.parse(data);
+
+  // Multi-night lodging: checkout can't be before the event's own (check-in)
+  // day — dayId never changes via update, so event.day.date is authoritative.
+  const checkOutDate =
+    "checkOutDate" in validated ? (validated.checkOutDate ? parseDateString(validated.checkOutDate) : null) : undefined;
+  if (checkOutDate && daysBetweenUTC(event.day.date, checkOutDate) < 0) {
+    throw new Error("Check-out date can't be before check-in");
+  }
 
   const newLocation = validated.location || null;
   const locationChanged = "location" in validated && newLocation !== event.location;
@@ -206,6 +226,7 @@ export async function updateEvent(eventId: string, data: Partial<{
         ...("bookingUrl" in validated ? { bookingUrl: validated.bookingUrl || null } : {}),
         ...("checkIn" in validated ? { checkIn: validated.checkIn || null } : {}),
         ...("layover" in validated ? { layover: validated.layover || null } : {}),
+        ...(checkOutDate !== undefined ? { checkOutDate } : {}),
       },
     });
     await syncLinkedExpense(next, tx);

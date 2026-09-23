@@ -118,6 +118,13 @@ model Event {
   // "1h 20m in Denver (DEN)". Null means none. Full multi-leg segment
   // modeling was scoped out — only invest there if this proves insufficient.
   layover          String?
+  // Multi-night lodging (hotel type only). Check-in date/time are the
+  // event's own day/startTime — there's no separate check-in date field.
+  // Null means "not multi-night": a same-day hotel event (or any other
+  // type) behaves exactly as before, a normal timed event in its day's
+  // list. Set to a date after the event's own day's date and it becomes an
+  // all-day banner spanning every day from check-in through checkOutDate.
+  checkOutDate     DateTime? @db.Date
   orderIndex   Int      @default(0)
   lat          Float?
   lng          Float?

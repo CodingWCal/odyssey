@@ -65,6 +65,9 @@ export const createEventSchema = z.object({
   checkIn: z.string().max(100).optional().or(z.literal("")),
   // Layover (ODY-128 minimal path) — free text, flight-type only in the UI.
   layover: z.string().max(160).optional().or(z.literal("")),
+  // Multi-night lodging checkout date, hotel-type only in the UI. Empty
+  // means "not multi-night" — clears back to an ordinary same-day event.
+  checkOutDate: dateString.optional().or(z.literal("")),
 });
 
 export const updateEventSchema = createEventSchema.partial().omit({ dayId: true, tripId: true });

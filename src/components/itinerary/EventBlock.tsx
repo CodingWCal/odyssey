@@ -244,6 +244,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
         tripId={tripId}
         dayId={event.dayId}
         dayLabel=""
+        dayDate={event.dayDate ?? event.createdAt}
         existing={event}
         destination={destination}
         onClose={() => setEditOpen(false)}
