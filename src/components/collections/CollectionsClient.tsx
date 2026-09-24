@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { addPlaceToItinerary, createPlace, deletePlace } from "@/app/trips/[tripId]/collections/actions";
 import { LocationAutocomplete } from "@/components/itinerary/LocationAutocomplete";
 import { Icons, EVENT_TYPES, TYPE_LABEL } from "@/components/shared/Icons";
+import { Modal } from "@/components/shared/Modal";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { toast } from "@/components/shared/Toast";
 import { formatShortDate } from "@/lib/utils";
+import { formatWeekday } from "@/lib/dates";
 import { TYPE_HEX } from "@/components/map/mapTypes";
 import type { EventType } from "@/types";
 
@@ -41,7 +43,8 @@ interface CollectionsClientProps {
 export function CollectionsClient({ tripId, places: initial, days, readOnly = false, destination }: CollectionsClientProps) {
   const [places, setPlaces] = useState(initial);
   const [adding, setAdding] = useState(false);
-  const [dayPick, setDayPick] = useState<Record<string, string>>({});
+  // The saved place whose "+" was tapped — its day picker is open (ODY-148).
+  const [addTarget, setAddTarget] = useState<CollectionPlace | null>(null);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState({
     category: "restaurant" as EventType,
@@ -111,18 +114,17 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
     });
   }
 
-  // Promote a saved place onto the itinerary on the picked day (ODY-078).
-  function handleAddToItinerary(p: CollectionPlace) {
-    if (readOnly) return;
-    const dayId = dayPick[p.id] || days[0]?.id;
-    if (!dayId) {
-      toast("This trip has no days to add to yet.");
-      return;
-    }
+  // Promote a saved place onto the itinerary on the picked day (ODY-078). The
+  // place stays in the collection. The modal stays open on failure so the
+  // traveler can retry or pick another day.
+  function handleAddToDay(day: DayOption) {
+    const place = addTarget;
+    if (readOnly || !place) return;
     startTransition(async () => {
       try {
-        await addPlaceToItinerary({ tripId, dayId, placeId: p.id });
-        toast("Added to itinerary.", "success");
+        await addPlaceToItinerary({ tripId, dayId: day.id, placeId: place.id });
+        setAddTarget(null);
+        toast(`Added "${place.title}" to ${day.label}.`, "success");
       } catch {
         toast("Couldn't add to itinerary — try again.");
       }
@@ -165,29 +167,14 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
         {!readOnly && (
           <div className="collections-item-actions">
             {days.length > 0 && (
-              <label className="explore-day-pick">
-                <span className="sr-only">Day to add {p.title} to</span>
-                <select
-                  className="input"
-                  value={dayPick[p.id] || days[0].id}
-                  onChange={(e) => setDayPick((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                >
-                  {days.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.label} · {formatShortDate(d.date)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {days.length > 0 && (
               <button
                 type="button"
-                className="btn btn-primary sm"
-                disabled={isPending}
-                onClick={() => handleAddToItinerary(p)}
+                className="icon-btn collections-add-btn"
+                aria-label={`Add ${p.title} to the itinerary`}
+                title="Add to itinerary"
+                onClick={() => setAddTarget(p)}
               >
-                Add to itinerary
+                <Icons.plus size={16} />
               </button>
             )}
             <button
@@ -354,6 +341,38 @@ export function CollectionsClient({ tripId, places: initial, days, readOnly = fa
           ))}
         </div>
       )}
+
+      {/* Day picker for a saved place's "+" (ODY-148) — tapping a day adds it,
+          same one-tap list as the itinerary's "Copy this day's events to…". */}
+      <Modal open={addTarget != null} onClose={() => setAddTarget(null)} ariaLabel="Add to itinerary">
+        <div className="modal-head">
+          <div className="left">
+            <h3>Add to itinerary</h3>
+            <p>Pick a day for {addTarget?.title}.</p>
+          </div>
+          <button className="icon-btn" onClick={() => setAddTarget(null)} aria-label="Close">
+            <Icons.close size={16} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="copy-day-list">
+            {days.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                className="copy-day-option"
+                disabled={isPending}
+                onClick={() => handleAddToDay(d)}
+              >
+                <span className="cdo-num">{d.label}</span>
+                <span className="cdo-label">
+                  {formatWeekday(d.date)} · {formatShortDate(d.date)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
