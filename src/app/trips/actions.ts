@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma/db";
+import { Prisma } from "@/generated/prisma/client";
 import { createTripSchema, updateTripSchema, createTripWizardSchema, type CreateTripWizardInput } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 // Local-calendar helpers live in lib so they're unit-testable (ODY-016).
@@ -267,6 +268,8 @@ export async function duplicateTrip(
             destLocation: ev.destLocation,
             destLat: ev.destLat,
             destLng: ev.destLng,
+            // Multi-leg flight structure (ODY-144) — see copyDayEvents.
+            legs: ev.legs == null ? Prisma.DbNull : (ev.legs as Prisma.InputJsonValue),
             orderIndex: ev.orderIndex,
             createdBy: dbUser.id,
           },

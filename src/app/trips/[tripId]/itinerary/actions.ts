@@ -37,14 +37,6 @@ function normalizeLegs(legs: CreateEventInput["legs"]): FlightLeg[] | null {
   }));
 }
 
-/**
- * When `legs` is present (flight type, any length including 1), it
- * supersedes the client-sent location/destLocation/startTime/endTime —
- * derived from the first/last leg so the rest of the app (map pins, day
- * sort, budget) keeps reading the same top-level fields unchanged, with one
- * source of truth (the legs array) rather than the client independently
- * computing the same thing.
- */
 /** Prisma's Json input type wants an index signature FlightLeg[] doesn't
  * have (and a separate sentinel for "set the column to NULL") — this is a
  * safe reinterpret, not a real type hole, since these are always our own
@@ -53,6 +45,14 @@ function legsJson(legs: FlightLeg[] | null): Prisma.NullableJsonNullValueInput |
   return legs ? (legs as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
 }
 
+/**
+ * When `legs` is present (flight type, any length including 1), it
+ * supersedes the client-sent location/destLocation/startTime/endTime —
+ * derived from the first/last leg so the rest of the app (map pins, day
+ * sort, budget) keeps reading the same top-level fields unchanged, with one
+ * source of truth (the legs array) rather than the client independently
+ * computing the same thing.
+ */
 function deriveFromLegs(legs: FlightLeg[]) {
   const first = legs[0];
   const last = legs[legs.length - 1];
@@ -144,8 +144,11 @@ export async function createEvent(data: {
   // Server-side geocoding is authoritative: if there's an address but no
   // coordinates (e.g. the user never clicked "📍 Pin"), resolve it here so the
   // map pin always matches the written location.
-  let lat = derived?.lat ?? validated.lat ?? null;
-  let lng = derived?.lng ?? validated.lng ?? null;
+  // A derived (legs) location uses only that leg's own coordinates — never
+  // falls back to client/stale top-level coords, which belong to whatever
+  // the location was before.
+  let lat = derived ? derived.lat : (validated.lat ?? null);
+  let lng = derived ? derived.lng : (validated.lng ?? null);
   if (location && (lat == null || lng == null)) {
     const coords = await geocode(location, { userKey: dbUser.clerkId });
     if (coords) {
@@ -155,8 +158,8 @@ export async function createEvent(data: {
   }
 
   // Flights carry a second endpoint (arrival). Geocode it the same way.
-  let destLat = derived?.destLat ?? validated.destLat ?? null;
-  let destLng = derived?.destLng ?? validated.destLng ?? null;
+  let destLat = derived ? derived.destLat : (validated.destLat ?? null);
+  let destLng = derived ? derived.destLng : (validated.destLng ?? null);
   if (destLocation && (destLat == null || destLng == null)) {
     const coords = await geocode(destLocation, { userKey: dbUser.clerkId });
     if (coords) {
@@ -256,8 +259,8 @@ export async function updateEvent(eventId: string, data: Partial<{
   //  - address unchanged -> leave existing coordinates as-is
   // A derived (legs) location instead uses that leg's own picked
   // coordinates, only geocoding if the leg didn't have them.
-  let lat = derived?.lat ?? validated.lat ?? event.lat;
-  let lng = derived?.lng ?? validated.lng ?? event.lng;
+  let lat = derived ? derived.lat : (validated.lat ?? event.lat);
+  let lng = derived ? derived.lng : (validated.lng ?? event.lng);
   if (locationChanged) {
     if (!newLocation) {
       lat = null;
@@ -278,8 +281,8 @@ export async function updateEvent(eventId: string, data: Partial<{
   // Mirror the same sync logic for a flight's arrival endpoint.
   const newDestLocation = derived ? derived.destLocation : (validated.destLocation || null);
   const destChanged = derived != null || ("destLocation" in validated && newDestLocation !== event.destLocation);
-  let destLat = derived?.destLat ?? validated.destLat ?? event.destLat;
-  let destLng = derived?.destLng ?? validated.destLng ?? event.destLng;
+  let destLat = derived ? derived.destLat : (validated.destLat ?? event.destLat);
+  let destLng = derived ? derived.destLng : (validated.destLng ?? event.destLng);
   if (destChanged) {
     if (!newDestLocation) {
       destLat = null;
@@ -416,6 +419,10 @@ export async function copyDayEvents(sourceDayId: string, targetDayId: string, tr
           destLocation: ev.destLocation,
           destLat: ev.destLat,
           destLng: ev.destLng,
+          // Multi-leg flight structure (ODY-144) is part of the plan, not a
+          // booking detail — without it a copied BOS→LAX→HNL flight would
+          // collapse to a single BOS→HNL route with no layover.
+          legs: ev.legs == null ? Prisma.DbNull : (ev.legs as Prisma.InputJsonValue),
           orderIndex: nextIndex++,
           createdBy: dbUser.id,
         },

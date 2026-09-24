@@ -83,7 +83,7 @@ export function FlightLegsFields({ legs, destination, onChange }: FlightLegsFiel
               value={leg.from}
               placeholder="John F. Kennedy International Airport"
               near={destination}
-              onChange={(text) => updateLeg(i, { from: text })}
+              onChange={(text) => updateLeg(i, { from: text, fromLat: undefined, fromLng: undefined })}
               onPick={(s) => updateLeg(i, { from: s.display, fromLat: s.lat, fromLng: s.lng })}
             />
           </div>
@@ -95,7 +95,7 @@ export function FlightLegsFields({ legs, destination, onChange }: FlightLegsFiel
               value={leg.to}
               placeholder="Narita International Airport"
               near={destination}
-              onChange={(text) => updateLeg(i, { to: text })}
+              onChange={(text) => updateLeg(i, { to: text, toLat: undefined, toLng: undefined })}
               onPick={(s) => updateLeg(i, { to: s.display, toLat: s.lat, toLng: s.lng })}
             />
           </div>
