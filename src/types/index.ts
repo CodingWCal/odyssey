@@ -23,6 +23,21 @@ export interface PackingItem {
   done: boolean;
 }
 
+/** One leg of a multi-leg flight (ODY-144) — see src/lib/flightLegs.ts. */
+export interface FlightLeg {
+  flightNumber: string | null;
+  from: string;
+  fromLat: number | null;
+  fromLng: number | null;
+  to: string;
+  toLat: number | null;
+  toLng: number | null;
+  /** 24h "HH:MM", same storage convention as Event.startTime/endTime. */
+  departTime: string;
+  arriveTime: string;
+  operatedBy: string | null;
+}
+
 export interface TripEvent {
   id: string;
   dayId: string;
@@ -43,8 +58,12 @@ export interface TripEvent {
   confirmationCode: string | null;
   bookingUrl: string | null;
   checkIn: string | null;
-  /** Free-text layover, flight-type only (ODY-128 minimal path), e.g. "1h 20m in Denver (DEN)". */
+  /** Free-text layover, flight-type only (ODY-128 minimal path), e.g. "1h 20m in Denver (DEN)".
+   * Superseded by `legs` (ODY-144) once a flight has structured legs. */
   layover: string | null;
+  /** Multi-leg flight segments (ODY-144), flight-type only. Null/empty means
+   * a plain single-leg flight (or any other event) — unchanged behavior. */
+  legs: FlightLeg[] | null;
   /** Multi-night lodging (hotel type only) — null means an ordinary same-day
    * event; set to a date after this event's own day turns it into an
    * all-day banner spanning every day of the stay. */

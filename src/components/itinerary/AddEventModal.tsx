@@ -6,9 +6,10 @@ import { Modal } from "@/components/shared/Modal";
 import { toast } from "@/components/shared/Toast";
 import { Icons, EVENT_TYPES, TYPE_LABEL } from "@/components/shared/Icons";
 import { LocationAutocomplete } from "./LocationAutocomplete";
+import { FlightLegsFields, emptyLeg, type LegFormState } from "./FlightLegsFields";
 import { categorizeEvent } from "@/lib/categorizeEvent";
 import { toDateInputValue } from "@/lib/dates";
-import type { TripEvent, EventType } from "@/types";
+import type { TripEvent, EventType, FlightLeg } from "@/types";
 
 interface AddEventModalProps {
   open: boolean;
@@ -23,6 +24,52 @@ interface AddEventModalProps {
   onSuccess?: () => void;
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
+}
+
+function legToFormState(l: FlightLeg): LegFormState {
+  return {
+    flightNumber: l.flightNumber ?? "",
+    from: l.from,
+    fromLat: l.fromLat ?? undefined,
+    fromLng: l.fromLng ?? undefined,
+    to: l.to,
+    toLat: l.toLat ?? undefined,
+    toLng: l.toLng ?? undefined,
+    departTime: l.departTime,
+    arriveTime: l.arriveTime,
+    operatedBy: l.operatedBy ?? "",
+  };
+}
+
+/**
+ * Seeds the leg-repeater form (ODY-144). A flight that already has
+ * structured legs uses them as-is. An older flight (or one edited before
+ * this feature existed) has no `legs` yet — upgrade it into a single leg 1
+ * from its existing flat location/destLocation/startTime/endTime so editing
+ * it moves to the new form without losing data; nothing is written until
+ * Save. Any non-flight type, or a brand-new flight, just starts with one
+ * blank leg.
+ */
+function initialLegs(existing?: TripEvent): LegFormState[] {
+  if (existing?.type !== "flight") return [emptyLeg()];
+  if (existing.legs && existing.legs.length > 0) return existing.legs.map(legToFormState);
+  if (existing.location || existing.destLocation || existing.startTime || existing.endTime) {
+    return [
+      {
+        flightNumber: "",
+        from: existing.location ?? "",
+        fromLat: existing.lat ?? undefined,
+        fromLng: existing.lng ?? undefined,
+        to: existing.destLocation ?? "",
+        toLat: existing.destLat ?? undefined,
+        toLng: existing.destLng ?? undefined,
+        departTime: existing.startTime ?? "",
+        arriveTime: existing.endTime ?? "",
+        operatedBy: "",
+      },
+    ];
+  }
+  return [emptyLeg()];
 }
 
 export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing, onClose, onSuccess, destination }: AddEventModalProps) {
@@ -46,8 +93,8 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
     confirmationCode: existing?.confirmationCode ?? "",
     bookingUrl: existing?.bookingUrl ?? "",
     checkIn: existing?.checkIn ?? "",
-    layover: existing?.layover ?? "",
     checkOutDate: existing?.checkOutDate ? toDateInputValue(existing.checkOutDate) : "",
+    legs: initialLegs(existing),
   });
   const [form, setForm] = useState(initialForm);
   // Booking details are collapsed by default, but opened when the event
@@ -88,6 +135,10 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
       toast("Give this event a title first.");
       return;
     }
+    if (isFlight && form.legs.some((l) => !l.from.trim() || !l.to.trim() || !l.departTime || !l.arriveTime)) {
+      toast("Fill in every leg's route and times.");
+      return;
+    }
     // Add a scheme to a bare URL so "acme.com/booking" saves as a valid link.
     const bookingUrl = form.bookingUrl.trim();
     const normalizedUrl = bookingUrl && !/^https?:\/\//i.test(bookingUrl) ? `https://${bookingUrl}` : bookingUrl;
@@ -113,9 +164,23 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
         confirmationCode: form.confirmationCode,
         bookingUrl: normalizedUrl,
         checkIn: form.checkIn,
-        // Layover (ODY-128) is flight-only. Send "" otherwise so switching
-        // away from flight clears any stale layover text.
-        layover: isFlight ? form.layover : "",
+        // Multi-leg flights (ODY-144) — flight-only. An empty array clears
+        // any previously-saved legs (e.g. switching away from flight); the
+        // server derives location/startTime/etc. from these when non-empty.
+        legs: isFlight
+          ? form.legs.map((l) => ({
+              flightNumber: l.flightNumber || null,
+              from: l.from,
+              fromLat: l.fromLat ?? null,
+              fromLng: l.fromLng ?? null,
+              to: l.to,
+              toLat: l.toLat ?? null,
+              toLng: l.toLng ?? null,
+              departTime: l.departTime,
+              arriveTime: l.arriveTime,
+              operatedBy: l.operatedBy || null,
+            }))
+          : [],
         // Multi-night lodging checkout date is hotel-only. Send "" otherwise
         // so switching away from hotel clears any stale checkout date.
         checkOutDate: isHotel ? form.checkOutDate : "",
@@ -211,46 +276,40 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
           )}
         </div>
 
-        <div className="field">
-          <label htmlFor="ev-loc">
-            {isFlight ? "From (departure)" : hasRoute ? "From (pickup)" : "Location"}
-          </label>
-          <LocationAutocomplete
-            id="ev-loc"
-            value={form.location}
-            placeholder={isFlight ? "John F. Kennedy International Airport" : hasRoute ? "Hotel lobby" : "Narita International Airport"}
-            near={destination}
-            onChange={(text) => setForm((s) => ({ ...s, location: text }))}
-            onPick={(s) => setForm((f) => ({ ...f, location: s.display, lat: s.lat, lng: s.lng }))}
+        {isFlight ? (
+          <FlightLegsFields
+            legs={form.legs}
+            destination={destination}
+            onChange={(legs) => set("legs", legs)}
           />
-        </div>
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="ev-loc">{hasRoute ? "From (pickup)" : "Location"}</label>
+              <LocationAutocomplete
+                id="ev-loc"
+                value={form.location}
+                placeholder={hasRoute ? "Hotel lobby" : "Narita International Airport"}
+                near={destination}
+                onChange={(text) => setForm((s) => ({ ...s, location: text }))}
+                onPick={(s) => setForm((f) => ({ ...f, location: s.display, lat: s.lat, lng: s.lng }))}
+              />
+            </div>
 
-        {hasRoute && (
-          <div className="field">
-            <label htmlFor="ev-dest">{isFlight ? "To (arrival)" : "To (drop-off)"}</label>
-            <LocationAutocomplete
-              id="ev-dest"
-              value={form.destLocation}
-              placeholder={isFlight ? "Narita International Airport" : "Leave blank to use the next stop"}
-              near={destination}
-              onChange={(text) => setForm((s) => ({ ...s, destLocation: text }))}
-              onPick={(s) => setForm((f) => ({ ...f, destLocation: s.display, destLat: s.lat, destLng: s.lng }))}
-            />
-          </div>
-        )}
-
-        {isFlight && (
-          <div className="field">
-            <label htmlFor="ev-layover">Layover (optional)</label>
-            <input
-              id="ev-layover"
-              className="input"
-              value={form.layover}
-              onChange={(e) => set("layover", e.target.value)}
-              placeholder="1h 20m in Denver (DEN)"
-              maxLength={160}
-            />
-          </div>
+            {hasRoute && (
+              <div className="field">
+                <label htmlFor="ev-dest">To (drop-off)</label>
+                <LocationAutocomplete
+                  id="ev-dest"
+                  value={form.destLocation}
+                  placeholder="Leave blank to use the next stop"
+                  near={destination}
+                  onChange={(text) => setForm((s) => ({ ...s, destLocation: text }))}
+                  onPick={(s) => setForm((f) => ({ ...f, destLocation: s.display, destLat: s.lat, destLng: s.lng }))}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {isHotel && (
@@ -270,16 +329,18 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
           </div>
         )}
 
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="ev-start">{isHotel ? "Check-in time" : "Starts"}</label>
-            <input id="ev-start" type="time" className="input mono" value={form.startTime} onChange={(e) => set("startTime", e.target.value)} />
+        {!isFlight && (
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="ev-start">{isHotel ? "Check-in time" : "Starts"}</label>
+              <input id="ev-start" type="time" className="input mono" value={form.startTime} onChange={(e) => set("startTime", e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="ev-end">{isHotel ? "Check-out time" : "Ends"}</label>
+              <input id="ev-end" type="time" className="input mono" value={form.endTime} onChange={(e) => set("endTime", e.target.value)} />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="ev-end">{isHotel ? "Check-out time" : "Ends"}</label>
-            <input id="ev-end" type="time" className="input mono" value={form.endTime} onChange={(e) => set("endTime", e.target.value)} />
-          </div>
-        </div>
+        )}
 
         <div className="field">
           <label htmlFor="ev-cost">Cost</label>

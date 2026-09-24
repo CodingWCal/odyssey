@@ -7,12 +7,14 @@ import { deleteEvent } from "@/app/trips/[tripId]/itinerary/actions";
 import { TypeBadge } from "@/components/shared/TypeBadge";
 import { Icons } from "@/components/shared/Icons";
 import { RouteLine } from "@/components/shared/RouteLine";
+import { FlightLegsDisplay } from "./FlightLegsDisplay";
 import { toast } from "@/components/shared/Toast";
 import type { TripEvent } from "@/types";
 import { parseNoteChunks } from "@/lib/notes";
 import { formatTime, firstAddressSegment, type TimeFormat } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { computeLegDayOffsets, isOvernightSimple } from "@/lib/flightLegs";
 
 const TYPE_VAR: Record<string, string> = {
   flight: "coral",
@@ -138,6 +140,21 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
 
+  // Multi-leg flights (ODY-144): a leg-card display replaces the plain
+  // RouteLine once there's more than one leg to show. A red-eye/overnight
+  // badge applies to any flight, single- or multi-leg — the multi-leg case
+  // needs the proper cumulative day-offset check (a same-day-looking final
+  // leg can still land a day later after an overnight layover); a plain
+  // flight with no structured legs falls back to comparing its top-level
+  // start/end clock times directly.
+  const legs = event.type === "flight" ? (event.legs ?? []) : [];
+  const isMultiLeg = legs.length > 1;
+  const overnight =
+    event.type === "flight" &&
+    (isMultiLeg
+      ? computeLegDayOffsets(legs).at(-1)!.arriveDayOffset >= 1
+      : isOvernightSimple(event.startTime, event.endTime));
+
   function handleDelete() {
     // Confirm before an irreversible delete (ODY mobile polish) — the trash
     // icon is a single tap, easy to hit by accident on a phone. Matches the
@@ -164,7 +181,12 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
 
             <div className="event-time">
               <span>{event.startTime ? formatTime(event.startTime, timeFormat) : "—"}</span>
-              {event.endTime && <span className="end">→ {formatTime(event.endTime, timeFormat)}</span>}
+              {event.endTime && (
+                <span className="end">
+                  → {formatTime(event.endTime, timeFormat)}
+                  {overnight && <sup className="flight-plusday" title="Arrives the next day">+1</sup>}
+                </span>
+              )}
             </div>
 
             <div className="event-main">
@@ -185,7 +207,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
 
               {(event.location || event.cost != null) && (
                 <div className="event-sub">
-                  {event.location && (
+                  {event.location && !isMultiLeg && (
                     (event.type === "flight" || event.type === "transport") && event.destLocation ? (
                       <span className="meta event-route">
                         <Icons.pin size={12} />
@@ -200,6 +222,8 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
                   )}
                 </div>
               )}
+
+              {isMultiLeg && <FlightLegsDisplay legs={legs} timeFormat={timeFormat} />}
 
               {(event.confirmationCode || event.bookingUrl || event.checkIn || event.layover) && (
                 <div className="event-booking">

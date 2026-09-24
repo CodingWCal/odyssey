@@ -7,7 +7,7 @@ import { ItineraryHero } from "@/components/itinerary/ItineraryHero";
 import { JoinWelcome } from "@/components/trips/JoinWelcome";
 import { fetchWeather } from "@/components/shared/WeatherBanner";
 import { notFound } from "next/navigation";
-import type { TripDay, TripEvent } from "@/types";
+import type { TripDay, TripEvent, FlightLeg } from "@/types";
 import { formatShortDate } from "@/lib/utils";
 import { formatWeekday } from "@/lib/dates";
 import { normalizeTripNoteContent } from "@/lib/tripNotes";
@@ -57,6 +57,10 @@ export default async function ItineraryPage({ params }: Props) {
     ...d,
     events: d.events.map((e: (typeof d.events)[number]) => ({
       ...e,
+      // Prisma types a Json column as unknown JSON; ODY-144's legs are only
+      // ever written through the validated flight-leg schema, so this is a
+      // safe reinterpret, not a real type hole.
+      legs: e.legs as unknown as FlightLeg[] | null,
       packingItems: packingByEvent.get(e.id) ?? [],
       // Own check-in day's date — lets AddEventModal bound a lodging
       // checkout date picker regardless of which day's banner opened it.

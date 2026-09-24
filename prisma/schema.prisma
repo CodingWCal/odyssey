@@ -115,9 +115,18 @@ model Event {
   bookingUrl       String? // link to the reservation
   checkIn          String? // free-text check-in detail, e.g. "After 3:00 PM"
   // ODY-128 minimal path: free-text layover, flight-type only in the UI, e.g.
-  // "1h 20m in Denver (DEN)". Null means none. Full multi-leg segment
-  // modeling was scoped out — only invest there if this proves insufficient.
+  // "1h 20m in Denver (DEN)". Null means none. Superseded by `legs` (ODY-144)
+  // once a flight has structured legs — kept only for pre-ODY-144 events that
+  // never got upgraded through the edit form.
   layover          String?
+  // Multi-leg flights (ODY-144), flight-type only in the UI: an ordered
+  // FlightLeg[] (see src/lib/flightLegs.ts) — flight number, from/to,
+  // depart/arrive times, operated-by. Null/empty means a plain single-leg
+  // flight (or any non-flight event) — nothing changes for those. When
+  // present, `location`/`destLocation`/`startTime`/`endTime` are derived
+  // server-side from the first/last leg so the rest of the app (map pins,
+  // day sort, budget) keeps reading the same top-level fields unchanged.
+  legs             Json?
   // Multi-night lodging (hotel type only). Check-in date/time are the
   // event's own day/startTime — there's no separate check-in date field.
   // Null means "not multi-night": a same-day hotel event (or any other

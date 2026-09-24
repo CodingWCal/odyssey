@@ -14,7 +14,7 @@ import { useIsMobile } from "@/lib/hooks/useIsMobile";
  * wrap/overflow fix already covered this — it only stopped addresses from
  * overflowing the card, not from being long.
  */
-function RoutePoint({ text }: { text: string }) {
+export function RoutePoint({ text }: { text: string }) {
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const short = firstAddressSegment(text);

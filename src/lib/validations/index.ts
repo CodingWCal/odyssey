@@ -44,6 +44,20 @@ export const createTripWizardSchema = z.object({
   invites: z.array(z.string().email()).optional(),
 });
 
+/** One leg of a multi-leg flight (ODY-144) — flight-type only in the UI. */
+const flightLegSchema = z.object({
+  flightNumber: z.string().max(20).optional().or(z.literal("")),
+  from: z.string().min(1, "Required").max(300),
+  fromLat: z.coerce.number().optional(),
+  fromLng: z.coerce.number().optional(),
+  to: z.string().min(1, "Required").max(300),
+  toLat: z.coerce.number().optional(),
+  toLng: z.coerce.number().optional(),
+  departTime: z.string().min(1, "Required").max(5),
+  arriveTime: z.string().min(1, "Required").max(5),
+  operatedBy: z.string().max(100).optional().or(z.literal("")),
+});
+
 export const createEventSchema = z.object({
   dayId: z.string().min(1),
   tripId: z.string().min(1),
@@ -64,7 +78,13 @@ export const createEventSchema = z.object({
   bookingUrl: z.string().url("Enter a valid URL").max(2000).optional().or(z.literal("")),
   checkIn: z.string().max(100).optional().or(z.literal("")),
   // Layover (ODY-128 minimal path) — free text, flight-type only in the UI.
+  // Superseded by `legs` once a flight has structured legs.
   layover: z.string().max(160).optional().or(z.literal("")),
+  // Multi-leg flights (ODY-144) — flight-type only in the UI. When present
+  // (any length, including 1), the server derives location/destLocation/
+  // startTime/endTime/layover from the first/last leg. Capped well above
+  // any real itinerary's needs.
+  legs: z.array(flightLegSchema).max(8).optional(),
   // Multi-night lodging checkout date, hotel-type only in the UI. Empty
   // means "not multi-night" — clears back to an ordinary same-day event.
   checkOutDate: dateString.optional().or(z.literal("")),

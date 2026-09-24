@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
-import { createEventSchema, updateEventSchema } from "@/lib/validations";
+import { Prisma } from "@/generated/prisma/client";
+import { createEventSchema, updateEventSchema, type CreateEventInput } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 // Shared cached Nominatim client (ODY-010). Server-side geocoding stays the
 // authoritative source of truth for pin coordinates so a map pin always
@@ -11,6 +12,61 @@ import { geocode } from "@/lib/geocode";
 // Event↔expense linkage lives in lib so it's unit-testable (ODY-016).
 import { syncLinkedExpense } from "@/lib/expenses";
 import { parseDateString, daysBetweenUTC } from "@/lib/dates";
+import type { FlightLeg } from "@/types";
+
+/**
+ * Multi-leg flights (ODY-144): the raw Zod-validated legs use `string |
+ * undefined` for optional fields (Zod's `.optional().or(literal(""))`
+ * idiom); the stored/read shape (`FlightLeg`) uses `string | null`
+ * everywhere, matching every other nullable field in this schema. Normalize
+ * once here rather than let two shapes drift.
+ */
+function normalizeLegs(legs: CreateEventInput["legs"]): FlightLeg[] | null {
+  if (!legs || legs.length === 0) return null;
+  return legs.map((l) => ({
+    flightNumber: l.flightNumber || null,
+    from: l.from,
+    fromLat: l.fromLat ?? null,
+    fromLng: l.fromLng ?? null,
+    to: l.to,
+    toLat: l.toLat ?? null,
+    toLng: l.toLng ?? null,
+    departTime: l.departTime,
+    arriveTime: l.arriveTime,
+    operatedBy: l.operatedBy || null,
+  }));
+}
+
+/**
+ * When `legs` is present (flight type, any length including 1), it
+ * supersedes the client-sent location/destLocation/startTime/endTime —
+ * derived from the first/last leg so the rest of the app (map pins, day
+ * sort, budget) keeps reading the same top-level fields unchanged, with one
+ * source of truth (the legs array) rather than the client independently
+ * computing the same thing.
+ */
+/** Prisma's Json input type wants an index signature FlightLeg[] doesn't
+ * have (and a separate sentinel for "set the column to NULL") — this is a
+ * safe reinterpret, not a real type hole, since these are always our own
+ * validated/normalized objects. */
+function legsJson(legs: FlightLeg[] | null): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue {
+  return legs ? (legs as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
+}
+
+function deriveFromLegs(legs: FlightLeg[]) {
+  const first = legs[0];
+  const last = legs[legs.length - 1];
+  return {
+    location: first.from,
+    lat: first.fromLat,
+    lng: first.fromLng,
+    destLocation: last.to,
+    destLat: last.toLat,
+    destLng: last.toLng,
+    startTime: first.departTime,
+    endTime: last.arriveTime,
+  };
+}
 
 const getDbUser = getOrCreateDbUser;
 
@@ -47,12 +103,15 @@ export async function createEvent(data: {
   bookingUrl?: string;
   checkIn?: string;
   layover?: string;
+  legs?: FlightLeg[];
   checkOutDate?: string;
 }) {
   const dbUser = await getDbUser();
   await assertTripAccess(data.tripId, dbUser.id);
 
   const validated = createEventSchema.parse(data);
+  const legs = normalizeLegs(validated.legs);
+  const derived = legs ? deriveFromLegs(legs) : null;
 
   // ODY-052: day must belong to the asserted trip (blocks cross-trip dayId IDOR).
   // Explore → itinerary save goes through this same path.
@@ -75,13 +134,20 @@ export async function createEvent(data: {
     orderBy: { orderIndex: "desc" },
   });
 
+  // Multi-leg flights (ODY-144): the legs array is the source of truth for
+  // these fields when present — the client-sent values are ignored.
+  const location = derived?.location ?? (validated.location || null);
+  const startTime = derived?.startTime ?? (validated.startTime || null);
+  const endTime = derived?.endTime ?? (validated.endTime || null);
+  const destLocation = derived?.destLocation ?? (validated.destLocation || null);
+
   // Server-side geocoding is authoritative: if there's an address but no
   // coordinates (e.g. the user never clicked "📍 Pin"), resolve it here so the
   // map pin always matches the written location.
-  let lat = validated.lat ?? null;
-  let lng = validated.lng ?? null;
-  if (validated.location && (lat == null || lng == null)) {
-    const coords = await geocode(validated.location, { userKey: dbUser.clerkId });
+  let lat = derived?.lat ?? validated.lat ?? null;
+  let lng = derived?.lng ?? validated.lng ?? null;
+  if (location && (lat == null || lng == null)) {
+    const coords = await geocode(location, { userKey: dbUser.clerkId });
     if (coords) {
       lat = coords.lat;
       lng = coords.lng;
@@ -89,10 +155,10 @@ export async function createEvent(data: {
   }
 
   // Flights carry a second endpoint (arrival). Geocode it the same way.
-  let destLat = validated.destLat ?? null;
-  let destLng = validated.destLng ?? null;
-  if (validated.destLocation && (destLat == null || destLng == null)) {
-    const coords = await geocode(validated.destLocation, { userKey: dbUser.clerkId });
+  let destLat = derived?.destLat ?? validated.destLat ?? null;
+  let destLng = derived?.destLng ?? validated.destLng ?? null;
+  if (destLocation && (destLat == null || destLng == null)) {
+    const coords = await geocode(destLocation, { userKey: dbUser.clerkId });
     if (coords) {
       destLat = coords.lat;
       destLng = coords.lng;
@@ -107,20 +173,22 @@ export async function createEvent(data: {
         tripId: validated.tripId,
         type: validated.type,
         title: validated.title,
-        location: validated.location || null,
-        startTime: validated.startTime || null,
-        endTime: validated.endTime || null,
+        location,
+        startTime,
+        endTime,
         notes: validated.notes || null,
         cost: validated.cost ?? null,
         lat,
         lng,
-        destLocation: validated.destLocation || null,
+        destLocation,
         destLat,
         destLng,
         confirmationCode: validated.confirmationCode || null,
         bookingUrl: validated.bookingUrl || null,
         checkIn: validated.checkIn || null,
-        layover: validated.layover || null,
+        // legs (ODY-144) supersedes the free-text layover once present.
+        layover: legs ? null : (validated.layover || null),
+        legs: legsJson(legs),
         checkOutDate,
         orderIndex: (lastEvent?.orderIndex ?? -1) + 1,
         createdBy: dbUser.id,
@@ -151,6 +219,7 @@ export async function updateEvent(eventId: string, data: Partial<{
   bookingUrl: string;
   checkIn: string;
   layover: string;
+  legs: FlightLeg[];
   checkOutDate: string;
 }>) {
   const dbUser = await getDbUser();
@@ -161,6 +230,15 @@ export async function updateEvent(eventId: string, data: Partial<{
 
   const validated = updateEventSchema.parse(data);
 
+  // Multi-leg flights (ODY-144). legsProvided distinguishes "the caller
+  // didn't touch legs" (undefined, leave the DB field alone) from "the
+  // caller sent an empty array" (null, clear it — e.g. switching away from
+  // flight). A non-empty legs array is the source of truth for
+  // location/destLocation/startTime/endTime below, same as createEvent.
+  const legsProvided = "legs" in validated;
+  const legs = legsProvided ? normalizeLegs(validated.legs) : undefined;
+  const derived = legs && legs.length > 0 ? deriveFromLegs(legs) : null;
+
   // Multi-night lodging: checkout can't be before the event's own (check-in)
   // day — dayId never changes via update, so event.day.date is authoritative.
   const checkOutDate =
@@ -169,19 +247,27 @@ export async function updateEvent(eventId: string, data: Partial<{
     throw new Error("Check-out date can't be before check-in");
   }
 
-  const newLocation = validated.location || null;
-  const locationChanged = "location" in validated && newLocation !== event.location;
+  const newLocation = derived ? derived.location : (validated.location || null);
+  const locationChanged = derived != null || ("location" in validated && newLocation !== event.location);
 
   // Keep coordinates in sync with the address (authoritative, server-side):
   //  - address removed  -> clear coordinates
   //  - address changed  -> re-geocode (ignore any stale client coords)
   //  - address unchanged -> leave existing coordinates as-is
-  let lat = validated.lat ?? event.lat;
-  let lng = validated.lng ?? event.lng;
+  // A derived (legs) location instead uses that leg's own picked
+  // coordinates, only geocoding if the leg didn't have them.
+  let lat = derived?.lat ?? validated.lat ?? event.lat;
+  let lng = derived?.lng ?? validated.lng ?? event.lng;
   if (locationChanged) {
     if (!newLocation) {
       lat = null;
       lng = null;
+    } else if (derived) {
+      if (lat == null || lng == null) {
+        const coords = await geocode(newLocation, { userKey: dbUser.clerkId });
+        lat = coords ? coords.lat : null;
+        lng = coords ? coords.lng : null;
+      }
     } else {
       const coords = await geocode(newLocation, { userKey: dbUser.clerkId });
       lat = coords ? coords.lat : null;
@@ -190,14 +276,20 @@ export async function updateEvent(eventId: string, data: Partial<{
   }
 
   // Mirror the same sync logic for a flight's arrival endpoint.
-  const newDestLocation = validated.destLocation || null;
-  const destChanged = "destLocation" in validated && newDestLocation !== event.destLocation;
-  let destLat = validated.destLat ?? event.destLat;
-  let destLng = validated.destLng ?? event.destLng;
+  const newDestLocation = derived ? derived.destLocation : (validated.destLocation || null);
+  const destChanged = derived != null || ("destLocation" in validated && newDestLocation !== event.destLocation);
+  let destLat = derived?.destLat ?? validated.destLat ?? event.destLat;
+  let destLng = derived?.destLng ?? validated.destLng ?? event.destLng;
   if (destChanged) {
     if (!newDestLocation) {
       destLat = null;
       destLng = null;
+    } else if (derived) {
+      if (destLat == null || destLng == null) {
+        const coords = await geocode(newDestLocation, { userKey: dbUser.clerkId });
+        destLat = coords ? coords.lat : null;
+        destLng = coords ? coords.lng : null;
+      }
     } else {
       const coords = await geocode(newDestLocation, { userKey: dbUser.clerkId });
       destLat = coords ? coords.lat : null;
@@ -212,8 +304,8 @@ export async function updateEvent(eventId: string, data: Partial<{
       data: {
         ...validated,
         location: newLocation,
-        startTime: validated.startTime || null,
-        endTime: validated.endTime || null,
+        startTime: derived ? derived.startTime : (validated.startTime || null),
+        endTime: derived ? derived.endTime : (validated.endTime || null),
         notes: validated.notes || null,
         lat,
         lng,
@@ -225,7 +317,16 @@ export async function updateEvent(eventId: string, data: Partial<{
         ...("confirmationCode" in validated ? { confirmationCode: validated.confirmationCode || null } : {}),
         ...("bookingUrl" in validated ? { bookingUrl: validated.bookingUrl || null } : {}),
         ...("checkIn" in validated ? { checkIn: validated.checkIn || null } : {}),
-        ...("layover" in validated ? { layover: validated.layover || null } : {}),
+        // legs (ODY-144) supersedes layover once there's more than one leg —
+        // force-clear it even if the caller didn't separately touch layover,
+        // so an upgraded flight doesn't keep showing stale free-text
+        // alongside the new structured legs.
+        ...(legs && legs.length > 1
+          ? { layover: null }
+          : "layover" in validated
+            ? { layover: validated.layover || null }
+            : {}),
+        ...(legsProvided ? { legs: legsJson(legs ?? null) } : {}),
         ...(checkOutDate !== undefined ? { checkOutDate } : {}),
       },
     });
