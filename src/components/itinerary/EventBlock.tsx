@@ -14,7 +14,7 @@ import { parseNoteChunks } from "@/lib/notes";
 import { formatTime, firstAddressSegment, type TimeFormat } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
-import { computeLegDayOffsets, isOvernightSimple } from "@/lib/flightLegs";
+import { flightLegsForDisplay, isOvernightFlight, isOvernightSimple } from "@/lib/flightLegs";
 
 const TYPE_VAR: Record<string, string> = {
   flight: "coral",
@@ -88,10 +88,9 @@ function EventNotes({ text }: { text: string }) {
  * address wraps 2-3 lines on a phone and dominates the card. Mobile shows
  * just the venue/street segment (text before the first comma) with a tap
  * to reveal the rest inline; desktop is unchanged, and a short address (no
- * comma — nothing to shorten) never gets a toggle at all. Flight/transport
- * routes go through RouteLine instead, which has its own matching
- * per-endpoint condense (ODY-143) — ODY-096 only fixed wrap/overflow, not
- * length, so routes were still fully spelled out until that follow-up.
+ * comma — nothing to shorten) never gets a toggle at all. Transport routes
+ * go through RouteLine and flights through leg cards (ODY-144/145) instead;
+ * both condense each endpoint the same way via RoutePoint (ODY-143).
  */
 function EventLocation({ location }: { location: string }) {
   const isMobile = useIsMobile();
@@ -140,20 +139,17 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
 
-  // Multi-leg flights (ODY-144): a leg-card display replaces the plain
-  // RouteLine once there's more than one leg to show. A red-eye/overnight
-  // badge applies to any flight, single- or multi-leg — the multi-leg case
-  // needs the proper cumulative day-offset check (a same-day-looking final
-  // leg can still land a day later after an overnight layover); a plain
-  // flight with no structured legs falls back to comparing its top-level
-  // start/end clock times directly.
-  const legs = event.type === "flight" ? (event.legs ?? []) : [];
-  const isMultiLeg = legs.length > 1;
+  // Every flight with a route renders as leg cards (ODY-144/145), one leg or
+  // many — an older flight with no stored legs gets one built from its flat
+  // fields. The overnight badge uses the cumulative day-offset check, which
+  // also catches a same-day-looking final leg that lands a day later after an
+  // overnight layover. A flight with no route to draw keeps the plain
+  // location line and falls back to comparing its top-level times.
+  const legs = event.type === "flight" ? flightLegsForDisplay(event) : [];
+  const hasLegCards = legs.length > 0;
   const overnight =
     event.type === "flight" &&
-    (isMultiLeg
-      ? computeLegDayOffsets(legs).at(-1)!.arriveDayOffset >= 1
-      : isOvernightSimple(event.startTime, event.endTime));
+    (hasLegCards ? isOvernightFlight(legs) : isOvernightSimple(event.startTime, event.endTime));
 
   function handleDelete() {
     // Confirm before an irreversible delete (ODY mobile polish) — the trash
@@ -207,7 +203,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
 
               {(event.location || event.cost != null) && (
                 <div className="event-sub">
-                  {event.location && !isMultiLeg && (
+                  {event.location && !hasLegCards && (
                     (event.type === "flight" || event.type === "transport") && event.destLocation ? (
                       <span className="meta event-route">
                         <Icons.pin size={12} />
@@ -223,7 +219,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
                 </div>
               )}
 
-              {isMultiLeg && <FlightLegsDisplay legs={legs} timeFormat={timeFormat} />}
+              {hasLegCards && <FlightLegsDisplay legs={legs} timeFormat={timeFormat} />}
 
               {(event.confirmationCode || event.bookingUrl || event.checkIn || event.layover) && (
                 <div className="event-booking">

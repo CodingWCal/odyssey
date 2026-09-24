@@ -1608,6 +1608,12 @@ textarea.input { height: auto; padding: 12px 14px; min-height: 78px; resize: ver
      until hover) is dropped here so it doesn't add an empty stacked row. */
   .event-top { flex-direction: column; gap: 7px; }
   .event-top .drag-handle { display: none; }
+  /* In this column layout .event-top's align-items: flex-start makes the
+     content column shrink-to-fit instead of full width (flex: 1 now governs
+     height). Flight leg cards (ODY-145) are bordered, so that shows as cards
+     of different widths — a short route draws a narrower card. Scoped to
+     flights; every event type shares the root cause (see ODY-146). */
+  .event-card.t-flight .event-main { align-self: stretch; }
   .event-time {
     min-width: 0; padding-top: 0;
     display: flex; align-items: baseline; gap: 6px;

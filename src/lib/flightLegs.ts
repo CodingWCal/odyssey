@@ -29,10 +29,20 @@ export interface LegDayOffset {
   arriveDayOffset: number;
 }
 
-function minutesOf(hhmm: string): number {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
-  if (!m) return 0;
+/** Minutes since local midnight, or null for a missing/unparseable time —
+ * older flights can lack a time, and a blank must never read as midnight. */
+function minutesOf(hhmm: string | null | undefined): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm ?? "").trim());
+  if (!m) return null;
   return Number(m[1]) * 60 + Number(m[2]);
+}
+
+/** True when `later` is clock-earlier than `earlier`, i.e. midnight passed in
+ * between. Unknown (either time missing) is never treated as a crossing. */
+function crossesMidnight(earlier: string, later: string): boolean {
+  const a = minutesOf(earlier);
+  const b = minutesOf(later);
+  return a != null && b != null && b < a;
 }
 
 /** Cumulative day offset (relative to the first leg's departure day) for every leg. */
@@ -41,21 +51,21 @@ export function computeLegDayOffsets(legs: FlightLeg[]): LegDayOffset[] {
   let carry = 0;
   for (let i = 0; i < legs.length; i++) {
     const leg = legs[i];
-    if (i > 0 && minutesOf(leg.departTime) < minutesOf(legs[i - 1].arriveTime)) {
-      carry += 1;
-    }
+    if (i > 0 && crossesMidnight(legs[i - 1].arriveTime, leg.departTime)) carry += 1;
     const departDayOffset = carry;
-    if (minutesOf(leg.arriveTime) < minutesOf(leg.departTime)) carry += 1;
+    if (crossesMidnight(leg.departTime, leg.arriveTime)) carry += 1;
     out.push({ departDayOffset, arriveDayOffset: carry });
   }
   return out;
 }
 
-/** Minutes between leg i's arrival and leg i+1's departure (a layover). */
-export function layoverMinutes(legs: FlightLeg[], offsets: LegDayOffset[], i: number): number {
-  const arrive = offsets[i].arriveDayOffset * 1440 + minutesOf(legs[i].arriveTime);
-  const depart = offsets[i + 1].departDayOffset * 1440 + minutesOf(legs[i + 1].departTime);
-  return depart - arrive;
+/** Minutes between leg i's arrival and leg i+1's departure (a layover), or
+ * null when either time is missing. */
+export function layoverMinutes(legs: FlightLeg[], offsets: LegDayOffset[], i: number): number | null {
+  const arrive = minutesOf(legs[i].arriveTime);
+  const depart = minutesOf(legs[i + 1].departTime);
+  if (arrive == null || depart == null) return null;
+  return offsets[i + 1].departDayOffset * 1440 + depart - (offsets[i].arriveDayOffset * 1440 + arrive);
 }
 
 /** "6h 15m" / "45m" / "2h" — never "0h 0m". */
@@ -84,5 +94,45 @@ export function isOvernightFlight(legs: FlightLeg[]): boolean {
 /** Same check for a flight with no structured legs — just top-level times. */
 export function isOvernightSimple(startTime: string | null | undefined, endTime: string | null | undefined): boolean {
   if (!startTime || !endTime) return false;
-  return minutesOf(endTime) < minutesOf(startTime);
+  return crossesMidnight(startTime, endTime);
+}
+
+/** The flat fields every flight carries, whether or not it has structured legs. */
+interface FlightFields {
+  legs: FlightLeg[] | null | undefined;
+  location: string | null;
+  destLocation: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  lat: number | null;
+  lng: number | null;
+  destLat: number | null;
+  destLng: number | null;
+}
+
+/**
+ * The legs to render as leg cards (ODY-145) — every flight gets the card, one
+ * leg or many. A flight saved through the leg form uses its stored legs; an
+ * older flight with no legs yet gets a single leg built from its flat
+ * from/to/time fields (display-only — nothing is written). A flight with no
+ * route to draw (no departure or no arrival) returns no legs and keeps the
+ * plain location line.
+ */
+export function flightLegsForDisplay(f: FlightFields): FlightLeg[] {
+  if (f.legs && f.legs.length > 0) return f.legs;
+  if (!f.location || !f.destLocation) return [];
+  return [
+    {
+      flightNumber: null,
+      from: f.location,
+      fromLat: f.lat,
+      fromLng: f.lng,
+      to: f.destLocation,
+      toLat: f.destLat,
+      toLng: f.destLng,
+      departTime: f.startTime ?? "",
+      arriveTime: f.endTime ?? "",
+      operatedBy: null,
+    },
+  ];
 }

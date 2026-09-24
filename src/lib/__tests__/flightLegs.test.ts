@@ -5,6 +5,7 @@ import {
   formatDuration,
   isOvernightFlight,
   isOvernightSimple,
+  flightLegsForDisplay,
   type FlightLeg,
 } from "@/lib/flightLegs";
 
@@ -129,5 +130,80 @@ describe("isOvernightSimple", () => {
   });
   it("is true when the end time is earlier than the start time", () => {
     expect(isOvernightSimple("23:00", "06:00")).toBe(true);
+  });
+});
+
+// ODY-145: pre-ODY-144 flights can be missing a time. A blank time must never
+// be read as midnight — that would show a false "+1" / nonsense layover.
+describe("missing times", () => {
+  it("never infers a day crossing when a leg's arrival time is missing", () => {
+    expect(computeLegDayOffsets([leg("BOS", "LAX", "10:00", "")])).toEqual([
+      { departDayOffset: 0, arriveDayOffset: 0 },
+    ]);
+    expect(isOvernightFlight([leg("BOS", "LAX", "10:00", "")])).toBe(false);
+  });
+
+  it("never infers a day crossing when a leg's departure time is missing", () => {
+    expect(isOvernightFlight([leg("BOS", "LAX", "", "06:00")])).toBe(false);
+  });
+
+  it("returns null for a layover when either side's time is missing", () => {
+    const legs = [leg("BOS", "LAX", "08:00", ""), leg("LAX", "HNL", "12:00", "15:00")];
+    expect(layoverMinutes(legs, computeLegDayOffsets(legs), 0)).toBeNull();
+  });
+
+  it("isOvernightSimple ignores an unparseable time rather than treating it as midnight", () => {
+    expect(isOvernightSimple("10:00", "soon")).toBe(false);
+  });
+});
+
+describe("flightLegsForDisplay", () => {
+  const base = {
+    legs: null,
+    location: "Boston Logan International Airport, Boston, MA",
+    destLocation: "Los Angeles International Airport, Los Angeles, CA",
+    startTime: "11:45",
+    endTime: "15:00",
+    lat: 42.36,
+    lng: -71.01,
+    destLat: 33.94,
+    destLng: -118.41,
+  };
+
+  it("returns a flight's stored legs as-is", () => {
+    const stored = [leg("BOS", "LAX", "11:45", "15:00"), leg("LAX", "HNL", "17:20", "20:03")];
+    expect(flightLegsForDisplay({ ...base, legs: stored })).toBe(stored);
+  });
+
+  it("builds one leg from the flat fields for a pre-ODY-144 flight with no legs", () => {
+    expect(flightLegsForDisplay(base)).toEqual([
+      {
+        flightNumber: null,
+        from: base.location,
+        fromLat: 42.36,
+        fromLng: -71.01,
+        to: base.destLocation,
+        toLat: 33.94,
+        toLng: -118.41,
+        departTime: "11:45",
+        arriveTime: "15:00",
+        operatedBy: null,
+      },
+    ]);
+  });
+
+  it("treats an empty legs array the same as no legs", () => {
+    expect(flightLegsForDisplay({ ...base, legs: [] })).toHaveLength(1);
+  });
+
+  it("keeps a missing time as empty rather than inventing one", () => {
+    const [only] = flightLegsForDisplay({ ...base, startTime: null, endTime: null });
+    expect(only.departTime).toBe("");
+    expect(only.arriveTime).toBe("");
+  });
+
+  it("returns no legs when there's no route to show (missing from or to)", () => {
+    expect(flightLegsForDisplay({ ...base, destLocation: null })).toEqual([]);
+    expect(flightLegsForDisplay({ ...base, location: null })).toEqual([]);
   });
 });
