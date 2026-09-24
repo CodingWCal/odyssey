@@ -80,6 +80,15 @@ export interface TripEvent {
   lodgingPhase?: "check-in" | "staying" | "check-out";
 }
 
+/** A day in the trip, for the copy-events and move-to-day pickers. */
+export interface DayOption {
+  id: string;
+  dayNumber: number;
+  label: string;
+  /** "YYYY-MM-DD" — bounds a lodging checkout date when moving to this day. */
+  date: string;
+}
+
 export interface TripDay {
   id: string;
   tripId: string;

@@ -90,7 +90,18 @@ export const createEventSchema = z.object({
   checkOutDate: dateString.optional().or(z.literal("")),
 });
 
-export const updateEventSchema = createEventSchema.partial().omit({ dayId: true, tripId: true });
+export const updateEventSchema = createEventSchema
+  .partial()
+  .omit({ dayId: true, tripId: true })
+  // Move to another day of the same trip from the edit form (ODY-147). The
+  // action verifies the day belongs to the event's own trip.
+  .extend({ dayId: z.string().min(1).optional() });
+
+/** Drag-and-drop an event onto another day (ODY-147). */
+export const moveEventSchema = z.object({
+  eventId: z.string().min(1),
+  targetDayId: z.string().min(1),
+});
 
 /** One person's resolved share of an expense (ODY-094). */
 const expenseShareSchema = z.object({

@@ -1063,10 +1063,33 @@ button.lodging-banner:hover { border-color: var(--gold); }
   box-shadow: var(--shadow-2);
   border-color: var(--rule-2);
 }
-.event-row.dragging .event-card {
+/* Drag-and-drop (ODY-147): the source card stays in place as a faded
+   placeholder while the lifted copy (.drag-preview, in the DragOverlay)
+   follows the pointer — it can't be the card itself, since a day's body
+   clips overflow and the card couldn't be seen leaving its own day. */
+.event-row.dragging { opacity: .35; }
+.drag-preview .event-card {
   box-shadow: var(--shadow-hover);
   transform: rotate(-.5deg);
   border-color: var(--peri);
+  cursor: grabbing;
+}
+.drag-preview-target {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--peri);
+  color: var(--on-fill);
+  font-size: 12px; font-weight: 600;
+  box-shadow: var(--shadow-2);
+}
+/* The day an event is being dragged onto (ODY-147) — the whole block,
+   header included, so a collapsed day is a visible target too. */
+.day-block.drop-target {
+  outline: 2px dashed var(--peri);
+  outline-offset: 8px;
+  border-radius: var(--radius-lg);
 }
 
 .event-top {

@@ -7,9 +7,10 @@ import { ItineraryHero } from "@/components/itinerary/ItineraryHero";
 import { JoinWelcome } from "@/components/trips/JoinWelcome";
 import { fetchWeather } from "@/components/shared/WeatherBanner";
 import { notFound } from "next/navigation";
-import type { TripDay, TripEvent, FlightLeg } from "@/types";
+import { ItineraryBoard } from "@/components/itinerary/ItineraryBoard";
+import type { DayOption, TripDay, TripEvent, FlightLeg } from "@/types";
 import { formatShortDate } from "@/lib/utils";
-import { formatWeekday } from "@/lib/dates";
+import { formatWeekday, toDateInputValue } from "@/lib/dates";
 import { normalizeTripNoteContent } from "@/lib/tripNotes";
 import { getOrCreateDbUser } from "@/lib/auth";
 import { db } from "@/lib/prisma/db";
@@ -162,27 +163,35 @@ export default async function ItineraryPage({ params }: Props) {
         </div>
       ) : (
         (() => {
-          // Day roster for the copy-events picker (ODY-033) — id + number +
-          // label, built once and shared by every DayBlock.
-          const dayRoster = trip.days.map((d: (typeof trip.days)[number], i: number) => ({
+          // Day roster for the copy-events picker (ODY-033) and the edit
+          // form's move-to-day picker (ODY-147), built once and shared by
+          // every DayBlock.
+          const dayRoster: DayOption[] = trip.days.map((d: (typeof trip.days)[number], i: number) => ({
             id: d.id,
             dayNumber: i + 1,
             label: `${formatWeekday(d.date)} · ${formatShortDate(d.date)}`,
+            date: toDateInputValue(d.date),
           }));
-          return daysWithPacking.map((day, index: number) => (
-            <DayBlock
-              key={day.id}
-              day={day as TripDay}
-              tripId={tripId}
-              dayNumber={index + 1}
-              readOnly={readOnly}
-              timeFormat={trip.timeFormat as "12h" | "24h"}
-              currency={trip.currency ?? "USD"}
-              destination={trip.destination}
-              days={dayRoster}
-              allDayEvents={(allDayByDay.get(day.id) ?? []) as TripEvent[]}
-            />
-          ));
+          // One drag-and-drop surface across every day, so an event can be
+          // dragged onto a different day (ODY-147).
+          return (
+            <ItineraryBoard timeFormat={trip.timeFormat as "12h" | "24h"}>
+              {daysWithPacking.map((day, index: number) => (
+                <DayBlock
+                  key={day.id}
+                  day={day as TripDay}
+                  tripId={tripId}
+                  dayNumber={index + 1}
+                  readOnly={readOnly}
+                  timeFormat={trip.timeFormat as "12h" | "24h"}
+                  currency={trip.currency ?? "USD"}
+                  destination={trip.destination}
+                  days={dayRoster}
+                  allDayEvents={(allDayByDay.get(day.id) ?? []) as TripEvent[]}
+                />
+              ))}
+            </ItineraryBoard>
+          );
         })()
       )}
     </div>

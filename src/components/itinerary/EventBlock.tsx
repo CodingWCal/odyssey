@@ -9,14 +9,14 @@ import { Icons } from "@/components/shared/Icons";
 import { RouteLine } from "@/components/shared/RouteLine";
 import { FlightLegsDisplay } from "./FlightLegsDisplay";
 import { toast } from "@/components/shared/Toast";
-import type { TripEvent } from "@/types";
+import type { DayOption, TripEvent } from "@/types";
 import { parseNoteChunks } from "@/lib/notes";
 import { formatTime, firstAddressSegment, type TimeFormat } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { flightLegsForDisplay, isOvernightFlight, isOvernightSimple } from "@/lib/flightLegs";
 
-const TYPE_VAR: Record<string, string> = {
+export const TYPE_VAR: Record<string, string> = {
   flight: "coral",
   hotel: "gold",
   restaurant: "peach",
@@ -132,9 +132,11 @@ interface EventBlockProps {
   destination?: string;
   /** Soft overlap titles for this event (ODY-077). */
   overlapWith?: string[];
+  /** The trip's days, for the edit form's move-to-day picker (ODY-147). */
+  days?: DayOption[];
 }
 
-export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h", currency = "USD", destination, overlapWith }: EventBlockProps) {
+export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = false, timeFormat = "12h", currency = "USD", destination, overlapWith, days }: EventBlockProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const typeColor = `var(--${TYPE_VAR[event.type] ?? "slate"})`;
@@ -269,6 +271,7 @@ export function EventBlock({ event, tripId, isDragging, dragHandle, readOnly = f
         dayDate={event.dayDate ?? event.createdAt}
         existing={event}
         destination={destination}
+        days={days}
         onClose={() => setEditOpen(false)}
         onSuccess={() => setEditOpen(false)}
       />

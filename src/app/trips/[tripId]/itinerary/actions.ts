@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/prisma/db";
 import { Prisma } from "@/generated/prisma/client";
-import { createEventSchema, updateEventSchema, type CreateEventInput } from "@/lib/validations";
+import { createEventSchema, updateEventSchema, moveEventSchema, type CreateEventInput } from "@/lib/validations";
 import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 // Shared cached Nominatim client (ODY-010). Server-side geocoding stays the
 // authoritative source of truth for pin coordinates so a map pin always
@@ -11,7 +11,7 @@ import { getOrCreateDbUser, assertTripRole } from "@/lib/auth";
 import { geocode } from "@/lib/geocode";
 // Event↔expense linkage lives in lib so it's unit-testable (ODY-016).
 import { syncLinkedExpense } from "@/lib/expenses";
-import { parseDateString, daysBetweenUTC } from "@/lib/dates";
+import { parseDateString, daysBetweenUTC, shiftDateUTC } from "@/lib/dates";
 import type { FlightLeg } from "@/types";
 
 /**
@@ -66,6 +66,31 @@ function deriveFromLegs(legs: FlightLeg[]) {
     startTime: first.departTime,
     endTime: last.arriveTime,
   };
+}
+
+/** Multi-night lodging: checkout can't be before check-in (the event's own day). */
+function assertCheckOutNotBeforeCheckIn(checkInDate: Date, checkOutDate: Date | null) {
+  if (checkOutDate && daysBetweenUTC(checkInDate, checkOutDate) < 0) {
+    throw new Error("Check-out date can't be before check-in");
+  }
+}
+
+/**
+ * Resolve moving an event to another day of the same trip (ODY-147) — null
+ * when the target is its current day. The target must belong to the event's
+ * own trip (the same IDOR guard as createEvent's ODY-052 day check). The
+ * event lands after the target day's last orderIndex, like a new event.
+ */
+async function resolveDayMove(tripId: string, fromDayId: string, targetDayId: string) {
+  if (targetDayId === fromDayId) return null;
+  const target = await db.day.findFirst({ where: { id: targetDayId, tripId }, select: { id: true, date: true } });
+  if (!target) throw new Error("Not found");
+  const last = await db.event.findFirst({
+    where: { dayId: target.id },
+    orderBy: { orderIndex: "desc" },
+    select: { orderIndex: true },
+  });
+  return { dayId: target.id, date: target.date, orderIndex: (last?.orderIndex ?? -1) + 1 };
 }
 
 const getDbUser = getOrCreateDbUser;
@@ -125,9 +150,7 @@ export async function createEvent(data: {
   // own (check-in) day. The client's date-input min= enforces this too;
   // this is the authoritative check.
   const checkOutDate = validated.checkOutDate ? parseDateString(validated.checkOutDate) : null;
-  if (checkOutDate && daysBetweenUTC(day.date, checkOutDate) < 0) {
-    throw new Error("Check-out date can't be before check-in");
-  }
+  assertCheckOutNotBeforeCheckIn(day.date, checkOutDate);
 
   const lastEvent = await db.event.findFirst({
     where: { dayId: validated.dayId },
@@ -224,6 +247,7 @@ export async function updateEvent(eventId: string, data: Partial<{
   layover: string;
   legs: FlightLeg[];
   checkOutDate: string;
+  dayId: string;
 }>) {
   const dbUser = await getDbUser();
 
@@ -242,13 +266,16 @@ export async function updateEvent(eventId: string, data: Partial<{
   const legs = legsProvided ? normalizeLegs(validated.legs) : undefined;
   const derived = legs && legs.length > 0 ? deriveFromLegs(legs) : null;
 
+  // Moving to another day from the edit form (ODY-147) — null when the day is
+  // unchanged. The target day must belong to this event's trip.
+  const move = validated.dayId ? await resolveDayMove(event.tripId, event.dayId, validated.dayId) : null;
+
   // Multi-night lodging: checkout can't be before the event's own (check-in)
-  // day — dayId never changes via update, so event.day.date is authoritative.
+  // day — the day it's moving to, if it's moving. Checked against the stored
+  // checkout too, so moving a stay past its own checkout is rejected.
   const checkOutDate =
     "checkOutDate" in validated ? (validated.checkOutDate ? parseDateString(validated.checkOutDate) : null) : undefined;
-  if (checkOutDate && daysBetweenUTC(event.day.date, checkOutDate) < 0) {
-    throw new Error("Check-out date can't be before check-in");
-  }
+  assertCheckOutNotBeforeCheckIn(move?.date ?? event.day.date, checkOutDate !== undefined ? checkOutDate : event.checkOutDate);
 
   const newLocation = derived ? derived.location : (validated.location || null);
   const locationChanged = derived != null || ("location" in validated && newLocation !== event.location);
@@ -331,6 +358,9 @@ export async function updateEvent(eventId: string, data: Partial<{
             : {}),
         ...(legsProvided ? { legs: legsJson(legs ?? null) } : {}),
         ...(checkOutDate !== undefined ? { checkOutDate } : {}),
+        // Always the verified day — never the raw client dayId `...validated`
+        // spread in above (ODY-147).
+        ...(move ? { dayId: move.dayId, orderIndex: move.orderIndex } : { dayId: event.dayId }),
       },
     });
     await syncLinkedExpense(next, tx);
@@ -339,6 +369,41 @@ export async function updateEvent(eventId: string, data: Partial<{
 
   revalidateTrip(event.tripId);
   return updated;
+}
+
+/**
+ * Drag-and-drop an event onto another day of the same trip (ODY-147).
+ * Deliberately not updateEvent(id, { dayId }): updateEvent treats its payload
+ * as the whole edit form, so a partial payload would clear the location,
+ * times and notes it leaves out.
+ */
+export async function moveEventToDay(eventId: string, targetDayId: string) {
+  const dbUser = await getDbUser();
+  const input = moveEventSchema.parse({ eventId, targetDayId });
+
+  const event = await db.event.findUnique({
+    where: { id: input.eventId },
+    select: { tripId: true, dayId: true, checkOutDate: true, day: { select: { date: true } } },
+  });
+  if (!event) throw new Error("Event not found");
+  await assertTripAccess(event.tripId, dbUser.id);
+
+  const move = await resolveDayMove(event.tripId, event.dayId, input.targetDayId);
+  if (!move) return;
+
+  // Moving lodging moves the whole stay: shift checkout by the same number of
+  // days so a same-day hotel (the only kind in the draggable timed list) stays
+  // valid instead of ending up checking out before it checks in.
+  const checkOutDate = event.checkOutDate
+    ? shiftDateUTC(event.checkOutDate, daysBetweenUTC(event.day.date, move.date))
+    : null;
+  assertCheckOutNotBeforeCheckIn(move.date, checkOutDate);
+
+  await db.event.update({
+    where: { id: input.eventId },
+    data: { dayId: move.dayId, orderIndex: move.orderIndex, checkOutDate },
+  });
+  revalidateTrip(event.tripId);
 }
 
 export async function deleteEvent(eventId: string) {

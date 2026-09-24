@@ -1,19 +1,10 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useEffect, useMemo, useTransition } from "react";
+import { useState, useRef, useLayoutEffect, useEffect, useMemo, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
+import { useDndMonitor, useDroppable, type DragEndEvent } from "@dnd-kit/core";
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
@@ -23,11 +14,13 @@ import { EventBlock } from "./EventBlock";
 import { AddEventModal } from "./AddEventModal";
 import { LodgingBanner } from "./LodgingBanner";
 import { DayNotes } from "./DayNotes";
+import { useItineraryBoard } from "./ItineraryBoard";
 import { Modal } from "@/components/shared/Modal";
-import { reorderEvents, copyDayEvents } from "@/app/trips/[tripId]/itinerary/actions";
+import { reorderEvents, copyDayEvents, moveEventToDay } from "@/app/trips/[tripId]/itinerary/actions";
+import { applyIncomingEvent, dragDataOf, type DayDropData, type EventDragData } from "@/lib/dayDnd";
 import { Icons } from "@/components/shared/Icons";
 import { toast } from "@/components/shared/Toast";
-import type { TripDay, TripEvent } from "@/types";
+import type { DayOption, TripDay, TripEvent } from "@/types";
 import { formatDate, type TimeFormat } from "@/lib/utils";
 import { formatWeekday, localDateKey, toDateInputValue } from "@/lib/dates";
 import { sortEventsByTime } from "@/lib/sortEvents";
@@ -40,25 +33,31 @@ const MOBILE_VISIBLE_LIMIT = 5;
 
 function SortableEvent({
   event,
+  dayNumber,
   tripId,
   readOnly,
   timeFormat,
   currency,
   destination,
   overlapWith,
+  days,
 }: {
   event: TripDay["events"][number];
+  dayNumber: number;
   tripId: string;
   readOnly?: boolean;
   timeFormat?: TimeFormat;
   currency?: string;
   destination?: string;
   overlapWith?: string[];
+  days: DayOption[];
 }) {
   const disabled = Boolean(readOnly);
+  const data: EventDragData = { type: "event", dayId: event.dayId, dayNumber, event };
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: event.id,
     disabled,
+    data,
   });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
@@ -73,9 +72,15 @@ function SortableEvent({
         currency={currency}
         destination={destination}
         overlapWith={overlapWith}
+        days={days}
         dragHandle={
           disabled ? undefined : (
-            <span {...listeners} className="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
+            <span
+              {...listeners}
+              className="drag-handle"
+              aria-label="Drag to reorder, or onto another day to move it"
+              title="Drag to reorder, or onto another day to move it"
+            >
               <Icons.drag size={14} />
             </span>
           )
@@ -98,8 +103,9 @@ interface DayBlockProps {
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
   /** Roster of the trip's days, so this day can copy its events onto another
-   * (ODY-033). Includes this day; the picker filters it out. */
-  days?: { id: string; dayNumber: number; label: string }[];
+   * (ODY-033) and an event can be moved to another (ODY-147). Includes this
+   * day; the copy picker filters it out. */
+  days?: DayOption[];
   /** Multi-night lodging stays spanning this day (ODY-lodging), each tagged
    * with its check-in/staying/check-out phase — rendered as an all-day
    * banner above the normal timed list, never inside it. */
@@ -139,6 +145,15 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   const [prevSig, setPrevSig] = useState(eventsSig);
   if (eventsSig !== prevSig) {
     setPrevSig(eventsSig);
+    setEvents(day.events);
+  }
+  // A failed cross-day move (ODY-147) drops every day's optimistic copy and
+  // re-reads the server's — the server props didn't change, so the signature
+  // check above would never fire on its own.
+  const { resyncToken, resync } = useItineraryBoard();
+  const [prevResync, setPrevResync] = useState(resyncToken);
+  if (resyncToken !== prevResync) {
+    setPrevResync(resyncToken);
     setEvents(day.events);
   }
 
@@ -181,12 +196,52 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
     }
   }, [collapsed, events.length, visibleEvents.length]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  // The whole day (header + body) is a drop target, so an empty or collapsed
+  // day can receive an event dragged from another day (ODY-147).
+  const dropData: DayDropData = { type: "day", dayId: day.id, dayNumber };
+  const { setNodeRef: setDropRef, isOver, active: activeDrag } = useDroppable({
+    id: `day:${day.id}`,
+    data: dropData,
+    disabled: readOnly,
+  });
+  const isIncoming = isOver && dragDataOf(activeDrag)?.dayId !== day.id;
+  const setSectionRef = useCallback(
+    (node: HTMLElement | null) => {
+      sectionRef.current = node;
+      setDropRef(node);
+    },
+    [setDropRef]
   );
 
-  async function handleDragEnd(e: DragEndEvent) {
+  // One DndContext spans every day (ItineraryBoard), so each day handles its
+  // own side of a drop: reorder within it, or the leaving/arriving half of a
+  // cross-day move. Only the leaving day calls the server.
+  useDndMonitor({
+    onDragEnd(e) {
+      const dragged = dragDataOf(e.active);
+      const target = dragDataOf(e.over);
+      if (dragged?.type !== "event" || !target) return;
+      if (dragged.dayId === target.dayId) {
+        if (dragged.dayId === day.id) void handleReorder(e);
+        return;
+      }
+      if (dragged.dayId === day.id) void moveOut(dragged.event, target.dayId, target.dayNumber);
+      else if (target.dayId === day.id) setEvents((evs) => applyIncomingEvent(evs, dragged.event, day.id, day.date));
+    },
+  });
+
+  async function moveOut(moved: TripEvent, toDayId: string, toDayNumber: number) {
+    setEvents((evs) => evs.filter((ev) => ev.id !== moved.id));
+    try {
+      await moveEventToDay(moved.id, toDayId);
+      toast(`Moved to Day ${String(toDayNumber).padStart(2, "0")}.`, "success");
+    } catch {
+      resync(); // puts it back here and removes it from the target day
+      toast("Couldn't move that event — put it back.");
+    }
+  }
+
+  async function handleReorder(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const oldIndex = visibleEvents.findIndex((ev) => ev.id === active.id);
@@ -226,7 +281,7 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
         await copyDayEvents(day.id, targetDayId, tripId);
         setCopyOpen(false);
         router.refresh();
-        toast("Events copied.");
+        toast("Events copied.", "success");
       } catch {
         toast("Couldn't copy those events — try again.");
       }
@@ -234,7 +289,10 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
   }
 
   return (
-    <section ref={sectionRef} className={`day-block${collapsed ? " collapsed" : ""}${isToday ? " is-today" : ""}`}>
+    <section
+      ref={setSectionRef}
+      className={`day-block${collapsed ? " collapsed" : ""}${isToday ? " is-today" : ""}${isIncoming ? " drop-target" : ""}`}
+    >
       {/* Keyboard-operable disclosure (ODY-022): Enter/Space toggle, focus ring
           via .day-head:focus-visible; layout unchanged. */}
       <header
@@ -277,36 +335,36 @@ export function DayBlock({ day, tripId, dayNumber, readOnly = false, timeFormat 
         {allDayEvents.length > 0 && (
           <div className="day-all-day">
             {allDayEvents.map((event) => (
-              <LodgingBanner key={event.id} event={event} tripId={tripId} readOnly={readOnly} destination={destination} />
+              <LodgingBanner key={event.id} event={event} tripId={tripId} readOnly={readOnly} destination={destination} days={days} />
             ))}
           </div>
         )}
 
         <DayNotes dayId={day.id} tripId={tripId} initialNotes={day.notes} readOnly={readOnly} />
 
-        <DndContext id={`dnd-day-${day.id}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={visibleEvents.map((e) => e.id)} strategy={verticalListSortingStrategy}>
-            <div className="timeline">
-              {visibleEvents.length === 0 && (
-                <p className="day-empty-note">
-                  {readOnly ? "No events planned for this day yet." : "No events yet — add your first one below."}
-                </p>
-              )}
-              {visibleEvents.map((event) => (
-                <SortableEvent
-                  key={event.id}
-                  event={event}
-                  tripId={tripId}
-                  readOnly={readOnly}
-                  timeFormat={timeFormat}
-                  currency={currency}
-                  destination={destination}
-                  overlapWith={overlaps.get(event.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <SortableContext items={visibleEvents.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+          <div className="timeline">
+            {visibleEvents.length === 0 && (
+              <p className="day-empty-note">
+                {readOnly ? "No events planned for this day yet." : "No events yet — add your first one below."}
+              </p>
+            )}
+            {visibleEvents.map((event) => (
+              <SortableEvent
+                key={event.id}
+                event={event}
+                dayNumber={dayNumber}
+                tripId={tripId}
+                readOnly={readOnly}
+                timeFormat={timeFormat}
+                currency={currency}
+                destination={destination}
+                overlapWith={overlaps.get(event.id)}
+                days={days}
+              />
+            ))}
+          </div>
+        </SortableContext>
 
         {hiddenCount > 0 && (
           <button

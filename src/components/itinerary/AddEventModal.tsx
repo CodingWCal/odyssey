@@ -8,8 +8,8 @@ import { Icons, EVENT_TYPES, TYPE_LABEL } from "@/components/shared/Icons";
 import { LocationAutocomplete } from "./LocationAutocomplete";
 import { FlightLegsFields, emptyLeg, type LegFormState } from "./FlightLegsFields";
 import { categorizeEvent } from "@/lib/categorizeEvent";
-import { toDateInputValue } from "@/lib/dates";
-import type { TripEvent, EventType, FlightLeg } from "@/types";
+import { toDateInputValue, shiftDateKeyBy } from "@/lib/dates";
+import type { DayOption, TripEvent, EventType, FlightLeg } from "@/types";
 
 interface AddEventModalProps {
   open: boolean;
@@ -24,6 +24,9 @@ interface AddEventModalProps {
   onSuccess?: () => void;
   /** Trip destination — biases location search toward it (ODY-091). */
   destination?: string;
+  /** The trip's days — when editing, a Day picker moves the event to
+   * another one (ODY-147). */
+  days?: DayOption[];
 }
 
 function legToFormState(l: FlightLeg): LegFormState {
@@ -72,7 +75,7 @@ function initialLegs(existing?: TripEvent): LegFormState[] {
   return [emptyLeg()];
 }
 
-export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing, onClose, onSuccess, destination }: AddEventModalProps) {
+export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing, onClose, onSuccess, destination, days = [] }: AddEventModalProps) {
   const isEdit = !!existing;
   const [isPending, startTransition] = useTransition();
   const [titleError, setTitleError] = useState(false);
@@ -94,6 +97,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
     bookingUrl: existing?.bookingUrl ?? "",
     checkIn: existing?.checkIn ?? "",
     checkOutDate: existing?.checkOutDate ? toDateInputValue(existing.checkOutDate) : "",
+    dayId: existing?.dayId ?? dayId,
     legs: initialLegs(existing),
   });
   const [form, setForm] = useState(initialForm);
@@ -128,6 +132,24 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
   // Flights and transport (Uber/Lyft, trains…) are point-to-point and get a
   // second "To" endpoint; everything else has a single location.
   const hasRoute = form.type === "flight" || form.type === "transport";
+
+  // Move to another day (ODY-147) — editing only; a new event goes on the day
+  // whose "Add event" was clicked.
+  const canMoveDay = isEdit && days.length > 1;
+  const selectedDay = days.find((d) => d.id === form.dayId);
+
+  function changeDay(nextDayId: string) {
+    setForm((s) => {
+      const from = days.find((d) => d.id === s.dayId);
+      const to = days.find((d) => d.id === nextDayId);
+      // Moving a stay moves its checkout with it — same number of nights.
+      const checkOutDate =
+        s.type === "hotel" && s.checkOutDate && from && to
+          ? shiftDateKeyBy(s.checkOutDate, from.date, to.date)
+          : s.checkOutDate;
+      return { ...s, dayId: nextDayId, checkOutDate };
+    });
+  }
 
   function handleSave() {
     if (!form.title.trim()) {
@@ -184,6 +206,8 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
         // Multi-night lodging checkout date is hotel-only. Send "" otherwise
         // so switching away from hotel clears any stale checkout date.
         checkOutDate: isHotel ? form.checkOutDate : "",
+        // Move to another day (ODY-147) — the server verifies it's this trip's.
+        ...(isEdit ? { dayId: form.dayId } : {}),
       };
       try {
         if (isEdit && existing) {
@@ -276,6 +300,19 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
           )}
         </div>
 
+        {canMoveDay && (
+          <div className="field">
+            <label htmlFor="ev-day">{isHotel ? "Check-in day" : "Day"}</label>
+            <select id="ev-day" className="input" value={form.dayId} onChange={(e) => changeDay(e.target.value)}>
+              {days.map((d) => (
+                <option key={d.id} value={d.id}>
+                  Day {String(d.dayNumber).padStart(2, "0")} · {d.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {isFlight ? (
           <FlightLegsFields
             legs={form.legs}
@@ -320,7 +357,7 @@ export function AddEventModal({ open, tripId, dayId, dayLabel, dayDate, existing
               type="date"
               className="input mono"
               value={form.checkOutDate}
-              min={toDateInputValue(dayDate)}
+              min={selectedDay?.date ?? toDateInputValue(dayDate)}
               onChange={(e) => set("checkOutDate", e.target.value)}
             />
             <p className="field-hint">

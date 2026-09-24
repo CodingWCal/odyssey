@@ -3,6 +3,7 @@ import {
   parseDateString,
   enumerateDays,
   shiftDateUTC,
+  shiftDateKeyBy,
   daysBetweenUTC,
   dayKey,
   toDateInputValue,
@@ -127,5 +128,23 @@ describe("shiftDateUTC / daysBetweenUTC (ODY-033)", () => {
     const from = utc("2026-07-10");
     const to = utc("2026-09-02");
     expect(shiftDateUTC(from, daysBetweenUTC(from, to)).toISOString()).toBe(to.toISOString());
+  });
+});
+
+// ODY-147: moving a stay to another day in the edit form shifts its checkout
+// by the same number of days. Runs in the browser, so it must not touch local
+// time (parseDateString builds local midnight — off by a day east of UTC).
+describe("shiftDateKeyBy", () => {
+  it("moves a date by the same number of days as from → to", () => {
+    expect(shiftDateKeyBy("2026-10-04", "2026-10-01", "2026-10-03")).toBe("2026-10-06");
+  });
+  it("moves backwards", () => {
+    expect(shiftDateKeyBy("2026-10-04", "2026-10-03", "2026-10-01")).toBe("2026-10-02");
+  });
+  it("crosses a month boundary", () => {
+    expect(shiftDateKeyBy("2026-10-31", "2026-10-30", "2026-11-01")).toBe("2026-11-02");
+  });
+  it("is unchanged when from and to are the same day", () => {
+    expect(shiftDateKeyBy("2026-10-04", "2026-10-01", "2026-10-01")).toBe("2026-10-04");
   });
 });

@@ -79,3 +79,18 @@ export function localDateKey(d: Date = new Date()): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+function utcFromKey(key: string): number {
+  const [y, m, d] = key.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+/**
+ * Move a "YYYY-MM-DD" date by the same number of days as `from` → `to` (both
+ * "YYYY-MM-DD") — e.g. shift a stay's checkout when its check-in day moves
+ * (ODY-147). Pure UTC arithmetic on the strings, so it's correct in any
+ * browser timezone, unlike parseDateString (local midnight).
+ */
+export function shiftDateKeyBy(key: string, from: string, to: string): string {
+  return new Date(utcFromKey(key) + utcFromKey(to) - utcFromKey(from)).toISOString().slice(0, 10);
+}

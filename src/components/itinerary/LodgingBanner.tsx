@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AddEventModal } from "./AddEventModal";
 import { Icons } from "@/components/shared/Icons";
-import type { TripEvent } from "@/types";
+import type { DayOption, TripEvent } from "@/types";
 
 const PHASE_LABEL: Record<NonNullable<TripEvent["lodgingPhase"]>, string> = {
   "check-in": "Check in",
@@ -16,6 +16,8 @@ interface LodgingBannerProps {
   tripId: string;
   readOnly?: boolean;
   destination?: string;
+  /** The trip's days, for the edit form's move-to-day picker (ODY-147). */
+  days?: DayOption[];
 }
 
 /**
@@ -25,7 +27,7 @@ interface LodgingBannerProps {
  * same AddEventModal as any event; the underlying Event is single, so
  * editing from any day it spans updates the whole stay.
  */
-export function LodgingBanner({ event, tripId, readOnly = false, destination }: LodgingBannerProps) {
+export function LodgingBanner({ event, tripId, readOnly = false, destination, days }: LodgingBannerProps) {
   const [editOpen, setEditOpen] = useState(false);
   const phase = event.lodgingPhase ?? "staying";
 
@@ -65,6 +67,7 @@ export function LodgingBanner({ event, tripId, readOnly = false, destination }: 
         dayDate={event.dayDate ?? event.createdAt}
         existing={event}
         destination={destination}
+        days={days}
         onClose={() => setEditOpen(false)}
         onSuccess={() => setEditOpen(false)}
       />
